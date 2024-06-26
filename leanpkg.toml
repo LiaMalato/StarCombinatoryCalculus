@@ -1,0 +1,4 @@
+[package]
+name = "lean_projeto_2"
+version = "0.1"
+lean_version = "leanprover/lean4:nightly"
