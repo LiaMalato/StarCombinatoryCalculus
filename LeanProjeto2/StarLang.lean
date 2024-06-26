@@ -30,6 +30,27 @@ example (σ τ : FType) : FType := star (arrow (star σ) τ)
 
 -- L-constants ???
 
+
+inductive Term
+| pi
+| sigma
+| sing
+| bUnion
+| iUnion
+| app : Term → Term → Term
+| universal : string → Term → Term
+| universalBounded : string → Term → Term → Term
+
+#check Term.universalBounded "x" Term.pi Term.pi
+
+open Term
+
+
+inductive TypeChecking : Term → FType → Prop
+| tcPi {σ τ} : TypeChecking pi (arrow σ (arrow τ σ))
+| tcSigma {σ τ ρ}: TypeChecking sigma (arrow (arrow σ (arrow τ ρ)) (arrow (arrow σ τ) (arrow σ ρ)))
+
+
 -- Combinador Pi -- Π : σ → (τ → σ) -- [def 1.2 b) i.]
 def Pi (σ τ : FType) : FType :=
   arrow σ (arrow τ σ)
