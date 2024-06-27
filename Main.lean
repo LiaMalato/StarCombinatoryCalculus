@@ -1,3 +1,3 @@
-import LeanProjeto2.StarLang
+-- import LeanProjeto2.StarLang
 
 namespace FOL
