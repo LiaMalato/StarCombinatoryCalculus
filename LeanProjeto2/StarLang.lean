@@ -34,23 +34,13 @@ example (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
 
 -- DEFINITION 1.2
 inductive Term -- Falta acrescentar as L-constants
-| pi                  -- ??? COMO LIDAR COM A "ARIDADE", para termos Pi, Pi x, Pi xy -> term application
+| pi
 | sigma
 | sing
 | bUnion
 | iUnion
 | var : string → Term
 | app : Term → Term → Term
---| disjunction : Term → Term → Term
---| negation : Term → Term
---| universal : string → FType → Term → Term
---| equality : FType → Term → Term → Term
---| membership : FType → Term → Term → Term
---| boundedUniversal : string → FType → Term → Term → Term
-
--- Os quantificadores não são termos
---| universal : string → Term → Term
---| universalBounded : string → Term → Term → Term
 
 --#check Term.universalBounded "x" Term.pi Term.pi
 
@@ -64,15 +54,6 @@ inductive TypeChecking : Term → FType → Prop     -- Falta L-constants
 | tcIUnion {σ τ} : TypeChecking iUnion (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆))
 | tcVar {x σ}: TypeChecking (var x) σ
 | tcApp {t₁ t₂ σ τ}: TypeChecking t₁ (σ ⟶ τ) → TypeChecking t₂ σ → TypeChecking (app t₁ t₂) τ
---| tcDisjunction {t₁ t₂ σ} : TypeChecking t₁ σ → TypeChecking t₂ σ → TypeChecking (disjunction t₁ t₂) σ
---| tcNegation {t σ} : TypeChecking t σ → TypeChecking (negation t) σ
---| tcUniversal {x σ t τ} : (∀ x, TypeChecking (var x) σ → TypeChecking t τ) → TypeChecking (universal x σ t) (σ ⟶ τ)
--- NEEDED? | tcEquality {σ t₁ t₂} : TypeChecking t₁ σ → TypeChecking t₂ σ → TypeChecking (equality σ t₁ t₂) (σ ⟶ σ ⟶ σ)
--- NEEDED? | tcMembership {σ t₁ t₂} : TypeChecking t₁ σ → TypeChecking t₂ (σ⋆) → TypeChecking (membership σ t₁ t₂) (σ ⟶ σ⋆ ⟶ σ)
---| tcBoundedUniversal {x σ t₁ t₂ τ} : TypeChecking t₁ (σ⋆) → (∀ x, TypeChecking (var x) σ → TypeChecking t₂ τ) → TypeChecking (boundedUniversal x σ t₁ t₂) (σ ⟶ τ)
--- Os quantificadores não são termos
---| tcUniversal {x : string} {σ τ : FType} : TypeChecking x σ → TypeChecking (universal x σ) (σ ⟶ τ) → TypeChecking (universal x σ) τ
---| tcUniv {x t σ}: TypeChecking x σ → TypeChecking t σ⋆
 
 -- --------------------
 -- FORMULAS
@@ -82,6 +63,20 @@ inductive AtomicFormula
 | rel : string → List Term → AtomicFormula  -- R(t₁, ..., tₙ)  --> TYPE CHECK?
 | eq : FType → Term → Term → AtomicFormula  -- t =σ q     --> TYPE CHECK? OR USE PREVIOUS?
 | mem : FType → Term → Term → AtomicFormula -- t ∈σ q
+
+-- Type checking for Atomic formulas
+inductive AtomicTypeChecking : AtomicFormula → Prop
+| tcRel {R l_terms} :                             -- R é relational symbol FALTA DE L; l_terms é uma lista de termos
+    (∀ t, t ∈ l_terms → TypeChecking t G) →
+    AtomicTypeChecking (AtomicFormula.rel R l_terms)
+| tcEq {σ t₁ t₂} :
+    TypeChecking t₁ σ →
+    TypeChecking t₂ σ →
+    AtomicTypeChecking (AtomicFormula.eq σ t₁ t₂)
+| tcMem {σ t₁ t₂} :
+    TypeChecking t₁ σ →
+    TypeChecking t₂ (σ⋆) →
+    AtomicTypeChecking (AtomicFormula.mem σ t₁ t₂)
 
 notation t₁ "=_"σ t₂ => AtomicFormula.eq σ t₁ t₂
 notation t₁ "∈_"σ t₂ => AtomicFormula.mem σ t₁ t₂
@@ -94,15 +89,55 @@ inductive BaseFormula
 | bor : BaseFormula → BaseFormula → BaseFormula
 | bboundedForall : string → FType → Term → BaseFormula → BaseFormula  -- ∀x^σ ∈ t. A
 
-open BaseFormula
-
 inductive Formula
 | Fatom : AtomicFormula → Formula
+| Fbase : BaseFormula → Formula
 | Fnot : Formula → Formula
 | For : Formula → Formula → Formula
 | FboundedForall : string → FType → Term → Formula → Formula  -- ∀x^σ ∈ t. A
 | FunboundedForall : string → FType → Formula → Formula       -- ∀x^σ. A
 
+-- Type checking for Base formulas
+inductive BaseFormulaTypeChecking : BaseFormula → Prop
+| tcBatom {A} :
+    AtomicTypeChecking A →
+    BaseFormulaTypeChecking (BaseFormula.batom A)
+| tcBnot {A} :
+    BaseFormulaTypeChecking A →
+    BaseFormulaTypeChecking (BaseFormula.bnot A)
+| tcBor {A B} :
+    BaseFormulaTypeChecking A →
+    BaseFormulaTypeChecking B →
+    BaseFormulaTypeChecking (BaseFormula.bor A B)
+| tcBboundedForall {x σ t A} :
+    TypeChecking (Term.var x) σ →
+    TypeChecking t (σ⋆) →
+    BaseFormulaTypeChecking A →
+    BaseFormulaTypeChecking (BaseFormula.bboundedForall x σ t A)
+
+-- Type checking for Formulas
+inductive FormulaTypeChecking : Formula → Prop
+| tcFatom {A} :
+    AtomicTypeChecking A →
+    FormulaTypeChecking (Formula.Fatom A)
+| tcFnot {A} :
+    FormulaTypeChecking A →
+    FormulaTypeChecking (Formula.Fnot A)
+| tcFor {A B} :
+    FormulaTypeChecking A →
+    FormulaTypeChecking B →
+    FormulaTypeChecking (Formula.For A B)
+| tcFboundedForall {x σ t A} :
+    TypeChecking (Term.var x) σ →
+    TypeChecking t (σ⋆) →
+    FormulaTypeChecking A →
+    FormulaTypeChecking (Formula.FboundedForall x σ t A)
+| tcFunboundedForall {x σ A} :
+    TypeChecking (Term.var x) σ →
+    FormulaTypeChecking A →
+    FormulaTypeChecking (Formula.FunboundedForall x σ A)
+
+open BaseFormula
 open Formula
 
 notation "¬₁" A => Fnot A
@@ -110,12 +145,36 @@ notation A "∨₁" B => For A B
 notation "∀₁" x σ t A => FboundedForall x σ t A
 notation "∀₁" x σ A => FunboundedForall x σ A
 
+
 -- --------------------
 -- ABREVIATURAS
 -- --------------------
 
--- falta definir as abreviaturas
+-- Conjunction:  A ∧ B := ¬(¬A∨¬B)
+def Fand (A B : Formula) : Formula :=
+  ¬₁ ((¬₁ A) ∨₁ (¬₁ B))
 
+-- Implication:  A → B := ¬ A ∨ B
+def Fimplies (A B : Formula) : Formula :=
+  (¬₁ A) ∨₁ B
+
+notation A "∧₁" B => Fand A B
+notation A "→₁" B => Fimplies A B
+
+-- Equivalence:  A ↔ B := (A → B) ∧ (B → A)
+def Fiff (A B : Formula) : Formula :=
+  (A →₁ B) ∧₁ (B →₁ A)
+
+-- Existential quantification:  ∃x A := ¬ (∀x (¬ A))
+-- def Fexists (x : var) (A : Formula) : Formula :=
+--  not_L (forall_L x (not_L A))
+
+notation A "↔₁" B => Fiff A B
+-- notation "∃₀" x A => exists_L x A
+
+-- ∃x A := ¬ (∀x (¬ A))                                -- NOT WORKING
+--def lexists (x : LVar) (φ : LFormula) : LFormula :=
+--  ¬₀ (∀₀ x (¬₀ φ))
 
 
 
@@ -198,11 +257,15 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 
 
 
+-- -----------------------------------------------------------------------------------
+-- --------------------------- OTHER AXIOMS -------------------------------------------------
+-- -----------------------------------------------------------------------------------
 
 
 -- EQUALITY AXIOMS (Axiom 1.2)
 
-
+--axiom equality_reflexivity (σ : FType) (x : var) : Formula :=
+--  ∀₀ x (Term.var x =_σ Term.var x)
 
 -- AXIOM FOR THE BOUNDED UNIVERSAL QUANTIFIER (Axiom 1.3)
 
