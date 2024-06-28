@@ -53,3 +53,11 @@ inductive Symb
 | tEq
 | memb
 | bForall
+
+
+inductive P : Prop
+| x
+| y
+
+--lemma a (x:P) : P := by
+--  constructor
