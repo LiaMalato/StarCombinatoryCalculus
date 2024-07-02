@@ -44,8 +44,8 @@ inductive LAtomic : Type
 | atom : LPred → List LTerm → LAtomic
 
 -- Formulas
-inductive LFormula : Type
-| atomic_L : LAtomic → LFormula              -- Atomic formulas
+inductive LFormula : Type     -- VARIAVEIS
+| atomic_L : LAtomic → LFormula               -- Atomic formulas
 | not_L : LFormula → LFormula                -- Negation
 | or_L : LFormula → LFormula → LFormula      -- Disjunction
 | forall_L : LVar → LFormula → LFormula      -- Universal quantification
@@ -54,7 +54,7 @@ open LFormula
 
 notation "¬₀" A => not_L A
 notation A "∨₀" B => or_L A B
-notation "∀₀" x A => forall_L x A
+notation "∀₀" => forall_L
 
 -- ----------------------------
 -- ABREVIATURAS PARA ∧, →, ∃, ↔
@@ -83,5 +83,5 @@ notation A "↔₀" B => iff_L A B
 notation "∃₀" x A => exists_L x A
 
 -- ∃x A := ¬ (∀x (¬ A))                                -- NOT WORKING
---def lexists (x : LVar) (φ : LFormula) : LFormula :=
---  ¬₀ (∀₀ x (¬₀ φ))
+def lexists (x : LVar) (φ : LFormula) : LFormula :=
+  ¬₀ (∀₀ x (¬₀ φ))

@@ -42,8 +42,6 @@ inductive Term -- Falta acrescentar as L-constants
 | var : string → Term
 | app : Term → Term → Term
 
---#check Term.universalBounded "x" Term.pi Term.pi
-
 open Term
 
 inductive TypeChecking : Term → FType → Prop     -- Falta L-constants
@@ -55,18 +53,96 @@ inductive TypeChecking : Term → FType → Prop     -- Falta L-constants
 | tcVar {x σ}: TypeChecking (var x) σ
 | tcApp {t₁ t₂ σ τ}: TypeChecking t₁ (σ ⟶ τ) → TypeChecking t₂ σ → TypeChecking (app t₁ t₂) τ
 
+open TypeChecking
+
+notation "Π₁" => Term.pi
+notation "Σ₁" => Term.sigma
+notation "𝔰₁" => Term.sing
+notation "∪₁" => Term.bUnion
+notation "ind_⋃₁" => Term.iUnion
+--notation "⁅"t₁ t₂"⁆" => Term.app t₁ t₂
+
+--example (t : Term) (x: var) :=
+--  TypeChecking.tcApp t x σ τ
+
+
+-- -------------------------------------
+-- EXAMPLE 1.3: cenas com tuples (tipos)
+-- -------------------------------------
+
+-- -------------------------
+-- EXAMPLE 1.4: [p.10/11]
+--  p: (σ → τ) → τ → ρ
+--  q : σ ⟶ τ ⟶ ρ
+--  r : ρ ⟶ σ
+--  s : ρ ⟶ σ
+--  t : σ → τ
+--  w : σ ⟶ τ⋆
+--  x : σ
+--  y : τ
+-- -------------------------
+
+-- Ex1.4(1). t₁t₂ : τ where t₁ : σ → τ and t₂ : σ
+example (σ τ : FType) (t₁ t₂ : Term) (h1: TypeChecking t₁ (σ ⟶ τ)) (h2 : TypeChecking t₂ σ) : TypeChecking (app t₁ t₂) τ := by
+  exact (TypeChecking.tcApp h1 h2)
+
+-- Ex1.4(1). tx : τ where t : σ → τ and x : σ
+example (σ τ : FType) (t : Term) (x : string) (h1: TypeChecking t (σ ⟶ τ)) (h2 : TypeChecking (var x) σ) : TypeChecking (app t (var x)) τ := by
+  exact (TypeChecking.tcApp h1 h2)
+
+-- Ex1.4(2). (pt)(tx) : ρ where p: (σ → τ) → τ → ρ, t : σ → τ and x : σ
+example (σ τ ρ : FType) (p t : Term) (x: string) (h1 : TypeChecking p ((σ⟶τ)⟶τ⟶ρ)) (h2: TypeChecking t (σ ⟶ τ)) (h3 : TypeChecking (var x) σ) : TypeChecking (app (app p t) (app t (var x))) ρ := by
+  have H1 := TypeChecking.tcApp h1 h2
+  have H2 := TypeChecking.tcApp h2 h3
+  exact (TypeChecking.tcApp H1 H2)
+
+-- Ex1.4(3) - Π₁_{σ,τ} x : τ ⟶ σ where Π₁ : σ ⟶ τ ⟶ σ and x : σ
+example (σ τ : FType) (t : Term) (x : string)
+    (h1 : TypeChecking (var x) σ)
+    (h2 : TypeChecking Π₁ (σ ⟶ τ ⟶ σ)) : TypeChecking (app Π₁ (var x)) (τ ⟶ σ) := sorry
+-- have H
+
+-- Ex1.4(4) - (Σ₁_{σ,τ,ρ} q)t : ρ ⟶ τ where Σ₁ : (σ ⟶ τ ⟶ ρ) ⟶ (σ ⟶ τ) ⟶ σ ⟶ ρ and t : σ ⟶ τ and x : σ
+example (σ τ ρ : FType) (q t : Term)
+    (h1 : TypeChecking t (σ ⟶ τ))
+    (h2: TypeChecking q (σ ⟶ τ ⟶ ρ)) : TypeChecking (app (app Σ₁ q) t) (ρ ⟶ τ) := sorry
+
+-- Ex1.4(5) -
+example (σ τ : FType) (t : Term) (x: string)
+    (h1 : TypeChecking t (σ ⟶ τ))
+    (h2 : TypeChecking (var x) σ)
+    (h3 : TypeChecking Σ₁ ((σ ⟶ τ ⟶ σ) ⟶ (σ ⟶ τ) ⟶ σ ⟶ σ))
+    (h4 : TypeChecking Π₁ (σ ⟶ τ ⟶ σ)): TypeChecking (app (app Σ₁ q) t) σ := sorry
+
+-- Ex1.4(6) -
+example (σ τ : FType) (w : Term) (x: string)
+    (h1 : TypeChecking w (σ ⟶ τ⋆))
+    (h2 : TypeChecking (var x) σ)
+    (h3 : TypeChecking 𝔰 (σ⋆ ⟶ σ⋆))
+    (h4 : TypeChecking ind_⋃₁ (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆)))
+    (h5 : TypeChecking ∪₁ (σ⋆ ⟶ (σ⋆ ⟶ σ⋆))) : TypeChecking (app ∪₁ (app (app ind_⋃₁ (app 𝔰 (var x))) w)) (τ⋆ ⟶ τ⋆) := sorry
+--  have H1 := TypeChecking (app 𝔰 x) σ⋆
+--  have H2 := TypeChecking (app ind_∪₁ (app 𝔰 x)) ((σ ⟶ τ⋆) ⟶ τ⋆)
+--  have H3 := TypeChecking (app (app ind_∪₁ (app 𝔰 x)) w) τ⋆
+--  have H4 := TypeChecking (app ∪₁ (app (app ind_∪₁ (app 𝔰 x)) w)) (τ⋆ ⟶ τ⋆)
+
+-- ----------------------------------------------
+-- EXAMPLE 1.5: cenas com tuples (termos e tipos)
+-- ----------------------------------------------
+
+
 -- --------------------
 -- FORMULAS
 -- --------------------
 
 inductive AtomicFormula
-| rel : string → List Term → AtomicFormula  -- R(t₁, ..., tₙ)  --> TYPE CHECK?
-| eq : FType → Term → Term → AtomicFormula  -- t =σ q     --> TYPE CHECK? OR USE PREVIOUS?
+| rel : string → List Term → AtomicFormula  -- R(t₁, ..., tₙ)
+| eq : FType → Term → Term → AtomicFormula  -- t =σ q
 | mem : FType → Term → Term → AtomicFormula -- t ∈σ q
 
 -- Type checking for Atomic formulas
 inductive AtomicTypeChecking : AtomicFormula → Prop
-| tcRel {R l_terms} :                             -- R é relational symbol FALTA DE L; l_terms é uma lista de termos
+| tcRel {R l_terms} :                             -- R é relational symbol DE L (falta); l_terms é uma lista de termos
     (∀ t, t ∈ l_terms → TypeChecking t G) →
     AtomicTypeChecking (AtomicFormula.rel R l_terms)
 | tcEq {σ t₁ t₂} :
@@ -80,6 +156,7 @@ inductive AtomicTypeChecking : AtomicFormula → Prop
 
 notation t₁ "=_"σ t₂ => AtomicFormula.eq σ t₁ t₂
 notation t₁ "∈_"σ t₂ => AtomicFormula.mem σ t₁ t₂
+
 
 open AtomicFormula
 
@@ -183,6 +260,10 @@ notation A "↔₁" B => Fiff A B
 -- Acrescentar algo que checks whether a formula is base or not
 -- --------------------
 
+-- ---------------------------------
+-- EXAMPLE 1.6: Base formulas or not
+-- ---------------------------------
+
 
 
 -- --------------------
@@ -202,6 +283,7 @@ notation A "↔₁" B => Fiff A B
 
 -- axiom ExcMid (A : Formula) : (¬₁ A) ∨₁ A
 -- axiom ExcMid (A : Formula) : For (Fnot A) A
+
 
 -- Excluded middle DEFINITION
 def excluded_middle_axiom (A : Formula) : Formula :=
@@ -267,6 +349,20 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 --axiom equality_reflexivity (σ : FType) (x : var) : Formula :=
 --  ∀₀ x (Term.var x =_σ Term.var x)
 
+
+-- PROPOSITION 1.1: Symmetry and transitivity of equality (higher types)
+
+-- Symmetry of equality   WRONG
+-- theorem symmetry_of_eq (x y : σ) : x = y → y = x :=
+-- λ h, h.symm
+
+-- Transitivity of equality   WRONG
+-- theorem transitivity_of_eq (x y z : σ) : x = y → y = z → x = z :=
+-- λ hxy hyz, hxy.trans hyz
+
+
+
+
 -- AXIOM FOR THE BOUNDED UNIVERSAL QUANTIFIER (Axiom 1.3)
 
 
@@ -285,3 +381,13 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 
 
 -- BOUNDED AXIOM OF CHOICE (Axiom 1.7)
+
+-- Pattermatching com "lambda por casos"  FAZER PARA OS OUTROS TERMOS
+--@[simp]
+--def subst (x : string) (p : Term) : Term → Term
+--| (var y) => if x=y then p else var y           -- var substitui logo
+--| (app e1 e2) => app (subst x p e1) (subst x p e2)
+--| x => x                  -- outra coisa qualquer
+
+
+end StarLang
