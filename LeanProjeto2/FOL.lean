@@ -77,11 +77,13 @@ def iff_L (A B : LFormula) : LFormula :=
 
 -- Existential quantification:  ∃x A := ¬ (∀x (¬ A))
 def exists_L (x : LVar) (A : LFormula) : LFormula :=
-  not_L (forall_L x (not_L A))
+  ¬₀ (∀₀ x (¬₀ A))
+-- not_L (forall_L x (not_L A))
 
 notation A "↔₀" B => iff_L A B
 notation "∃₀" x A => exists_L x A
+--def ∃₀ := exists_L
 
 -- ∃x A := ¬ (∀x (¬ A))                                -- NOT WORKING
-def lexists (x : LVar) (φ : LFormula) : LFormula :=
-  ¬₀ (∀₀ x (¬₀ φ))
+-- def lexists (x : LVar) (φ : LFormula) : LFormula :=
+--  ¬₀ (∀₀ x (¬₀ φ))

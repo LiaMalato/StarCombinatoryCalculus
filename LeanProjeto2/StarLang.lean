@@ -51,8 +51,8 @@ notation "Σ₁" => Term.sigma
 notation "𝔰₁" => Term.sing
 notation "∪₁" => Term.bUnion
 notation "ind_⋃₁" => Term.iUnion
+notation t₁ "·" t₂ => Term.app t₁ t₂
 --notation "⁅"t₁ t₂"⁆" => Term.app t₁ t₂
-
 
 -- ------------------
 -- FORMULAS (p.12-14)
@@ -81,7 +81,7 @@ inductive AtomicTypeChecking : AtomicFormula → Prop
 
 -- NOTATION: Notation for the equality and the membership symbols
 --notation t₁ "=_"σ t₂ => AtomicFormula.eq σ t₁ t₂
-notation t₁ "∈_"σ t₂ => AtomicFormula.mem σ t₁ t₂
+--notation t₁ "∈_"σ t₂ => AtomicFormula.mem σ t₁ t₂
 
 open AtomicFormula
 
@@ -143,12 +143,21 @@ inductive FormulaTypeChecking : Formula → Prop
 open BaseFormula
 open Formula
 
+def AB (A B : Formula) : Formula := Formula.For A B
+def AB2 (A B : Formula) : Formula := For A B
+def ABC (A B C : Formula) : Formula := For A (For B C)
+
 -- NOTATION: Notation for the primitive symbols ¬, ∨, ∀x and ∀x∈t in L^{omega}_*
 notation "¬₁" A => Fnot A
 notation A "∨₁" B => For A B
 notation "b∀₁" x σ t A => FboundedForall x σ t A
-notation "∀₁" x σ A => FunboundedForall x σ A
+notation "V₁" x σ A => FunboundedForall x σ A
 
+def ABC2 (A B C : Formula) : Formula := A ∨₁ (B ∨₁ C)
+def ABC3 (A B C : Formula) : Formula := (A ∨₁ B) ∨₁ C
+#check ABC2
+--def ABCABC2 (A B C : Formula) : Formula → Formula := (ABC2 A B C) → (ABC3 A B C)
+--def ABCABC (A B C : Formula) : Formula → Formula := A ∨₁ (B ∨₁ C) → (A ∨₁ B) ∨₁ C
 
 -- --------------------
 -- DEFINED SYMBOLS: Usual logical abbreviations for the defined symbols ∧, →, ↔, ∃x and ∃x∈t in L^{omega}_* (p.8 and p.14)
@@ -174,8 +183,8 @@ def Fiff (A B : Formula) : Formula :=
   (A →₁ B) ∧₁ (B →₁ A)
 
 -- Existential quantification:  ∃x A := ¬ (∀x (¬ A))
---def Fexists (x : var) (A : Formula) : Formula :=
---  ¬₁ (∀₁ x (¬₁ A))
+--def Fexists (x : string) (σ : FType) (A : Formula) : Formula :=
+--  ¬₁(∀₁ "x" σ (¬₁A))
 
 notation A "↔₁" B => Fiff A B
 -- notation "∃₀" x A => exists_L x A
@@ -183,6 +192,24 @@ notation A "↔₁" B => Fiff A B
 -- ∃x A := ¬ (∀x (¬ A))                                -- NOT WORKING
 --def lexists (x : LVar) (A : LFormula) : LFormula :=
 --  ¬₁ (∀₁ x (¬₁ A))
+
+def teste3 (A : Formula) := ¬₁(¬₁ A)
+#check teste3
+
+-- FunboundedForall x σ A
+
+def V (x : string) (σ : FType) (A : Formula) : Formula := FunboundedForall x σ A
+def bV (x : string) (σ : FType) (t : Term) (A : Formula) : Formula := FboundedForall x σ t A
+
+-- F_unb_exists
+def E (x : string) (σ : FType) (A : Formula) : Formula :=
+  ¬₁(FunboundedForall x σ (¬₁ A))
+
+-- F_b_exists
+def bE (x : string) (σ : FType) (t : Term) (A : Formula) : Formula :=
+  ¬₁(FboundedForall x σ t (¬₁ A))
+
+--  ¬₁(∀₁ x σ (¬₁ A))
 
 -- --------------------------------------
 
@@ -316,11 +343,20 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 -- --------------------------- Associativity ----------------------------------------
 -- Associativity
 
--- def associativity_r (A B C : Formula) (h : A ∨₁ (B ∨₁ C)) : Formula :=
+--def associativity_r (A B C : Formula) (h : A ∨₁ (B ∨₁ C)) : Formula :=
 --   (A ∨₁ B) ∨₁ C
 
--- axiom associativity_rule (A B C : Formula) : Formula
--- axiom associativity_instance (A B C : Formula) : associativity_rule A B C = A ∨₁ (B ∨₁ C) → (A ∨₁ B) ∨₁ C
+--def associativity_r (A B C : Formula) (h : (For A (For B C))) : Formula :=
+--   For (For A B) C
+
+--def associativity_r (A B : Formula) : Formula → Formula :=
+--  A → A
+
+--axiom associativity_rule (A B C : Formula) : Formula
+--axiom ass_inst (A B C : Formula) : associativity_rule A B C = (A∨₁(B∨₁C) → (A∨₁B)∨₁C)
+--axiom associativity_instance (A B C : Formula) : (associativity_rule A B C) = A ∨₁ (B ∨₁ C) → (A ∨₁ B) ∨₁ C
+
+--axiom associativity (A B C : Formula) : ((A ∨₁ B) ∨₁ C) → (A ∨₁ (B ∨₁ C))
 
 -- --------------------------- Cut --------------------------------------------------
 -- Cut
@@ -392,22 +428,55 @@ lemma example_lemma (P Q : Prop) (h : P → Q) (p : P) : Q :=
 -- ----------------------------------------------------------------------------------------------------------
 -- ----------------------------------------------------------------------------------------------------------
 
--- AXIOM FOR THE BOUNDED UNIVERSAL QUANTIFIER (Axiom 1.3)
+-- -----------------AXIOM FOR THE BOUNDED UNIVERSAL QUANTIFIER (Axiom 1.3) -----------------
+
+def AxU (σ : FType) (x t : Term) (A : Formula) : Formula            -- FALTA A(x)
+  := (bV x σ t A) ↔₁ (V x σ ((Fbase (batom (mem σ x t))) →₁ A))
+
+-- ----------------------------- COMBINATOR AXIOMS (Axiom 1.4) -----------------------------
+
+def AxC₁ (σ : FType) (p q : Term) : AtomicFormula       -- FALTA TYPECHECKING
+  := eq σ ((Π₁·p)·q) q
+
+def AxC₂ (τ : FType) (p q t : Term) : AtomicFormula     -- FALTA TYPECHECKING
+  := eq τ (((Σ₁·p)·q)·t) ((p·t)·(q·t))
+
+-- ---------------- PRIMARY AXIOMS FOR THE STAR CONSTANTS (Axiom 1.5) ----------------------
+
+def AxP₁ (τ : FType) (x y : Term) : AtomicFormula
+  := eq (τ⋆) ((ind_⋃₁·(𝔰₁·x))·y) (x·y)
+
+def AxP₂_atom (τ : FType) (x y z : Term) : AtomicFormula
+  := eq (τ⋆) ((ind_⋃₁·((∪₁·x)·y))·z) ((∪₁·((ind_⋃₁·x)·z))·((ind_⋃₁·y)·z))
+
+def AxP₂_base (τ : FType) (x y z : Term) : BaseFormula
+  := batom (eq (τ⋆) ((ind_⋃₁·((∪₁·x)·y))·z) ((∪₁·((ind_⋃₁·x)·z))·((ind_⋃₁·y)·z)))
+
+def AxP₂_formula (τ : FType) (x y z : Term) : Formula
+  := Fbase (batom (eq (τ⋆) ((ind_⋃₁·((∪₁·x)·y))·z) ((∪₁·((ind_⋃₁·x)·z))·((ind_⋃₁·y)·z))))
+
+-- -------------- SECONDARY AXIOMS FOR THE STAR CONSTANTS (Axiom 1.6) ----------------------
+
+def AxS₁ (σ : FType) (x y : Term) : Formula
+  := Fbase (batom (mem σ x (𝔰₁·y))) ↔₁ Fbase (batom (eq σ x y))
+
+--def AxS₁_ab (σ : FType) (x y : Term) : Formula                  -- ABBREVIATION NOT WORKING
+--  := Fbase (batom (x ∈_ σ (𝔰₁·y))) ↔₁ Fbase (batom (x ∈_ σ y))
+
+def AxS₂ (σ : FType) (x a b: Term) : Formula
+  := Fbase (batom ( mem σ x ((∪₁·a)·b) )) ↔₁  ( ( Fbase ((batom (mem σ x a))) ∨₁ Fbase ((batom (mem σ x b)) )))
+
+def AxS₃ (σ : FType) (x a b f : Term) : Formula
+  := (Fbase (batom (mem σ b ((ind_⋃₁·a)·f)))) ↔₁ (bE x σ a (Fbase (batom ((mem σ b (f·x))))))
+
+-- ---------------------- BOUNDED AXIOM OF CHOICE (Axiom 1.7) -----------------------------
+
+-- This está meh!! f não tem de ser variável...
+def bAC  (x y f : string) (σ : FType) (A : Formula) : Formula        -- FALTA: restricted to base formulas | (x y : var) | tirar tipos
+  := (V x σ (E y σ A)) →₁ (E f σ (V x σ (bE y σ ((var f)·(var x)) A)))
 
 
-
--- COMBINATOR AXIOMS (Axiom 1.4)
-
--- PRIMARY AXIOMS FOR THE STAR CONSTANTS (Axiom 1.5)
-
-
-
-
--- SECONDARY AXIOMS FOR THE STAR CONSTANTS (Axiom 1.6)
-
-
-
--- BOUNDED AXIOM OF CHOICE (Axiom 1.7)
+-- SUBSTITUIÇAO
 
 -- Pattermatching com "lambda por casos"  FAZER PARA OS OUTROS TERMOS
 --@[simp]
@@ -415,16 +484,5 @@ lemma example_lemma (P Q : Prop) (h : P → Q) (p : P) : Q :=
 --| (var y) => if x=y then p else var y           -- var substitui logo
 --| (app e1 e2) => app (subst x p e1) (subst x p e2)
 --| x => x                  -- outra coisa qualquer
-
-
-def AxC₁ (σ : FType) (p q : Term) : AtomicFormula       -- FALTA TYPECHECKING
-  := eq σ (app (app Π₁ p) q) q
-
-def AxC₂ (τ : FType) (p q t : Term) : AtomicFormula     -- FALTA TYPECHECKING
-  := eq τ (app (app (app Σ₁ p) q) t) (app (app p t) (app q t))
-
---def AxP₁ (τ : FType) (x y : Term) : AtomicFormula
---  :=
-
 
 end StarLang
