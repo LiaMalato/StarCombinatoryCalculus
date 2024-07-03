@@ -4,57 +4,48 @@ namespace StarLang
 
 -- Finite types [def 1.1]
 inductive FType : Type
-| ground : FType                 -- G
-| arrow : FType → FType → FType  -- σ → τ   arrow : FType → (FType → (FType → FType))
-| star : FType → FType           -- σ*
+| ground : FType                        -- G
+| arrow : FType → FType → FType         -- σ → τ
+| star : FType → FType                  -- σ*
 
 open FType
 
--- notation G => ground
-def G := ground
+-- Notation for finite types
+def G := ground                         -- notation G => ground
 notation t "⟶" t1 => arrow t t1
 notation t "⋆" => star t
 
--- EXAMPLE 1.2
-def ex1Type1 : FType := G⋆                                           -- 1.2.1 G*
-def ex1Type2 : FType := G ⟶ G                                        -- G → G
-def ex1Type31 : FType := G ⟶ (G ⟶ G)                                -- G → (G → G)
-def ex1Type32 : FType := (G ⟶ G) ⟶ G                                -- (G → G) → G
-def ex1Type4 : FType := (G ⟶ G) ⟶ (G ⟶ (G ⟶ G))                   -- (G → G) → (G → (G → G))
-def ex1Type51 (σ τ : FType) : FType := σ ⟶ ((σ⋆ ⟶ τ) ⟶ τ)          -- σ → ((σ* → τ) → τ)
-def ex1Type52 (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆                     -- 1.2.5 (σ* → τ)*
-example (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
+-- --------------------------
+-- TERMS E CONSTANTS (p.9-12)
+-- --------------------------
 
-#check ex1Type32 -- ???????????
-#check ex1Type51
-
--- --------------------
--- TERMOS E CONSTANTES
--- --------------------
-
--- DEFINITION 1.2
-inductive Term -- Falta acrescentar as L-constants
-| pi
-| sigma
-| sing
-| bUnion
-| iUnion
-| var : string → Term
-| app : Term → Term → Term
+-- DEFINITION 1.2 (p.8-9): Terms of L^{omega}_*
+inductive Term
+| lcons : LTerm → Term                  -- L-constants
+| pi                                    -- combinators:     Π
+| sigma                                 --                  Σ
+| sing                                  -- star constants:  𝔰
+| bUnion                                --                  ∪ (binary union)
+| iUnion                                --                  ∪ (indexed union)
+| var : string → Term                   -- variables
+| app : Term → Term → Term              -- application of terms
 
 open Term
 
-inductive TypeChecking : Term → FType → Prop     -- Falta L-constants
-| tcPi {σ τ} : TypeChecking pi (σ ⟶ (τ ⟶ σ))
-| tcSigma {σ τ ρ}: TypeChecking sigma ((σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ)))
-| tcSing {σ}: TypeChecking sing (σ ⟶ σ⋆)
-| tcBUnion {σ}: TypeChecking bUnion (σ⋆ ⟶ (σ⋆ ⟶ σ⋆))
-| tcIUnion {σ τ} : TypeChecking iUnion (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆))
-| tcVar {x σ}: TypeChecking (var x) σ
-| tcApp {t₁ t₂ σ τ}: TypeChecking t₁ (σ ⟶ τ) → TypeChecking t₂ σ → TypeChecking (app t₁ t₂) τ
+-- Typing the terms of L^{omega}_*   (term type checking)
+inductive TypeChecking : Term → FType → Prop
+| tcLcons (t : LTerm) : TypeChecking (lcons t) G                                                  -- L-constants have type G
+| tcPi {σ τ} : TypeChecking pi (σ ⟶ (τ ⟶ σ))                                                    -- Π_{σ,τ} : σ ⟶ (τ ⟶ σ)
+| tcSigma {σ τ ρ}: TypeChecking sigma ((σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ)))                  -- Σ_{σ,τ,ρ} : (σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ))
+| tcSing {σ}: TypeChecking sing (σ ⟶ σ⋆)                                                         -- 𝔰_{σ} : σ⋆
+| tcBUnion {σ}: TypeChecking bUnion (σ⋆ ⟶ (σ⋆ ⟶ σ⋆))                                            -- ∪_{σ} : σ⋆ ⟶ (σ⋆ ⟶ σ⋆)
+| tcIUnion {σ τ} : TypeChecking iUnion (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆))                                   -- ∪_{σ} : σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆)
+| tcVar {x σ}: TypeChecking (var x) σ                                                             -- Variables x : σ
+| tcApp {t₁ t₂ σ τ}: TypeChecking t₁ (σ ⟶ τ) → TypeChecking t₂ σ → TypeChecking (app t₁ t₂) τ    -- If t₁ : (σ ⟶ τ) and t₂ : σ, then t₁t₂ : τ
 
 open TypeChecking
 
+-- NOTATION: Notation for combinators and star constants
 notation "Π₁" => Term.pi
 notation "Σ₁" => Term.sigma
 notation "𝔰₁" => Term.sing
@@ -62,85 +53,19 @@ notation "∪₁" => Term.bUnion
 notation "ind_⋃₁" => Term.iUnion
 --notation "⁅"t₁ t₂"⁆" => Term.app t₁ t₂
 
---example (t : Term) (x: var) :=
---  TypeChecking.tcApp t x σ τ
 
+-- ------------------
+-- FORMULAS (p.12-14)
+-- ------------------
 
--- -------------------------------------
--- EXAMPLE 1.3: cenas com tuples (tipos)
--- -------------------------------------
-
--- -------------------------
--- EXAMPLE 1.4: [p.10/11]
---  p: (σ → τ) → τ → ρ
---  q : σ ⟶ τ ⟶ ρ
---  r : ρ ⟶ σ
---  s : ρ ⟶ σ
---  t : σ → τ
---  w : σ ⟶ τ⋆
---  x : σ
---  y : τ
--- -------------------------
-
--- Ex1.4(1). t₁t₂ : τ where t₁ : σ → τ and t₂ : σ
-example (σ τ : FType) (t₁ t₂ : Term) (h1: TypeChecking t₁ (σ ⟶ τ)) (h2 : TypeChecking t₂ σ) : TypeChecking (app t₁ t₂) τ := by
-  exact (TypeChecking.tcApp h1 h2)
-
--- Ex1.4(1). tx : τ where t : σ → τ and x : σ
-example (σ τ : FType) (t : Term) (x : string) (h1: TypeChecking t (σ ⟶ τ)) (h2 : TypeChecking (var x) σ) : TypeChecking (app t (var x)) τ := by
-  exact (TypeChecking.tcApp h1 h2)
-
--- Ex1.4(2). (pt)(tx) : ρ where p: (σ → τ) → τ → ρ, t : σ → τ and x : σ
-example (σ τ ρ : FType) (p t : Term) (x: string) (h1 : TypeChecking p ((σ⟶τ)⟶τ⟶ρ)) (h2: TypeChecking t (σ ⟶ τ)) (h3 : TypeChecking (var x) σ) : TypeChecking (app (app p t) (app t (var x))) ρ := by
-  have H1 := TypeChecking.tcApp h1 h2
-  have H2 := TypeChecking.tcApp h2 h3
-  exact (TypeChecking.tcApp H1 H2)
-
--- Ex1.4(3) - Π₁_{σ,τ} x : τ ⟶ σ where Π₁ : σ ⟶ τ ⟶ σ and x : σ
-example (σ τ : FType) (t : Term) (x : string)
-    (h1 : TypeChecking (var x) σ)
-    (h2 : TypeChecking Π₁ (σ ⟶ τ ⟶ σ)) : TypeChecking (app Π₁ (var x)) (τ ⟶ σ) := sorry
--- have H
-
--- Ex1.4(4) - (Σ₁_{σ,τ,ρ} q)t : ρ ⟶ τ where Σ₁ : (σ ⟶ τ ⟶ ρ) ⟶ (σ ⟶ τ) ⟶ σ ⟶ ρ and t : σ ⟶ τ and x : σ
-example (σ τ ρ : FType) (q t : Term)
-    (h1 : TypeChecking t (σ ⟶ τ))
-    (h2: TypeChecking q (σ ⟶ τ ⟶ ρ)) : TypeChecking (app (app Σ₁ q) t) (ρ ⟶ τ) := sorry
-
--- Ex1.4(5) -
-example (σ τ : FType) (t : Term) (x: string)
-    (h1 : TypeChecking t (σ ⟶ τ))
-    (h2 : TypeChecking (var x) σ)
-    (h3 : TypeChecking Σ₁ ((σ ⟶ τ ⟶ σ) ⟶ (σ ⟶ τ) ⟶ σ ⟶ σ))
-    (h4 : TypeChecking Π₁ (σ ⟶ τ ⟶ σ)): TypeChecking (app (app Σ₁ q) t) σ := sorry
-
--- Ex1.4(6) -
-example (σ τ : FType) (w : Term) (x: string)
-    (h1 : TypeChecking w (σ ⟶ τ⋆))
-    (h2 : TypeChecking (var x) σ)
-    (h3 : TypeChecking 𝔰 (σ⋆ ⟶ σ⋆))
-    (h4 : TypeChecking ind_⋃₁ (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆)))
-    (h5 : TypeChecking ∪₁ (σ⋆ ⟶ (σ⋆ ⟶ σ⋆))) : TypeChecking (app ∪₁ (app (app ind_⋃₁ (app 𝔰 (var x))) w)) (τ⋆ ⟶ τ⋆) := sorry
---  have H1 := TypeChecking (app 𝔰 x) σ⋆
---  have H2 := TypeChecking (app ind_∪₁ (app 𝔰 x)) ((σ ⟶ τ⋆) ⟶ τ⋆)
---  have H3 := TypeChecking (app (app ind_∪₁ (app 𝔰 x)) w) τ⋆
---  have H4 := TypeChecking (app ∪₁ (app (app ind_∪₁ (app 𝔰 x)) w)) (τ⋆ ⟶ τ⋆)
-
--- ----------------------------------------------
--- EXAMPLE 1.5: cenas com tuples (termos e tipos)
--- ----------------------------------------------
-
-
--- --------------------
--- FORMULAS
--- --------------------
-
+-- DEFINITION 1.6 (p.11): Atomic formulas of L^{omega}_*
 inductive AtomicFormula
-| rel : string → List Term → AtomicFormula  -- R(t₁, ..., tₙ)
-| eq : FType → Term → Term → AtomicFormula  -- t =σ q
-| mem : FType → Term → Term → AtomicFormula -- t ∈σ q
+| lForm : LFormula → AtomicFormula                                  -- Remark 1.9: The atomic formulas of L^{omega}_* include the atomic formulas of L
+| rel : string → List Term → AtomicFormula                          -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
+| eq : FType → Term → Term → AtomicFormula                          -- t =σ q
+| mem : FType → Term → Term → AtomicFormula                         -- t ∈σ q
 
--- Type checking for Atomic formulas
+-- Typing the components of the atomic formulas of L^{omega}_* (atomic formulas type checking)
 inductive AtomicTypeChecking : AtomicFormula → Prop
 | tcRel {R l_terms} :                             -- R é relational symbol DE L (falta); l_terms é uma lista de termos
     (∀ t, t ∈ l_terms → TypeChecking t G) →
@@ -154,34 +79,37 @@ inductive AtomicTypeChecking : AtomicFormula → Prop
     TypeChecking t₂ (σ⋆) →
     AtomicTypeChecking (AtomicFormula.mem σ t₁ t₂)
 
-notation t₁ "=_"σ t₂ => AtomicFormula.eq σ t₁ t₂
+-- NOTATION: Notation for the equality and the membership symbols
+--notation t₁ "=_"σ t₂ => AtomicFormula.eq σ t₁ t₂
 notation t₁ "∈_"σ t₂ => AtomicFormula.mem σ t₁ t₂
-
 
 open AtomicFormula
 
+-- DEFINITION 1.10 (p.14): Base formulas of L^{omega}_*
 inductive BaseFormula
-| batom : AtomicFormula → BaseFormula
-| bnot : BaseFormula → BaseFormula
-| bor : BaseFormula → BaseFormula → BaseFormula
-| bboundedForall : string → FType → Term → BaseFormula → BaseFormula  -- ∀x^σ ∈ t. A
+| batom : AtomicFormula → BaseFormula                                   -- Atomic formulas are base formulas
+| bnot : BaseFormula → BaseFormula                                      -- If A is a base formula, then so is (¬A)
+| bor : BaseFormula → BaseFormula → BaseFormula                         -- If A and B are base formulas, then so is (A∨B)
+| bboundedForall : string → FType → Term → BaseFormula → BaseFormula    -- If A is a base formula, then so is (∀x∈t A)
 
+--#check (A : AtomicFormula) batom A
+def SomeFormula (A : AtomicFormula) : BaseFormula := BaseFormula.batom A
+#check SomeFormula
+
+-- DEFINITION 1.7 (p.13): Formulas of L^{omega}_*
 inductive Formula
-| Fatom : AtomicFormula → Formula
-| Fbase : BaseFormula → Formula
-| Fnot : Formula → Formula
-| For : Formula → Formula → Formula
-| FboundedForall : string → FType → Term → Formula → Formula  -- ∀x^σ ∈ t. A
-| FunboundedForall : string → FType → Formula → Formula       -- ∀x^σ. A
+| Fbase : BaseFormula → Formula                                         -- Base formulas are formulas
+| Fnot : Formula → Formula                                              -- If A is a formula, then so is (¬A)
+| For : Formula → Formula → Formula                                     -- If A and B are formulas, then so is (A∨B)
+| FboundedForall : string → FType → Term → Formula → Formula            -- If A is a formula, then so is (∀x∈t A)
+| FunboundedForall : string → FType → Formula → Formula                 -- If A is a base formula, then so is (∀x A)
 
--- Type checking for Base formulas
+-- Type checking for base formulas
 inductive BaseFormulaTypeChecking : BaseFormula → Prop
 | tcBatom {A} :
-    AtomicTypeChecking A →
-    BaseFormulaTypeChecking (BaseFormula.batom A)
+    AtomicTypeChecking A → BaseFormulaTypeChecking (BaseFormula.batom A)
 | tcBnot {A} :
-    BaseFormulaTypeChecking A →
-    BaseFormulaTypeChecking (BaseFormula.bnot A)
+    BaseFormulaTypeChecking A → BaseFormulaTypeChecking (BaseFormula.bnot A)
 | tcBor {A B} :
     BaseFormulaTypeChecking A →
     BaseFormulaTypeChecking B →
@@ -192,14 +120,12 @@ inductive BaseFormulaTypeChecking : BaseFormula → Prop
     BaseFormulaTypeChecking A →
     BaseFormulaTypeChecking (BaseFormula.bboundedForall x σ t A)
 
--- Type checking for Formulas
+-- Type checking for formulas
 inductive FormulaTypeChecking : Formula → Prop
-| tcFatom {A} :
-    AtomicTypeChecking A →
-    FormulaTypeChecking (Formula.Fatom A)
+| tcFbase {A} :
+    BaseFormulaTypeChecking A → FormulaTypeChecking (Formula.Fbase A)
 | tcFnot {A} :
-    FormulaTypeChecking A →
-    FormulaTypeChecking (Formula.Fnot A)
+    FormulaTypeChecking A → FormulaTypeChecking (Formula.Fnot A)
 | tcFor {A B} :
     FormulaTypeChecking A →
     FormulaTypeChecking B →
@@ -217,21 +143,25 @@ inductive FormulaTypeChecking : Formula → Prop
 open BaseFormula
 open Formula
 
+-- NOTATION: Notation for the primitive symbols ¬, ∨, ∀x and ∀x∈t in L^{omega}_*
 notation "¬₁" A => Fnot A
 notation A "∨₁" B => For A B
-notation "∀₁" x σ t A => FboundedForall x σ t A
+notation "b∀₁" x σ t A => FboundedForall x σ t A
 notation "∀₁" x σ A => FunboundedForall x σ A
 
 
 -- --------------------
--- ABREVIATURAS
+-- DEFINED SYMBOLS: Usual logical abbreviations for the defined symbols ∧, →, ↔, ∃x and ∃x∈t in L^{omega}_* (p.8 and p.14)
 -- --------------------
 
 -- Conjunction:  A ∧ B := ¬(¬A∨¬B)
+@[simp]
 def Fand (A B : Formula) : Formula :=
   ¬₁ ((¬₁ A) ∨₁ (¬₁ B))
+-- have (¬₁ ((¬₁ A) ∨₁ (¬₁ B))) by
 
 -- Implication:  A → B := ¬ A ∨ B
+@[simp]
 def Fimplies (A B : Formula) : Formula :=
   (¬₁ A) ∨₁ B
 
@@ -239,30 +169,92 @@ notation A "∧₁" B => Fand A B
 notation A "→₁" B => Fimplies A B
 
 -- Equivalence:  A ↔ B := (A → B) ∧ (B → A)
+@[simp]
 def Fiff (A B : Formula) : Formula :=
   (A →₁ B) ∧₁ (B →₁ A)
 
 -- Existential quantification:  ∃x A := ¬ (∀x (¬ A))
--- def Fexists (x : var) (A : Formula) : Formula :=
---  not_L (forall_L x (not_L A))
+--def Fexists (x : var) (A : Formula) : Formula :=
+--  ¬₁ (∀₁ x (¬₁ A))
 
 notation A "↔₁" B => Fiff A B
 -- notation "∃₀" x A => exists_L x A
 
 -- ∃x A := ¬ (∀x (¬ A))                                -- NOT WORKING
---def lexists (x : LVar) (φ : LFormula) : LFormula :=
---  ¬₀ (∀₀ x (¬₀ φ))
+--def lexists (x : LVar) (A : LFormula) : LFormula :=
+--  ¬₁ (∀₁ x (¬₁ A))
 
+-- --------------------------------------
+
+-- DEFINITION 1.8 (p.14): The bounded existential quantifier ∃x∈t (defined symbol)
 
 
 
 -- --------------------
 -- Acrescentar algo que checks whether a formula is base or not
+--  + acrescentar que simbolos definidos também deixam as base formulas closed
 -- --------------------
 
--- ---------------------------------
--- EXAMPLE 1.6: Base formulas or not
--- ---------------------------------
+def isBase : Formula → Bool
+| Fbase _ => true
+| _ => false
+
+#check isBase
+
+-- Function to check if a formula is a base formula
+--@[simp]
+def isBaseFormula : Formula → Bool
+| Fbase _ => true
+| ¬₁ (Fbase _) => true
+| (Fbase _) ∨₁ (Fbase _) => true
+| FboundedForall _ _ _ (Formula.Fbase _) => true
+| _ => false
+
+-- Ex1.4(1). tx : τ where t : σ → τ and x : σ
+example (σ τ : FType) (t : Term) (x : string) (h1: TypeChecking t (σ ⟶ τ)) (h2 : TypeChecking (var x) σ) : TypeChecking (app t (var x)) τ :=
+  by
+   exact TypeChecking.tcApp h1 h2
+
+lemma teste1 (A : BaseFormula) (hA : isBaseFormula (Fbase A)) (hB : isBaseFormula (Fbase B)) : isBaseFormula ((Fbase A) ∨₁ (Fbase B)) :=
+  by
+    simp [isBaseFormula]
+
+#check teste1
+
+
+
+-- Lemma: ¬₁ ((¬₁ A) ∨₁ (¬₁ B)) is a base formula
+--AQUIlemma neg_disjunction_is_base_formula (A B : BaseFormula) (h: bnot (bor (bnot A) (bnot B))) : BaseFormula := sorry
+--begin
+  -- Apply the bor and bnot constructors to form the desired formula
+--  exact BaseFormula.bnot (BaseFormula.bor (BaseFormula.bnot A) (BaseFormula.bnot B)),
+--end
+
+--example (A : BaseFormula) (hA : isBaseFormula (Fbase A)) (hB : isBaseFormula (Fbase B)) : isBaseFormula ((¬₁ (Fbase A)) ∨₁ (Fbase B)) :=
+--  by
+--    simp [isBaseFormula]
+
+  -- by
+  -- exact isBaseFormula
+
+-- lemma (A B : FBase): (A ∧₁ B) : FBase :=
+-- Lemma: if A and B are BaseFormula, then A ∧₁ B is a BaseFormula
+--lemma and_is_baseformula (A B : BaseFormula) : isBaseFormula ((Fbase A) ∧₁ (Fbase B)) = true := sorry
+  ----by
+    -- Simplify using the definition of Fand
+    -----simp
+    -----have h1 := isBaseFormula ((Fbase A) ∨₁ (Fbase B))
+  --by unfold Fand (Fbase A) (Fbase B)
+  --by unfold Fand ; simp [isBaseFormula]
+
+-- ----------------------------------------
+-- EXAMPLE 1.6 (p.14): Base formulas or not
+-- ----------------------------------------
+
+-- example (A : Formula) (B : FBase) (σ τ : FTypes)
+
+
+
 
 
 
@@ -352,24 +344,59 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 
 -- PROPOSITION 1.1: Symmetry and transitivity of equality (higher types)
 
--- Symmetry of equality   WRONG
--- theorem symmetry_of_eq (x y : σ) : x = y → y = x :=
+-- Symmetry of equality   WRONG -> precisamos de TypeChecking?
+--theorem symmetry_of_eq (σ : FType) (x y : string): AtomicFormula.eq σ (var x) (var y) → AtomicFormula.eq σ (var y) (var x) := sorry
+-- by intro a intro b exact tcEq hx hy
 -- λ h, h.symm
 
--- Transitivity of equality   WRONG
--- theorem transitivity_of_eq (x y z : σ) : x = y → y = z → x = z :=
+-- Types in the symmetry of equality   WRONG -> precisamos de TypeChecking?
+--theorem symmetry_of_eq (σ : FType) (x y : string)
+--    (hx : TypeChecking (var x) σ)
+--    (hy : TypeChecking (var y) σ) : (var x) "=_"σ (var y) → (var y) "=_"σ (var x) := sorry
+-- by intro a intro b exact tcEq hx hy
+-- λ h, h.symm
+
+-- #check AtomicFormula.eq σ (var x) (var y)
+
+-- Types in the symmetry of equality   WRONG -> precisamos de TypeChecking?
+--theorem symmetry_of_eq2 (σ : FType) (x y : string)
+--    (hx : TypeChecking (var x) σ)
+--    (hy : TypeChecking (var y) σ)
+--    (hy : TypeChecking (var y) σ): AtomicFormula.eq σ (var x) (var y) → AtomicFormula.eq σ (var y) (var x) := sorry
+-- by intro a intro b exact tcEq hx hy
+-- λ h, h.symm
+
+-- notation t₁ "=_"σ t₂ => AtomicFormula.eq σ t₁ t₂
+
+-- Transitivity of equality   WRONG -> precisamos de TypeChecking?
+-- theorem transitivity_of_eq (σ : FType) (x y z : string) (hx : TypeChecking.tcVar x σ) (hy : TypeChecking.tcVar y σ) (hz : TypeChecking.tcVar z σ) : (var x) "=_"σ (var y) → (var y) "=_"σ (var z) → (var x) "=_"σ (var z) :=
 -- λ hxy hyz, hxy.trans hyz
 
 
+lemma example_lemma (P Q : Prop) (h : P → Q) (p : P) : Q :=
+  h p
 
+-- notation t₁ "=_" t₂ σ => AtomicFormula.eq t₁ t₂ σ
+
+--lemma example_lemma2 (t₁ t₂ : Term) (σ : FType) : (AtomicFormula.eq t₁ t₂ σ) → (AtomicFormula.eq t₁ t₂ σ) := sorry
+
+-- inductive AtomicFormula2
+-- | atrel : string → List Term → AtomicFormula2  -- R(t₁, ..., tₙ)
+-- | ateq : Term → Term → FType → AtomicFormula2  -- t =σ q
+-- | atmem : FType → Term → Term → AtomicFormula2 -- t ∈σ q
+
+-- lemma example_lemma2 (t₁ t₂ : Term) (σ : FType) (h: t₁ "=_" t₂ σ) : (t₁ "=_" t₂ σ) := sorry
+--  intro h
+--  exact h
+
+-- ----------------------------------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------------------------------------
 
 -- AXIOM FOR THE BOUNDED UNIVERSAL QUANTIFIER (Axiom 1.3)
 
 
 
 -- COMBINATOR AXIOMS (Axiom 1.4)
-
-
 
 -- PRIMARY AXIOMS FOR THE STAR CONSTANTS (Axiom 1.5)
 
@@ -388,6 +415,16 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 --| (var y) => if x=y then p else var y           -- var substitui logo
 --| (app e1 e2) => app (subst x p e1) (subst x p e2)
 --| x => x                  -- outra coisa qualquer
+
+
+def AxC₁ (σ : FType) (p q : Term) : AtomicFormula       -- FALTA TYPECHECKING
+  := eq σ (app (app Π₁ p) q) q
+
+def AxC₂ (τ : FType) (p q t : Term) : AtomicFormula     -- FALTA TYPECHECKING
+  := eq τ (app (app (app Σ₁ p) q) t) (app (app p t) (app q t))
+
+--def AxP₁ (τ : FType) (x y : Term) : AtomicFormula
+--  :=
 
 
 end StarLang
