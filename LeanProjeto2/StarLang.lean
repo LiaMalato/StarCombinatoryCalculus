@@ -19,8 +19,10 @@ notation t "⋆" => star t
 -- TERMS E CONSTANTS (p.9-12)
 -- --------------------------
 
+def Sym : Type := String deriving BEq, DecidableEq, Repr
+
 -- DEFINITION 1.2 (p.8-9): Terms of L^{omega}_*
-inductive Term
+inductive Term --where
 | lcons : LTerm → Term                  -- L-constants
 | pi                                    -- combinators:     Π
 | sigma                                 --                  Σ
@@ -29,8 +31,36 @@ inductive Term
 | iUnion                                --                  ∪ (indexed union)
 | var : string → Term                   -- variables
 | app : Term → Term → Term              -- application of terms
+--deriving BEq, DecidableEq, Repr
+
+--namespace Term
+-- Notation for Terms
+--infixl:70 " □ " => app
+--prefix:90 "` " => var
+
+-- NOTATION: Notation for combinators and star constants
+notation "Π₁" => Term.pi
+notation "Σ₁" => Term.sigma
+notation "𝔰₁" => Term.sing
+notation "∪₁" => Term.bUnion
+notation "ind_⋃₁" => Term.iUnion
+notation t₁ "·" t₂ => Term.app t₁ t₂
+--notation "⁅"t₁ t₂"⁆" => Term.app t₁ t₂
 
 open Term
+
+/-
+-- Substitution function for Terms
+def subst : Term → Sym → Term → Term
+| (var x), y, v => if x = y then v else var x
+| pi, _, _ => pi
+| sigma, _, _ => sigma
+| sing, _, _ => sing
+| bUnion, _, _ => bUnion
+| iUnion, _, _ => iUnion
+| (app l m), y, v => app (subst l y v) (subst m y v)
+-/
+
 
 -- Typing the terms of L^{omega}_*   (term type checking)
 inductive TypeChecking : Term → FType → Prop
@@ -45,14 +75,6 @@ inductive TypeChecking : Term → FType → Prop
 
 open TypeChecking
 
--- NOTATION: Notation for combinators and star constants
-notation "Π₁" => Term.pi
-notation "Σ₁" => Term.sigma
-notation "𝔰₁" => Term.sing
-notation "∪₁" => Term.bUnion
-notation "ind_⋃₁" => Term.iUnion
-notation t₁ "·" t₂ => Term.app t₁ t₂
---notation "⁅"t₁ t₂"⁆" => Term.app t₁ t₂
 
 -- ------------------
 -- FORMULAS (p.12-14)
@@ -196,10 +218,15 @@ notation A "↔₁" B => Fiff A B
 def teste3 (A : Formula) := ¬₁(¬₁ A)
 #check teste3
 
--- FunboundedForall x σ A
+-- --------------------------------------
+-- Notation for the bounded and unbounded universal quantifier
 
 def V (x : string) (σ : FType) (A : Formula) : Formula := FunboundedForall x σ A
 def bV (x : string) (σ : FType) (t : Term) (A : Formula) : Formula := FboundedForall x σ t A
+
+-- --------------------------------------
+
+-- DEFINITION 1.8 (p.14): The bounded existential quantifier ∃x∈t (defined symbol)
 
 -- F_unb_exists
 def E (x : string) (σ : FType) (A : Formula) : Formula :=
@@ -208,14 +235,6 @@ def E (x : string) (σ : FType) (A : Formula) : Formula :=
 -- F_b_exists
 def bE (x : string) (σ : FType) (t : Term) (A : Formula) : Formula :=
   ¬₁(FboundedForall x σ t (¬₁ A))
-
---  ¬₁(∀₁ x σ (¬₁ A))
-
--- --------------------------------------
-
--- DEFINITION 1.8 (p.14): The bounded existential quantifier ∃x∈t (defined symbol)
-
-
 
 -- --------------------
 -- Acrescentar algo que checks whether a formula is base or not
@@ -268,7 +287,7 @@ lemma teste1 (A : BaseFormula) (hA : isBaseFormula (Fbase A)) (hB : isBaseFormul
 -- Lemma: if A and B are BaseFormula, then A ∧₁ B is a BaseFormula
 --lemma and_is_baseformula (A B : BaseFormula) : isBaseFormula ((Fbase A) ∧₁ (Fbase B)) = true := sorry
   ----by
-    -- Simplify using the definition of Fand
+    -- Acho que devia simplificar usando Fand
     -----simp
     -----have h1 := isBaseFormula ((Fbase A) ∨₁ (Fbase B))
   --by unfold Fand (Fbase A) (Fbase B)
@@ -441,6 +460,7 @@ def AxC₁ (σ : FType) (p q : Term) : AtomicFormula       -- FALTA TYPECHECKING
 def AxC₂ (τ : FType) (p q t : Term) : AtomicFormula     -- FALTA TYPECHECKING
   := eq τ (((Σ₁·p)·q)·t) ((p·t)·(q·t))
 
+
 -- ---------------- PRIMARY AXIOMS FOR THE STAR CONSTANTS (Axiom 1.5) ----------------------
 
 def AxP₁ (τ : FType) (x y : Term) : AtomicFormula
@@ -484,5 +504,45 @@ def bAC  (x y f : string) (σ : FType) (A : Formula) : Formula        -- FALTA: 
 --| (var y) => if x=y then p else var y           -- var substitui logo
 --| (app e1 e2) => app (subst x p e1) (subst x p e2)
 --| x => x                  -- outra coisa qualquer
+
+
+/-
+
+def subst (x : string) (y : Sym) (v l m : Term) : Term → Sym → Term → Term
+| (var x), y, v => if x = y then v else (var x)
+| pi, _, _ => pi
+| sigma, _, _ => sigma
+| sing, _, _ => sing
+| bUnion, _, _ => bUnion
+| iUnion, _, _ => iUnion
+| (app l m), y, v => app (subst l y v) (subst m y v)
+
+-/
+
+
+-- CONVERSIONS
+
+-- Primeira conversion
+def pi_app_transform : Term → Term
+| (Π₁·q)·_ => q
+| t => t
+
+-- Example usage
+--#eval pi_app_transform p
+
+-- Transformation function?
+def pi_app_transform2 : Term → Term
+| (Π₁·q)·_ => q   -- Transforma (Π₁·q)·_ em q
+| t => t             -- Outros casos ficam
+
+-- def pi_app_transform2 : Term → Term → Term
+-- | p q => q
+-- | t => t
+
+def example_term (q t : Term) : Term := (Π₁·q)·t
+#check example_term
+
+
+
 
 end StarLang
