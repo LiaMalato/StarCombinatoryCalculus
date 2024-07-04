@@ -115,8 +115,8 @@ inductive BaseFormula
 | bboundedForall : string → FType → Term → BaseFormula → BaseFormula    -- If A is a base formula, then so is (∀x∈t A)
 
 --#check (A : AtomicFormula) batom A
-def SomeFormula (A : AtomicFormula) : BaseFormula := BaseFormula.batom A
-#check SomeFormula
+def SomeFormula (A : AtomicFormula) : BaseFormula := BaseFormula.batom A        -- TESTE
+#check SomeFormula                                                              -- TESTE
 
 -- DEFINITION 1.7 (p.13): Formulas of L^{omega}_*
 inductive Formula
@@ -165,9 +165,9 @@ inductive FormulaTypeChecking : Formula → Prop
 open BaseFormula
 open Formula
 
-def AB (A B : Formula) : Formula := Formula.For A B
-def AB2 (A B : Formula) : Formula := For A B
-def ABC (A B C : Formula) : Formula := For A (For B C)
+def AB (A B : Formula) : Formula := Formula.For A B             -- TESTE
+def AB2 (A B : Formula) : Formula := For A B                    -- TESTE
+def ABC (A B C : Formula) : Formula := For A (For B C)          -- TESTE
 
 -- NOTATION: Notation for the primitive symbols ¬, ∨, ∀x and ∀x∈t in L^{omega}_*
 notation "¬₁" A => Fnot A
@@ -175,9 +175,9 @@ notation A "∨₁" B => For A B
 notation "b∀₁" x σ t A => FboundedForall x σ t A
 notation "V₁" x σ A => FunboundedForall x σ A
 
-def ABC2 (A B C : Formula) : Formula := A ∨₁ (B ∨₁ C)
-def ABC3 (A B C : Formula) : Formula := (A ∨₁ B) ∨₁ C
-#check ABC2
+def ABC2 (A B C : Formula) : Formula := A ∨₁ (B ∨₁ C)           -- TESTE
+def ABC3 (A B C : Formula) : Formula := (A ∨₁ B) ∨₁ C           -- TESTE
+#check ABC2                                                     -- TESTE
 --def ABCABC2 (A B C : Formula) : Formula → Formula := (ABC2 A B C) → (ABC3 A B C)
 --def ABCABC (A B C : Formula) : Formula → Formula := A ∨₁ (B ∨₁ C) → (A ∨₁ B) ∨₁ C
 
@@ -211,12 +211,12 @@ def Fiff (A B : Formula) : Formula :=
 notation A "↔₁" B => Fiff A B
 -- notation "∃₀" x A => exists_L x A
 
--- ∃x A := ¬ (∀x (¬ A))                                -- NOT WORKING
---def lexists (x : LVar) (A : LFormula) : LFormula :=
---  ¬₁ (∀₁ x (¬₁ A))
+-- ∃x A := ¬ (∀x (¬ A))                                 -- TESTE
+--def lexists (x : LVar) (A : LFormula) : LFormula :=   -- TESTE
+--  ¬₁ (∀₁ x (¬₁ A))                                    -- TESTE
 
-def teste3 (A : Formula) := ¬₁(¬₁ A)
-#check teste3
+def teste3 (A : Formula) := ¬₁(¬₁ A)                    -- TESTE
+#check teste3                                           -- TESTE
 
 -- --------------------------------------
 -- Notation for the bounded and unbounded universal quantifier
@@ -241,13 +241,14 @@ def bE (x : string) (σ : FType) (t : Term) (A : Formula) : Formula :=
 --  + acrescentar que simbolos definidos também deixam as base formulas closed
 -- --------------------
 
+-- CHECK SE É BASE
+
 def isBase : Formula → Bool
 | Fbase _ => true
 | _ => false
 
 #check isBase
 
--- Function to check if a formula is a base formula
 --@[simp]
 def isBaseFormula : Formula → Bool
 | Fbase _ => true
@@ -256,30 +257,32 @@ def isBaseFormula : Formula → Bool
 | FboundedForall _ _ _ (Formula.Fbase _) => true
 | _ => false
 
--- Ex1.4(1). tx : τ where t : σ → τ and x : σ
-example (σ τ : FType) (t : Term) (x : string) (h1: TypeChecking t (σ ⟶ τ)) (h2 : TypeChecking (var x) σ) : TypeChecking (app t (var x)) τ :=
-  by
-   exact TypeChecking.tcApp h1 h2
+-- Ex1.4(1). tx : τ where t : σ → τ and x : σ                                 -- TESTE
+example (σ τ : FType) (t : Term) (x : string)                                 -- TESTE
+    (h1: TypeChecking t (σ ⟶ τ))                                             -- TESTE
+    (h2 : TypeChecking (var x) σ) : TypeChecking (app t (var x)) τ :=         -- TESTE
+  by                                                                          -- TESTE
+   exact TypeChecking.tcApp h1 h2                                             -- TESTE
 
-lemma teste1 (A : BaseFormula) (hA : isBaseFormula (Fbase A)) (hB : isBaseFormula (Fbase B)) : isBaseFormula ((Fbase A) ∨₁ (Fbase B)) :=
-  by
-    simp [isBaseFormula]
+lemma teste1 (A : BaseFormula)                                                -- TESTE
+  (hA : isBaseFormula (Fbase A))                                              -- TESTE
+  (hB : isBaseFormula (Fbase B)) : isBaseFormula ((Fbase A) ∨₁ (Fbase B)) :=  -- TESTE
+  by                                                                          -- TESTE
+    simp [isBaseFormula]                                                      -- TESTE
 
-#check teste1
+#check teste1                                                                 -- TESTE
 
 
 
 -- Lemma: ¬₁ ((¬₁ A) ∨₁ (¬₁ B)) is a base formula
 --AQUIlemma neg_disjunction_is_base_formula (A B : BaseFormula) (h: bnot (bor (bnot A) (bnot B))) : BaseFormula := sorry
 --begin
-  -- Apply the bor and bnot constructors to form the desired formula
 --  exact BaseFormula.bnot (BaseFormula.bor (BaseFormula.bnot A) (BaseFormula.bnot B)),
 --end
 
 --example (A : BaseFormula) (hA : isBaseFormula (Fbase A)) (hB : isBaseFormula (Fbase B)) : isBaseFormula ((¬₁ (Fbase A)) ∨₁ (Fbase B)) :=
 --  by
 --    simp [isBaseFormula]
-
   -- by
   -- exact isBaseFormula
 
@@ -292,6 +295,9 @@ lemma teste1 (A : BaseFormula) (hA : isBaseFormula (Fbase A)) (hB : isBaseFormul
     -----have h1 := isBaseFormula ((Fbase A) ∨₁ (Fbase B))
   --by unfold Fand (Fbase A) (Fbase B)
   --by unfold Fand ; simp [isBaseFormula]
+
+
+
 
 -- ----------------------------------------
 -- EXAMPLE 1.6 (p.14): Base formulas or not
@@ -400,7 +406,7 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 -- PROPOSITION 1.1: Symmetry and transitivity of equality (higher types)
 
 -- Symmetry of equality   WRONG -> precisamos de TypeChecking?
---theorem symmetry_of_eq (σ : FType) (x y : string): AtomicFormula.eq σ (var x) (var y) → AtomicFormula.eq σ (var y) (var x) := sorry
+-- theorem symmetry_of_eq (σ : FType) (x y : string): eq σ (var x) (var y) → eq σ (var y) (var x) := sorry
 -- by intro a intro b exact tcEq hx hy
 -- λ h, h.symm
 
