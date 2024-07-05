@@ -38,6 +38,8 @@ inductive Term --where
 --infixl:70 " □ " => app
 --prefix:90 "` " => var
 
+-- (x:string) (var x)
+
 -- NOTATION: Notation for combinators and star constants
 notation "Π₁" => Term.pi
 notation "Σ₁" => Term.sigma
@@ -102,7 +104,7 @@ inductive AtomicTypeChecking : AtomicFormula → Prop
     AtomicTypeChecking (AtomicFormula.mem σ t₁ t₂)
 
 -- NOTATION: Notation for the equality and the membership symbols
---notation t₁ "=_"σ t₂ => AtomicFormula.eq σ t₁ t₂
+--notation t₁ "=_" t₂ => AtomicFormula.eq t₁ t₂
 --notation t₁ "∈_"σ t₂ => AtomicFormula.mem σ t₁ t₂
 
 open AtomicFormula
@@ -368,6 +370,9 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 -- --------------------------- Associativity ----------------------------------------
 -- Associativity
 
+-- axiom associativity {A B C : Formula} : (A ∨₁ (B ∨₁ C)) → (A ∨₁ B) ∨₁ C
+
+
 --def associativity_r (A B C : Formula) (h : A ∨₁ (B ∨₁ C)) : Formula :=
 --   (A ∨₁ B) ∨₁ C
 
@@ -406,7 +411,7 @@ axiom contraction_instance (A : Formula) : contraction_rule A = A ∨₁ A
 -- PROPOSITION 1.1: Symmetry and transitivity of equality (higher types)
 
 -- Symmetry of equality   WRONG -> precisamos de TypeChecking?
--- theorem symmetry_of_eq (σ : FType) (x y : string): eq σ (var x) (var y) → eq σ (var y) (var x) := sorry
+--theorem symmetry_of_eq (σ : FType) (x y : string): eq σ (var x) (var y) → eq σ (var y) (var x) := sorry
 -- by intro a intro b exact tcEq hx hy
 -- λ h, h.symm
 
@@ -460,9 +465,10 @@ def AxU (σ : FType) (x t : Term) (A : Formula) : Formula            -- FALTA A(
 
 -- ----------------------------- COMBINATOR AXIOMS (Axiom 1.4) -----------------------------
 
-def AxC₁ (σ : FType) (p q : Term) : AtomicFormula       -- FALTA TYPECHECKING
+def AxC₁ (σ : FType) (p q : Term) : AtomicFormula       -- FALTA TYPECHECKING -> TBDONE AS LEMMA
   := eq σ ((Π₁·p)·q) q
 
+-- (h: typechecks pri,eirq tqu qnd  )
 def AxC₂ (τ : FType) (p q t : Term) : AtomicFormula     -- FALTA TYPECHECKING
   := eq τ (((Σ₁·p)·q)·t) ((p·t)·(q·t))
 

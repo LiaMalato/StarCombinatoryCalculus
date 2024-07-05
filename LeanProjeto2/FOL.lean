@@ -27,9 +27,10 @@ open LogCon
 -- --------------------
 
 inductive LTerm : Type
-| Lvar : LVar → LTerm
+| Lvar : String → LTerm
 | Lconst : String → LTerm
 | Lfunc : String → List LTerm → LTerm
+--deriving BEq, DecidableEq, Repr
 
 -- Predicate symbols
 def LPred : Type := String
