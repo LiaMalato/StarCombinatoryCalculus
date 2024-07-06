@@ -172,9 +172,9 @@ example (A B : Formula) (hA_at : isAtomic A) (hB_b : isBase B) : (isBase (A∨�
   have h := b_atom hA_at
   exact b_or h hB_b
 
--- ------------------------------------------------------
--- LEMMAS: Defined symbols of base formulas are also base
--- ------------------------------------------------------
+-- --------------------------------------------------------------------------
+-- LEMMAS: Defined symbols of base formulas are also base (Remark 1.11, p.14)
+-- --------------------------------------------------------------------------
 
 -- Lemma Conj_base states that if A and B are base formulas, then so is their conjunction A ∧ B
 lemma Conj_base (A B : Formula) (hA : isBase A) (hB : isBase B) : (isBase (A∧₁B)) := by
@@ -202,12 +202,27 @@ lemma Iff_base (A B : Formula) (hA : isBase A) (hB : isBase B) : (isBase (A↔�
   have H := b_or h_n_or_nAB h_n_or_nBA
   exact b_not H
 
--- Lemma unbForall_base states that if A is a base formula, then so is ∀x∈t A
-lemma unbForall_base (A : Formula) (x : string) (t : Term) (hA : isBase A) : (isBase (bE₁ x t A)) := by
+-- Lemma unbForall_base states that if A is a base formula, then so is ∃x∈t A
+lemma bExists_base {A : Formula} (x : string) (t : Term) (hA : isBase A) : (isBase (bE₁ x t A)) := by
   unfold bE₁
   have h_nA := b_not hA
   have h_unbForall_nA := b_bForall x t h_nA
   exact b_not h_unbForall_nA
+
+-- ------------------
+-- EXAMPLE 1.6 (p.14)
+-- ------------------
+
+-- Example 1.6.1 (p.14): If B is a base formula, then so is ∀x∈t B(x)
+example (B : Formula) (hB_b : isBase B) (x : string) (t : Term): (isBase (bV₁ x t (¬₁ B))) := by
+  have H := b_not hB_b
+  exact b_bForall x t H
+
+-- Example 1.6.2 (p.14): If A and B are base formulas, then so is ∀x∈t ∃y∈q (A∨B)
+example (A B : Formula) (hA_b : isBase A) (hB_b : isBase B) (x y : string) (t q : Term): (isBase (bV₁ x t (bE₁ y q (A ∨₁ B)))) := by
+  have H_or_AB := b_or hA_b hB_b
+  have H_bExists := bExists_base y q H_or_AB
+  exact b_bForall x t H_bExists
 
 -- ------------------------------------------------------
 -- TYPECHECKING
@@ -345,6 +360,10 @@ def examplinho (q t : Term) := ((Π₁·q)·t)
 -- FALTA: conversions preserve types
 
 -- EXAMPLE 1.10 (p.28)
+
+
+-- PRENEXIFICATION RULES
+
 
 
 end StarLang
