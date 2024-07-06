@@ -1,4 +1,4 @@
-import LeanProjeto2.StarLang
+import LeanProjeto2.StarLang_old
 
 open StarLang
 open FType
@@ -61,3 +61,43 @@ inductive P : Prop
 
 --lemma a (x:P) : P := by
 --  constructor
+
+
+-- AXIOMS SEM NOTAÇAO
+
+open Term
+open AtomicFormula
+
+def AxC₁ (σ : FType) (p q : Term) : AtomicFormula       -- FALTA TYPECHECKING
+  := eq σ (app (app Π₁ p) q) q
+--:= eq σ ((Π₁·p)·q) q
+
+def AxC₂ (τ : FType) (p q t : Term) : AtomicFormula     -- FALTA TYPECHECKING
+  := eq τ (app (app (app Σ₁ p) q) t) (app (app p t) (app q t))
+--:= eq τ (((Σ₁·p)·q)·t) ((p·t)·(q·t))
+
+def AxP₁ (τ : FType) (x y : Term) : AtomicFormula
+  := eq (τ⋆) (app (app ind_⋃₁ (app 𝔰₁ x)) y) (app x y)
+--:= eq (τ⋆) ((ind_⋃₁ · (𝔰₁·x)) · y) (x·y)
+
+def AxP₂ (τ : FType) (x y z : Term) : AtomicFormula
+  := eq (τ⋆) (app (app ind_⋃₁ (app (app ∪₁ x) y) ) z) (app (app ∪₁ (app (app ind_⋃₁ x) z)) (app (app ind_⋃₁ y) z))
+--:= eq (τ⋆) ((ind_⋃₁ · ((∪₁·x)·y))·z) ((∪₁·((ind_⋃₁ · x)·z))·((ind_⋃₁ · y)·z))
+
+
+
+/-
+inductive Conversions
+| C1 (t₁ t₂ : Term)
+| C2 (t₁ t₂ t₃ : Term)
+| C3 (t₁ t₂ : Term)
+| C4 (t₁ t₂ t₃ : Term)
+
+--def conversin : Expr → Int
+--| C1 t₁ t₂      => t₁
+--| C2 t₁ t₂ t₃   => (t₁·t₃)·(t₂·t₃)
+--| C3 t₁ t₂      => t₂·t₁
+--| C4 t₁ t₂ t₃   => (∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃)
+
+-- def C1 (t₁ t₂ : Term) : Term := ((Π₁·t₁)·t₂) => t₁
+-/
