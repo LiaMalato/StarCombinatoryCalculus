@@ -21,6 +21,15 @@ def G := ground                         -- notation G => ground
 notation t "⟶" t1 => arrow t t1
 notation t "⋆" => star t
 
+def s1ex2_1 : FType := G⋆
+def s1ex2_2 : FType := G ⟶ G
+def s1ex2_3 : FType := G ⟶ (G ⟶ G)
+def s1ex2_3' : FType := (G ⟶ G) ⟶ G
+def s1ex2_4 : FType := (G ⟶ G) ⟶ (G ⟶ (G ⟶ G))
+def s1ex2_5 (σ τ : FType) : FType := σ ⟶ ((σ⋆ ⟶ τ) ⟶ τ)
+def s1ex2_5' (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
+example (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
+
 -- ----------------------------
 -- TERMS and CONSTANTS (p.9-12)
 -- ----------------------------
@@ -92,6 +101,7 @@ inductive Formula
 
 open Formula
 
+
 -- NOTATION: Notation for the equality and the membership symbols
 notation t₁ "=₁" t₂ => Formula.eq t₁ t₂
 notation t₁ "∈₁" t₂ => Formula.mem t₁ t₂
@@ -106,12 +116,17 @@ notation "bV₁" => bForall
 -- DEFINITION 1.8 (p.14): The bounded existential quantifier ∃x∈t (defined symbol)
 
 -- The unbounded existential quantifier ∃x A
-def E₁ (x : string) (A : Formula) : Formula :=
+@[simp]
+def unbExists (x : string) (A : Formula) : Formula :=
   ¬₁(unbForall x (¬₁ A))
 
 -- The bounded existential quantifier ∃x A
-def bE₁ (x : string) (t : Term) (A : Formula) : Formula :=
+@[simp]
+def bExists (x : string) (t : Term) (A : Formula) : Formula :=
   ¬₁(bForall x t (¬₁ A))
+
+notation "E₁" => unbExists
+notation "bE₁" => bExists
 
 -- Testing the notation
 -- def Notation_test (x : string) (t : Term) (A : Formula) : Formula := bV₁ x t A
@@ -204,7 +219,7 @@ lemma Iff_base (A B : Formula) (hA : isBase A) (hB : isBase B) : (isBase (A↔�
 
 -- Lemma unbForall_base states that if A is a base formula, then so is ∃x∈t A
 lemma bExists_base {A : Formula} (x : string) (t : Term) (hA : isBase A) : (isBase (bE₁ x t A)) := by
-  unfold bE₁
+  unfold bExists
   have h_nA := b_not hA
   have h_unbForall_nA := b_bForall x t h_nA
   exact b_not h_unbForall_nA
@@ -347,23 +362,99 @@ inductive ConvertsTo : Term → Term → Prop
 
 def conv : Term → Term
 | ((Π₁·t₁)·t₂) => t₁
-| ((Σ₁·t₁)·t₂)·t₃ => (t₁·t₃)·(t₂·t₃)
-| (ind_⋃₁·(𝔰₁·t₁))·t₂ => t₂·t₁
-| (ind_⋃₁·((∪₁·t₁)·t₂))·t₃ => (∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃)
+| (((Σ₁·t₁)·t₂)·t₃) => ((t₁·t₃)·(t₂·t₃))
+| ((ind_⋃₁·(𝔰₁·t₁))·t₂) => (t₂·t₁)
+| ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) => ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
 | t => t
 
 def examplinho (q t : Term) := ((Π₁·q)·t)
 --#eval examplinho                                FALTA: falta o REPR que está a dar erro
 
---notation t₁ "▹" t₂ => conv t₁ t₂
+--notation t "▹" => conv t
+
+--def p₁ : Term := var "p₁"
+--def p₂ : Term := var "p₂"
+
+--#eval conv ((Π₁·p₁)·p₂)
 
 -- FALTA: conversions preserve types
+
+
+
+
+
+/-
+Definir um Conv_TypeChecking?
+
+inductive Term_TypeChecking : Term → FType → Prop
+| tcLcons (t : LTerm) : Term_TypeChecking (lcons t) G                                                           -- L-constants have type G
+| tcPi {σ τ} : Term_TypeChecking pi (σ ⟶ (τ ⟶ σ))                                                             -- Π_{σ,τ} : σ ⟶ (τ ⟶ σ)
+| tcSigma {σ τ ρ}: Term_TypeChecking sigma ((σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ)))                           -- Σ_{σ,τ,ρ} : (σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ))
+| tcSing {σ}: Term_TypeChecking sing (σ ⟶ σ⋆)                                                                  -- 𝔰_{σ} : σ⋆
+| tcBUnion {σ}: Term_TypeChecking bUnion (σ⋆ ⟶ (σ⋆ ⟶ σ⋆))                                                      -- ∪_{σ} : σ⋆ ⟶ (σ⋆ ⟶ σ⋆)
+| tcIUnion {σ τ} : Term_TypeChecking iUnion (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆))                                            -- ∪_{σ} : σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆)
+| tcVar {x σ}: Term_TypeChecking (var x) σ                                                                       -- Variables x : σ
+| tcApp {t₁ t₂ σ τ}: Term_TypeChecking t₁ (σ ⟶ τ) → Term_TypeChecking t₂ σ → Term_TypeChecking (app t₁ t₂) τ    -- If t₁ : (σ ⟶ τ) and t₂ : σ, then t₁t₂ : τ
+
+-- Ex1.4(1). t₁t₂ : τ where t₁ : σ → τ and t₂ : σ
+example (σ τ : FType) (t₁ t₂ : Term) (h1: TypeChecking t₁ (σ ⟶ τ)) (h2 : TypeChecking t₂ σ) : TypeChecking (app t₁ t₂) τ :=
+  by
+    exact TypeChecking.tcApp h1 h2
+
+-- Π₁ : σ⟶τ⟶σ, t₁ : σ  and t₂ : τ, then TypeChecking (conv ((Π₁·t₁)·t₂)) σ
+example (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := sorry
+
+
+-/
+
+-- ---------------------
+-- REMARK 1.21 (p.26):
+-- Conversions preserve types
+-- ---------------------
+
+
+lemma Conv1_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by
+  exact ht₁
+
+lemma Conv2_TypeChecking (σ τ ρ : FType) (t₁ t₂ t₃ : Term) (ht₁ : Term_TypeChecking t₁ (ρ ⟶ σ ⟶ τ)) (ht₂ : Term_TypeChecking t₂ (ρ ⟶ σ)) (ht₃ : Term_TypeChecking t₃ ρ) : Term_TypeChecking (conv ((Σ₁·t₁)·t₂)·t₃) τ := sorry
+
+/-
+lemma Conv2_TypeChecking (σ τ ρ : FType) (t₁ t₂ t₃ : Term) (ht₁ : Term_TypeChecking t₁ (ρ ⟶ σ ⟶ τ)) (ht₂ : Term_TypeChecking t₂ (ρ ⟶ σ)) (ht₃ : Term_TypeChecking t₃ ρ) : Term_TypeChecking (conv ((Σ₁·t₁)·t₂)·t₃) τ := by
+  exact ht₁
+
+lemma Conv3_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by
+  exact ht₁
+
+lemma Conv4_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by
+  exact ht₁
+-/
+
 
 -- EXAMPLE 1.10 (p.28)
 
 
+
+
+
 -- PRENEXIFICATION RULES
+-- Definir novo inductive para termos as usual prenexification rules?
+-- ou usar um isFormula?
+def prenex : Formula → Formula
+| Formula.not (Formula.unbForall x A)  => Formula.unbForall x (prenex (Formula.not A))
+| Formula.not (Formula.bForall x t A)  => Formula.bForall x t (prenex (Formula.not A))
+| Formula.or (Formula.unbForall x A) B => Formula.unbForall x (prenex (Formula.or A B))
+| Formula.or (Formula.bForall x t A) B => Formula.bForall x t (prenex (Formula.or A B))
+| Formula.or A (Formula.unbForall x B) => Formula.unbForall x (prenex (Formula.or A B))
+| Formula.or A (Formula.bForall x t B) => Formula.bForall x t (prenex (Formula.or A B))
+| Formula.unbForall x A => Formula.unbForall x (prenex A)
+| Formula.bForall x t A => Formula.bForall x t (prenex A)
+| Formula.rel r l_term => Formula.rel r l_term
+| Formula.eq t₁ t₂ => Formula.eq t₁ t₂
+| Formula.mem t₁ t₂ => Formula.mem t₁ t₂
+| Formula.not A => Formula.not (prenex A)
+| Formula.or A B => Formula.or (prenex A) (prenex B)
+| x => x
 
-
+-- FREE VARIABLES NOT WORKING :'(
 
 end StarLang
