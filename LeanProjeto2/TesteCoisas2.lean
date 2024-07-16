@@ -1,7 +1,7 @@
 import MathLib.Tactic
 
 inductive Term
-| var : string → Term
+| var : String → Term
 | pi : Term
 
 
@@ -27,7 +27,7 @@ inductive Formula : FormulaLevel → Type
 | or : Formula b1 → Formula b2 → Formula (ensure_base (max b1 b2))
 
 
-| forall : string → Formula b → Formula unrestricted
+| forall : String → Formula b → Formula unrestricted
 
 
 open Formula

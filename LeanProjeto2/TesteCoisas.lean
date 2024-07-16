@@ -39,6 +39,7 @@ inductive isBase : Formula → Prop
 example (f: Formula) (h:isAtomic f)  : (isBase f) := by
   exact isBase.batom h
 
+-- -----------------------------------------------
 
 inductive NormalizesTo : Formula → Formula → Prop
 | orLeft : NormalizesTo (or f1 f2) f1
@@ -79,3 +80,12 @@ inductive isTrue : Formula → Prop
   Equivalent A B →
   isTrue A →
   isTrue B
+
+
+
+/-
+-- Atomic formulas (maneira antiga de definir Atomic Formulas in L - FOL)
+
+inductive LAtomic : Type
+| atom : LPred → List LTerm → LAtomic
+-/

@@ -1,4 +1,4 @@
-import LeanProjeto2.StarLang_old
+import LeanProjeto2.StarLang
 
 open StarLang
 open FType
@@ -66,7 +66,14 @@ inductive P : Prop
 -- AXIOMS SEM NOTAÇAO
 
 open Term
-open AtomicFormula
+open Formula
+--open AtomicFormula
+
+
+/-
+--------------------------------------
+Isto era uma tentativa para os axiomas (onde o eq ainda era definido à custa do tipo)
+--------------------------------------
 
 def AxC₁ (σ : FType) (p q : Term) : AtomicFormula       -- FALTA TYPECHECKING
   := eq σ (app (app Π₁ p) q) q
@@ -83,10 +90,15 @@ def AxP₁ (τ : FType) (x y : Term) : AtomicFormula
 def AxP₂ (τ : FType) (x y z : Term) : AtomicFormula
   := eq (τ⋆) (app (app ind_⋃₁ (app (app ∪₁ x) y) ) z) (app (app ∪₁ (app (app ind_⋃₁ x) z)) (app (app ind_⋃₁ y) z))
 --:= eq (τ⋆) ((ind_⋃₁ · ((∪₁·x)·y))·z) ((∪₁·((ind_⋃₁ · x)·z))·((ind_⋃₁ · y)·z))
+-/
 
 
 
 /-
+--------------------------------------
+Isto era uma tentativa para as conversões
+--------------------------------------
+
 inductive Conversions
 | C1 (t₁ t₂ : Term)
 | C2 (t₁ t₂ t₃ : Term)

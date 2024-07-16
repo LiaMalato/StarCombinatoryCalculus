@@ -1,7 +1,7 @@
-import LeanProjeto2.StarLang
+--import LeanProjeto2.StarLang_old
 
-open StarLang
-open FType
+--open StarLang
+--open FType
 
 -- SHOENFIELD'S FUNCTIONAL INTERPREATION
 

@@ -6,6 +6,8 @@
 import LeanProjeto2.FOL
 import MathLib.Tactic
 
+open FOL
+
 namespace StarLang
 
 -- Finite types [def 1.1]
@@ -46,7 +48,41 @@ inductive Term --where
 | iUnion                                --                  ∪ (indexed union)
 | var : String → Term                   -- variables
 | app : Term → Term → Term              -- application of terms
---deriving Repr                                                                     -- DÁ ERRO
+deriving Repr, DecidableEq                                                                  -- DÁ ERRO
+
+
+namespace Term
+
+inductive closed_under : Term → Finset String → Prop
+| cu_lcons :
+  closed_under (.lcons xs) α
+| cu_pi : closed_under (.pi) α
+| cu_sigma : closed_under (.sigma) α
+| cu_var :
+    x ∈ α →
+    -----------
+    closed_under (.var x) α
+-- todo
+
+def freevars : Term → Finset String
+| .lcons x => x.freevars
+| .pi
+| .sigma
+| .sing
+| .bUnion
+| .iUnion => {}
+| .var x => {x}
+| .app x y => x.freevars ∪ y.freevars
+
+end Term
+
+-- example (x:String) (α: Finset String) (h:{x : Term | x.closed_under α})
+--   (y:Term) (h: y.closed_under α)
+-- :
+--    by sorry
+
+
+
 
 -- NOTATION: Notation for combinators and star constants
 notation "Π₁" => Term.pi
@@ -77,6 +113,7 @@ inductive Term_TypeChecking : Term → FType → Prop
 open Term_TypeChecking
 
 
+
 -- ------------------
 -- FORMULAS (p.12-14)
 -- ------------------
@@ -88,15 +125,26 @@ We define the formulas of L^ω_*:
   c) The formulas (definition 1.7 - p.13)
 -/
 
-inductive Formula
+inductive Formula : Type
 | L_Form : LFormula → Formula
-| rel : string → List Term → Formula                                -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
-| eq : Term → Term → Formula                                        -- t =σ q
-| mem : Term → Term → Formula                                       -- t ∈σ q
-| not : Formula → Formula                                           -- If A is a formula, then so is (¬A)
-| or : Formula → Formula → Formula                                  -- If A and B are formulas, then so is (A∨B)
-| unbForall : string → Formula → Formula                            -- If A is a base formula, then so is (∀x A)
-| bForall : string → Term → Formula → Formula                       -- If A is a formula, then so is (∀x∈t A)
+| rel : String → List Term → Formula                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
+| eq : Term → Term → Formula                                      -- t =σ q
+| mem : Term → Term → Formula                                     -- t ∈σ q
+| not : Formula → Formula                                         -- If A is a formula, then so is (¬A)
+| or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
+| unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
+| bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
+
+
+def Formula.freevars : Formula → Finset String
+| .L_Form _ => by sorry -- TODO: criar o LFormula.freevars e chamar aqui
+| .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset
+| .eq a b
+| .or a b
+| .mem a b => a.freevars ∪ b.freevars
+| .not a => a.freevars
+| .unbForall x f
+| .bForall x t f => f.freevars \ ([x].toFinset)
 
 
 open Formula
@@ -117,19 +165,19 @@ notation "bV₁" => bForall
 
 -- The unbounded existential quantifier ∃x A
 @[simp]
-def unbExists (x : string) (A : Formula) : Formula :=
+def unbExists (x : String) (A : Formula) : Formula :=
   ¬₁(unbForall x (¬₁ A))
 
 -- The bounded existential quantifier ∃x A
 @[simp]
-def bExists (x : string) (t : Term) (A : Formula) : Formula :=
+def bExists (x : String) (t : Term) (A : Formula) : Formula :=
   ¬₁(bForall x t (¬₁ A))
 
 notation "E₁" => unbExists
 notation "bE₁" => bExists
 
 -- Testing the notation
--- def Notation_test (x : string) (t : Term) (A : Formula) : Formula := bV₁ x t A
+-- def Notation_test (x : String) (t : Term) (A : Formula) : Formula := bV₁ x t A
 -- #check Notation_test
 
 -- --------------------
@@ -175,7 +223,7 @@ inductive isBase : Formula → Prop
 | b_atom : isAtomic A → isBase A                                                -- Atomic formulas are base formulas
 | b_not (h: isBase A) : isBase (not A)                                          -- If A is base, then so is ¬₁A
 | b_or (h1: isBase A) (h2 : isBase B) : isBase (or A B)                         -- If A and B are base, then so is A∨₁B
-| b_bForall (x : string) (t : Term) (h : isBase A) : isBase (bForall x t A)     -- If A is base, then so is ∀x∈t A
+| b_bForall (x : String) (t : Term) (h : isBase A) : isBase (bForall x t A)     -- If A is base, then so is ∀x∈t A
 
 open isBase
 
@@ -218,7 +266,7 @@ lemma Iff_base (A B : Formula) (hA : isBase A) (hB : isBase B) : (isBase (A↔�
   exact b_not H
 
 -- Lemma unbForall_base states that if A is a base formula, then so is ∃x∈t A
-lemma bExists_base {A : Formula} (x : string) (t : Term) (hA : isBase A) : (isBase (bE₁ x t A)) := by
+lemma bExists_base {A : Formula} (x : String) (t : Term) (hA : isBase A) : (isBase (bE₁ x t A)) := by
   unfold bExists
   have h_nA := b_not hA
   have h_unbForall_nA := b_bForall x t h_nA
@@ -229,12 +277,12 @@ lemma bExists_base {A : Formula} (x : string) (t : Term) (hA : isBase A) : (isBa
 -- ------------------
 
 -- Example 1.6.1 (p.14): If B is a base formula, then so is ∀x∈t B(x)
-example (B : Formula) (hB_b : isBase B) (x : string) (t : Term): (isBase (bV₁ x t (¬₁ B))) := by
+example (B : Formula) (hB_b : isBase B) (x : String) (t : Term): (isBase (bV₁ x t (¬₁ B))) := by
   have H := b_not hB_b
   exact b_bForall x t H
 
 -- Example 1.6.2 (p.14): If A and B are base formulas, then so is ∀x∈t ∃y∈q (A∨B)
-example (A B : Formula) (hA_b : isBase A) (hB_b : isBase B) (x y : string) (t q : Term): (isBase (bV₁ x t (bE₁ y q (A ∨₁ B)))) := by
+example (A B : Formula) (hA_b : isBase A) (hB_b : isBase B) (x y : String) (t q : Term): (isBase (bV₁ x t (bE₁ y q (A ∨₁ B)))) := by
   have H_or_AB := b_or hA_b hB_b
   have H_bExists := bExists_base y q H_or_AB
   exact b_bForall x t H_bExists
@@ -278,7 +326,7 @@ inductive Formula_TypeChecking : Formula → Prop
 -- AXIOMS
 -- --------------------------------------
 
---def normal_form (A B : Formula) (x: string) : Formula → Formula
+--def normal_form (A B : Formula) (x: String) : Formula → Formula
 --| or A B => A
 --| bForall x A => A
 --| t => t
@@ -292,7 +340,14 @@ inductive Equivalent : Formula → Formula → Prop
 
 inductive isTrue : Formula → Prop
 | lem : isTrue (A ∨₁ (¬₁A))
---| substitution : FALTA
+-- TODO: Primeiro definir closed_under, depois substition e isto funciona
+-- | substitution {t:Term} {x:String} :
+--       x ∈ xs →
+--       F.closed_under xs →   -- TODO: definir o closed_under para Formula
+--       isTrue (.unbForall x F) →
+--       --------------
+--       isTrue (Formula.substitution x t F) -- TODO: Definir substituion para Formula
+
 | expansion:
       isTrue A →
       ---------------
@@ -331,7 +386,7 @@ inductive isTrue : Formula → Prop
 | AxS₁ (t₁ t₂ : Term) :
     isTrue ((t₁ ∈₁ (𝔰₁·t₂)) ↔₁ (t₁ =₁ t₂))
 | AxS₂ (t₁ t₂ t₃ : Term) : isTrue ((t₁ ∈₁ ((∪₁·t₂)·t₃) ) ↔₁ ((t₁ ∈₁ t₂) ∨₁ (t₁ ∈₁ t₃)))
-| AxS₃ (a f b : Term) : isTrue ((b ∈₁ ((ind_⋃₁·a)·f)) ↔₁ (bE₁ x a (b ∈₁ (f·x))))
+| AxS₃ (a f b : Term) : isTrue ((b ∈₁ ((ind_⋃₁·a)·f)) ↔₁ (bE₁ x a (b ∈₁ (f·(var x)))))
 
 -- FALTA: falta o bAC^ω_*
 
@@ -440,8 +495,8 @@ lemma Conv4_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeCh
 -- Definir novo inductive para termos as usual prenexification rules?
 -- ou usar um isFormula?
 def prenex : Formula → Formula
-| Formula.not (Formula.unbForall x A)  => Formula.unbForall x (prenex (Formula.not A))
-| Formula.not (Formula.bForall x t A)  => Formula.bForall x t (prenex (Formula.not A))
+| .not (Formula.unbForall x A)  => Formula.unbForall x (prenex (Formula.not A))
+| .not (Formula.bForall x t A)  => Formula.bForall x t (prenex (Formula.not A))
 | Formula.or (Formula.unbForall x A) B => Formula.unbForall x (prenex (Formula.or A B))
 | Formula.or (Formula.bForall x t A) B => Formula.bForall x t (prenex (Formula.or A B))
 | Formula.or A (Formula.unbForall x B) => Formula.unbForall x (prenex (Formula.or A B))
