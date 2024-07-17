@@ -48,24 +48,30 @@ inductive Term --where
 | iUnion                                --                  ∪ (indexed union)
 | var : String → Term                   -- variables
 | app : Term → Term → Term              -- application of terms
-deriving Repr, DecidableEq                                                                  -- DÁ ERRO
+deriving Repr, DecidableEq
 
 
 namespace Term
 
 inductive closed_under : Term → Finset String → Prop
-| cu_lcons :
-  closed_under (.lcons xs) α
+| cu_lcons : closed_under (.lcons xs) α
 | cu_pi : closed_under (.pi) α
 | cu_sigma : closed_under (.sigma) α
+| cu_sing : closed_under (.sing) α
+| cu_bUnion : closed_under (.bUnion) α
+| cu_iUnion : closed_under (.iUnion) α
 | cu_var :
     x ∈ α →
     -----------
     closed_under (.var x) α
--- todo
+| cu_app : closed_under (app t₁ t₂) α               -- is this even right?
+
+-- -------------------------------------
+-- FREE VARIABLES PARA TERMOS EM L^ω_*
+-- -------------------------------------
 
 def freevars : Term → Finset String
-| .lcons x => x.freevars
+| .lcons x => x.Lfreevars
 | .pi
 | .sigma
 | .sing
@@ -82,7 +88,9 @@ end Term
 --    by sorry
 
 
-
+-- ------------------------------------------------------------
+-- NOTATION FOR THE COMBINATORS AND THE STAR CONSTANTS IN L^ω_* (and the application of terms)
+-- ------------------------------------------------------------
 
 -- NOTATION: Notation for combinators and star constants
 notation "Π₁" => Term.pi
@@ -112,6 +120,41 @@ inductive Term_TypeChecking : Term → FType → Prop
 
 open Term_TypeChecking
 
+-- -------------------------------------
+-- TERM SUBSTITUTION IN L^ω_*
+-- -------------------------------------
+
+/-
+inductive Term --where
+| lcons : LTerm → Term                  -- L-constants
+| pi                                    -- combinators:     Π
+| sigma                                 --                  Σ
+| sing                                  -- star constants:  𝔰
+| bUnion                                --                  ∪ (binary union)
+| iUnion                                --                  ∪ (indexed union)
+| var : String → Term                   -- variables
+| app : Term → Term → Term              -- application of terms
+deriving Repr, DecidableEq
+
+| .Lfunc name args => .Lfunc name (args.map (substitution x replacement))             -- a tirar
+
+-- Definição de substituição de termos: Substituimos _ por _ em _
+def substitution (x : String) (replacement : Term) : Term → Term
+| .lcons t => .lcons (LTerm.Lsubstitution x replacement t)                                  -- NOT WORKING: replacement teria de ser LTerm
+| .var y => if x = y
+          then replacement
+          else (.var y)
+| .app t₁ t₂ => .app (substitution x replacement t₁) (substitution x replacement t₂)  -- funciona? Acho que sim
+| t => t                                                                              -- para que pi, sigma, sing, bUnion e iUnion não sejam afetados
+decreasing_by sorry             -- TODO (net-ech)
+
+-/
+
+
+
+-- TO DO
+
+
 
 
 -- ------------------
@@ -135,9 +178,12 @@ inductive Formula : Type
 | unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
 | bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
 
+-- -------------------------------------
+-- FREE VARIABLES PARA FORMULAS EM L^ω_*
+-- -------------------------------------
 
 def Formula.freevars : Formula → Finset String
-| .L_Form _ => by sorry -- TODO: criar o LFormula.freevars e chamar aqui
+| .L_Form (A : LFormula) => LFormula.Lfreevars_formula A                         --| .L_Form _ => by sorry -- TODO: criar o LFormula.freevars e chamar aqui
 | .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset
 | .eq a b
 | .or a b
@@ -322,8 +368,56 @@ inductive Formula_TypeChecking : Formula → Prop
     Formula_TypeChecking (Formula.unbForall x A)
 
 
+-- -------------------------------------
+-- FORMULA SUBSTITUTION IN L^ω_*
+-- -------------------------------------
+
+
+
+
+-- TO DO
+
+
+
+
+
+-- -------------------------------------
+-- FORMULA CLOSED UNDER
+-- -------------------------------------
+
+/-
+inductive Formula : Type
+| L_Form : LFormula → Formula
+| rel : String → List Term → Formula                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
+| eq : Term → Term → Formula                                      -- t =σ q
+| mem : Term → Term → Formula                                     -- t ∈σ q
+| not : Formula → Formula                                         -- If A is a formula, then so is (¬A)
+| or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
+| unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
+| bForall : String → Term → Formula → Formula
+
+inductive closed_under : Formula → Finset String → Prop
+| cu_L_Form : closed_under (.lcons xs) α
+| cu_rel : closed_under (.pi) α
+| cu_eq : closed_under (.sigma) α
+| cu_mem : closed_under (.sing) α
+| cu_not : closed_under (.bUnion) α
+| cu_or : closed_under (.iUnion) α
+| unbForall :
+    x ∈ α →
+    -----------
+    closed_under (.var x) α
+| cu_bForall : closed_under (app t₁ t₂) α               -- is this even right?
+-/
+
+
+
+
+
 -- --------------------------------------
--- AXIOMS
+-- --------------------------------------
+-- ------------- AXIOMS -----------------
+-- --------------------------------------
 -- --------------------------------------
 
 --def normal_form (A B : Formula) (x: String) : Formula → Formula
@@ -343,10 +437,10 @@ inductive isTrue : Formula → Prop
 -- TODO: Primeiro definir closed_under, depois substition e isto funciona
 -- | substitution {t:Term} {x:String} :
 --       x ∈ xs →
---       F.closed_under xs →   -- TODO: definir o closed_under para Formula
---       isTrue (.unbForall x F) →
+--       A.closed_under xs →   -- TODO: definir o closed_under para Formula
+--       isTrue (.unbForall x A) →
 --       --------------
---       isTrue (Formula.substitution x t F) -- TODO: Definir substituion para Formula
+--       isTrue (Formula.substitution x t A) -- TODO: Definir substituion para Formula
 
 | expansion:
       isTrue A →
