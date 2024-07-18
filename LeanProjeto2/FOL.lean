@@ -40,8 +40,6 @@ example : LTerm_is_wellformed ["x", "y"] var_x :=
 example : LTerm_is_wellformed ["x", "y"] const_a :=
   LTerm_is_wellformed.bc_const
 
-
-
 /-
 -- Example proof of well-formedness for func_f   NOT WORKING AINDA
 theorem func_f_wellformed : LTerm_is_wellformed ["x", "y"] func_f :=
@@ -51,6 +49,15 @@ theorem func_f_wellformed : LTerm_is_wellformed ["x", "y"] func_f :=
       | LTerm.Lvar x => LTerm_is_wellformed.bc_var _
       | LTerm.Lconst c => LTerm_is_wellformed.bc_const)
 -/
+
+
+-- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
+inductive L_closed_under_term : LTerm → Finset String → Prop
+| Lcu_Lvar : x ∈ α → L_closed_under_term (Lvar x) α                                      -- if x is an element of a set of variables α, then Lvar x is closed under α
+| Lcu_Lconst : L_closed_under_term (Lconst c) α                                          -- A term Lconst c (a constant) is closed under any set of variables α since constants do not contain any variables. TODO: change descript
+| Lcu_Lfunc : (∀ t, t ∈ ts → L_closed_under_term t α) →                                  -- A function term Lfunc f ts is closed under the set α if every term t in the list ts is closed under the set α. TODO: change descript
+    L_closed_under_term (Lfunc f ts) α
+
 
 
 /-
@@ -160,6 +167,21 @@ inductive LFormula_is_wellformed : List String → LFormula → Prop
     LFormula_is_wellformed xs (forall_L x A)                 -- If A is a well-formed formula (for our list xs and the bound variable x), then so is ∀x A.
 
 
+-- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
+inductive L_closed_under_formula : LFormula → Finset String → Prop  -- TODO: change descripts here
+| cu_atomic_L : ∀ (P : LPred) (ts : List LTerm) (α : Finset String),        -- An atomic formula atomic_L P ts is closed under a set α if all terms in the list ts are closed under α
+    (∀ t, t ∈ ts → L_closed_under_term t α) →
+    L_closed_under_formula (atomic_L P ts) α
+| cu_not_L : ∀ (A : LFormula) (α : Finset String),                          -- A negation formula not_L A is closed under a set α if the subformula A is closed under α.
+    L_closed_under_formula A α →
+    L_closed_under_formula (not_L A) α
+| cu_or_L : ∀ (A B : LFormula) (α β : Finset String),                       -- A disjunction formula or_L A B is closed under a union of two sets α and β if A is closed under α and B is closed under β. This allows for A and B to be checked against different sets of variables.
+    L_closed_under_formula A α →
+    L_closed_under_formula B β →
+    L_closed_under_formula (or_L A B) (α ∪ β)
+| cu_forall_L : ∀ (x : String) (A : LFormula) (α : Finset String),          -- A universal quantifier formula forall_L x A is closed under a set α if the subformula A is closed under the set α with the variable x added to it. This accounts for the bound variable x.
+    L_closed_under_formula A (α ∪ {x}) →
+    L_closed_under_formula (forall_L x A) α
 
 namespace LFormula
 
@@ -202,7 +224,7 @@ notation "∃₀" => exists_L
 -- FREE VARIABLES IN FORMULAS
 -- ----------------------------
 
--- Define a set to store free variables
+-- Definition: free variables of formulas in L (a set that stores free variables)
 def Lfreevars_formula : LFormula → Finset String
 | (LFormula.atomic_L _ ts) =>                                                                 -- Gives the union of the free variables of each term in the term list ts.
   let term_Lfreevars : List (Finset String) := List.map LTerm.Lfreevars ts;

@@ -7,6 +7,7 @@ import LeanProjeto2.FOL
 import MathLib.Tactic
 
 open FOL
+open LFormula
 
 namespace StarLang
 
@@ -100,32 +101,36 @@ inductive
 
 namespace Term
 
-inductive closed_under : Term → Finset String → Prop
-| cu_lcons : closed_under (.lcons xs) α
-| cu_pi : closed_under (.pi) α
-| cu_sigma : closed_under (.sigma) α
-| cu_sing : closed_under (.sing) α
-| cu_bUnion : closed_under (.bUnion) α
-| cu_iUnion : closed_under (.iUnion) α
+
+-- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
+inductive closed_under : Term → Finset String → Prop                      -- TODO: estas coisas em baixo é para tirar?
+| cu_lcons : closed_under (lcons xs) α
+| cu_pi : closed_under (pi) α                                             -- a tirar? Π não tem variáveis
+| cu_sigma : closed_under (sigma) α                                       -- a tirar? Σ não tem variáveis
+| cu_sing : closed_under (sing) α                                         -- a tirar? 𝔰 não tem variáveis
+| cu_bUnion : closed_under (bUnion) α                                     -- a tirar? ∪ não tem variáveis
+| cu_iUnion : closed_under (iUnion) α                                     -- a tirar? ind_U não tem variáveis
 | cu_var :
     x ∈ α →
     -----------
-    closed_under (.var x) α
-| cu_app : closed_under (app t₁ t₂) α               -- is this even right?
+    closed_under (var x) α
+| cu_app : closed_under t₁ α → closed_under t₂ β → closed_under (app t₁ t₂) (α ∪ β)
+-- TODO: o de cima ou | cu_app : closed_under t₁ α → closed_under t₂ α → closed_under (app t₁ t₂) α ?
+
 
 -- -------------------------------------
 -- FREE VARIABLES PARA TERMOS EM L^ω_*
 -- -------------------------------------
 
 def freevars : Term → Finset String
-| .lcons x => x.Lfreevars
-| .pi
-| .sigma
-| .sing
-| .bUnion
-| .iUnion => {}
-| .var x => {x}
-| .app x y => x.freevars ∪ y.freevars
+| lcons x => x.Lfreevars
+| pi
+| sigma
+| sing
+| bUnion
+| iUnion => {}
+| var x => {x}
+| app t₁ t₂ => t₁.freevars ∪ t₂.freevars
 
 end Term
 
@@ -278,12 +283,12 @@ inductive Formula_is_wellformed : List String → Formula → Prop
 def Formula.freevars : Formula → Finset String
 | .L_Form (A : LFormula) => LFormula.Lfreevars_formula A                         --| .L_Form _ => by sorry -- TODO: criar o LFormula.freevars e chamar aqui
 | .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset
-| .eq a b
-| .or a b
-| .mem a b => a.freevars ∪ b.freevars
-| .not a => a.freevars
-| .unbForall x f
-| .bForall x t f => f.freevars \ ([x].toFinset)
+| .eq t₁ t₂
+| .or t₁ t₂
+| .mem t₁ t₂ => t₁.freevars ∪ t₂.freevars
+| .not A => A.freevars
+| .unbForall x A
+| .bForall x t A => A.freevars \ ([x].toFinset)
 
 
 
@@ -499,7 +504,7 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
           then replacement
           else (.var y)
 | .app t₁ t₂ => .app (term_substitution x replacement t₁) (term_substitution x replacement t₂)  -- In an application, we do the substitution in each term
-| t => t                                                                              -- The combinators Π, Σ and the star constants 𝔰, ∪, ind_⋃ are constants and hence are not affected by substitution
+| t => t                                                                              -- The combinators Π, Σ and the star constants 𝔰, ∪, ind_⋃ are constants and hence are not affected by substitution ⋃₁
 
 
 | (L_Form A) => match replacement with
@@ -548,21 +553,61 @@ inductive Formula : Type
 | or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
 | unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
 | bForall : String → Term → Formula → Formula
-
-inductive closed_under : Formula → Finset String → Prop
-| cu_L_Form : closed_under (.lcons xs) α
-| cu_rel : closed_under (.pi) α
-| cu_eq : closed_under (.sigma) α
-| cu_mem : closed_under (.sing) α
-| cu_not : closed_under (.bUnion) α
-| cu_or : closed_under (.iUnion) α
-| unbForall :
-    x ∈ α →
-    -----------
-    closed_under (.var x) α
-| cu_bForall : closed_under (app t₁ t₂) α               -- is this even right?
 -/
 
+-- Definition: closed_under for formulas inStar
+-- Cuidado: cada vez que temos um termo t ele pode ou não ser um LTerm => pattern matching
+
+-- operations or constants that are universally considered to be closed under any set of variables without additional conditions. TODO: change descript
+inductive closed_under : Formula → Finset String → Prop
+
+| cu_L_Form : --∀ (A : LFormula) (α : Finset String),
+    L_closed_under_formula A α →                                      -- A formula in Star is closed_under a set of variables if it was closed_under in L for the same set of variables
+    closed_under (L_Form A) α
+
+| cu_rel : --∀ (R : String) (ts : List Term) (α : Finset String),
+    (∀ t, t ∈ ts → (match t with
+                     | lcons lt => L_closed_under_term lt α
+                     | _ => true)) →
+    closed_under (rel R ts) α
+
+| cu_eq : --∀ (t₁ t₂ : Term) (α : Finset String),
+    (match t₁ with
+     | Term.lcons lt₁ => L_closed_under_term lt₁ α
+     | _ => true) →
+    (match t₂ with
+     | Term.lcons lt₂ => L_closed_under_term lt₂ α
+     | _ => true) →
+    closed_under (t₁ =₁ t₂) α
+
+| cu_mem : --∀ (t₁ t₂ : Term) (α : Finset String),
+    (match t₁ with
+     | Term.lcons lt₁ => L_closed_under_term lt₁ α
+     | _ => true) →
+    (match t₂ with
+     | Term.lcons lt₂ => L_closed_under_term lt₂ α
+     | _ => true) →
+    closed_under (t₁ ∈₁ t₂) α
+
+| cu_not : --∀ (A : Formula) (α : Finset String),
+    closed_under A α →                                            -- The negation of a formula is closed_under as long as the formula is closed_under
+    closed_under (¬₁ A) α
+
+| cu_or : --∀ (A B : Formula) (α β : Finset String),
+    closed_under A α →                                            -- The disjunction of two formulas is closed_under as long as both formulas are closed_under
+    closed_under B β →
+    closed_under (A ∨₁ B) (α ∪ β)
+
+| cu_unbForall : --∀ (x : String) (A : Formula) (α : Finset String),
+    closed_under A (α ∪ {x}) →                                    -- If a formula A is closed under a finite set α with the bound variable x, then ∀x A is closed under it as well
+    closed_under (V₁ x A) (α ∪ {x})
+
+| cu_bForall : --∀ (x : String) (t : Term) (A : Formula) (α : Finset String),
+    (match t with
+     | Term.lcons lt => L_closed_under_term lt α
+     | _ => true) →
+    closed_under A (α ∪ {x}) →
+    closed_under (bV₁ x t A) (α ∪ {x})
 
 
 
