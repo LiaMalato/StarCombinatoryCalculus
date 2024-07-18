@@ -50,6 +50,53 @@ inductive Term --where
 | app : Term → Term → Term              -- application of terms
 deriving Repr, DecidableEq
 
+open Term
+
+-- Helper function to check if an LTerm is well-formed
+inductive LTerm_is_wellformed_inStar : List String → LTerm → Prop
+| wf_var {xs x} : x ∈ xs → LTerm_is_wellformed_inStar xs (LTerm.Lvar x)
+| wf_const {xs c} : LTerm_is_wellformed_inStar xs (LTerm.Lconst c)
+| wf_func {xs f ts} : (∀ t ∈ ts, LTerm_is_wellformed_inStar xs t) → LTerm_is_wellformed_inStar xs (LTerm.Lfunc f ts)
+
+-- Define Term_is_wellformed for Term
+inductive Term_is_wellformed : List String → Term → Prop
+| wf_lcons {xs} {t : LTerm} : LTerm_is_wellformed_inStar xs t → Term_is_wellformed xs (lcons t)           -- TODO: não sei porque com LTerm.LTerm_is_wellformed não funciona tbm
+| wf_pi {xs} : Term_is_wellformed xs pi
+| wf_sigma {xs} : Term_is_wellformed xs sigma
+| wf_sing {xs} : Term_is_wellformed xs sing
+| wf_bUnion {xs} : Term_is_wellformed xs bUnion
+| wf_iUnion {xs} : Term_is_wellformed xs iUnion
+| wf_var {xs x} : x ∈ xs → Term_is_wellformed xs (var x)
+| wf_app {xs t1 t2} : Term_is_wellformed xs t1 → Term_is_wellformed xs t2 → Term_is_wellformed xs (app t1 t2)
+
+-- Example usage
+def ex_term1 := Term.var "x"
+def ex_term2 := Term.lcons (LTerm.Lvar "y")
+def ex_term3 := Term.app ex_term1 ex_term2
+
+example : Term_is_wellformed ["x", "y"] ex_term1 := Term_is_wellformed.wf_var (List.mem_cons_self "x" ["y"])
+--example : Term_is_wellformed ["x", "y"] ex_term2 := Term_is_wellformed.wf_lcons (LTerm_is_wellformed_inStar.wf_var (List.mem_cons_self "y" ["x"]))
+--example : Term_is_wellformed ["x", "y"] ex_term3 := Term_is_wellformed.wf_app (Term_is_wellformed.wf_var (List.mem_cons_self "x" ["y"])) (Term_is_wellformed.wf_lcons (LTerm_is_wellformed_inStar.wf_var (List.mem_cons_self "y" ["x"])))
+
+/-
+inductive LTerm : Type
+| Lvar : String → LTerm
+| Lconst : String → LTerm
+| Lfunc : String → List LTerm → LTerm
+deriving BEq, Repr
+
+-- Definition: well-formed terms
+inductive Term_is_wellformed : List String → LTerm → Prop
+| bc_var :
+    (x ∈ xs) → Term_is_wellformed xs (Lvar x)                                   -- A variable Lvar x is well-formed if x is in the list
+| bc_const :
+    Term_is_wellformed xs (Lconst c)                                            -- A constant is always well-formed
+| bc_func :
+    (∀ t ∈ ts, Term_is_wellformed xs t) → Term_is_wellformed xs (Lfunc f ts)    -- If t₁,...,tₙ are well-formed, then so is f(t₁,...,tₙ)
+
+inductive
+
+-/
 
 namespace Term
 
@@ -150,6 +197,16 @@ decreasing_by sorry             -- TODO (net-ech)
 
 -/
 
+def term_substitution (x : String) (replacement : Term) : Term → Term
+| .lcons t => match replacement with
+              | .lcons r => .lcons (LTerm.Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+              | _ => .lcons t
+| .var y => if x = y
+          then replacement
+          else (.var y)
+| .app t₁ t₂ => .app (term_substitution x replacement t₁) (term_substitution x replacement t₂)  -- In an application, we do the substitution in each term
+| t => t                                                                              -- The combinators Π, Σ and the star constants 𝔰, ∪, ind_⋃ are constants and hence are not affected by substitution
+
 
 
 -- TO DO
@@ -178,6 +235,42 @@ inductive Formula : Type
 | unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
 | bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
 
+open Formula
+
+-- Helper function: well-formed FOL formulas in L^ω_*
+inductive LFormula_is_wellformed_inStar : List String → LFormula → Prop
+| wf_atomic {xs P ts} :
+    (∀ t ∈ ts, LTerm_is_wellformed_inStar xs t) →
+    LFormula_is_wellformed_inStar xs (LFormula.atomic_L P ts)                -- If t₁,...,tₙ are well-formed terms, then so is P(t₁,...,tₙ)
+| wf_not {xs A} :
+    LFormula_is_wellformed_inStar xs A →
+    LFormula_is_wellformed_inStar xs (LFormula.not_L A)                      -- If A is a well-formed formula, then so is ¬A.
+| wf_or {xs A B} :
+    LFormula_is_wellformed_inStar xs A →
+    LFormula_is_wellformed_inStar xs B →
+    LFormula_is_wellformed_inStar xs (LFormula.or_L A B)                     -- If A and B are well-formed formulas, then so is A∨B.
+| wf_forall {xs x A} :
+    LFormula_is_wellformed_inStar (x :: xs) A →
+    LFormula_is_wellformed_inStar xs (LFormula.forall_L x A)                 -- If A is a well-formed formula (for our list xs and the bound variable x), then so is ∀x A.
+
+-- Definition: well-formed formulas in L^ω_*
+inductive Formula_is_wellformed : List String → Formula → Prop
+| wf_L_Form {xs} {A : LFormula} : LFormula_is_wellformed_inStar xs A → Formula_is_wellformed xs (L_Form A)
+| wf_rel {xs P ts} :
+    (∀ t ∈ ts, Term_is_wellformed xs t) → Formula_is_wellformed xs (rel P ts)                                       -- If t₁,...,tₙ are well-formed terms, then so is P(t₁,...,tₙ)
+| wf_eq {xs t₁ t₂} :
+    Term_is_wellformed xs t₁ → Term_is_wellformed xs t₂ → Formula_is_wellformed xs (eq t₁ t₂)
+| wf_mem {xs t₁ t₂} :
+    Term_is_wellformed xs t₁ → Term_is_wellformed xs t₂ → Formula_is_wellformed xs (mem t₁ t₂)
+| wf_not {xs A} :
+    Formula_is_wellformed xs A → Formula_is_wellformed xs (not A)                                                   -- If A is a well-formed formula, then so is ¬A.
+| wf_or {xs A B} :
+    Formula_is_wellformed xs A → Formula_is_wellformed xs B → Formula_is_wellformed xs (or A B)                     -- If A and B are well-formed formulas, then so is A∨B.
+| wf_unbForall {xs x A} :
+    Formula_is_wellformed (x :: xs) A → Formula_is_wellformed xs (unbForall x A)                                    -- If A is a well-formed formula (for our list xs and the bound variable x), then so is ∀x A.
+| wf_bForall {xs x t A} :
+    Formula_is_wellformed (x :: xs) A → Formula_is_wellformed xs (bForall x t A)
+
 -- -------------------------------------
 -- FREE VARIABLES PARA FORMULAS EM L^ω_*
 -- -------------------------------------
@@ -192,8 +285,6 @@ def Formula.freevars : Formula → Finset String
 | .unbForall x f
 | .bForall x t f => f.freevars \ ([x].toFinset)
 
-
-open Formula
 
 
 -- NOTATION: Notation for the equality and the membership symbols
@@ -253,6 +344,22 @@ def F_iff (A B : Formula) : Formula :=
   -- (¬₁ A ∨₁ B) ∧₁ (¬₁ B ∨₁ A)
 
 notation A "↔₁" B => F_iff A B
+
+-- ----------------------------
+-- SENTENCES (CLOSED FORMULAS)
+-- ----------------------------
+
+-- TODO: Este exemplo é o mesmo que temos em FOL
+-- Exemplo para calcular as free variables da fórmula R(x,y) ∨ (∀ z Q(z))
+def ex_freevars_formula := (rel "R" [var "x", var "y"]) ∨₁ (V₁ "z" (rel "Q" [var "z"]))
+#eval Formula.freevars ex_freevars_formula                                  -- The free variables of the formula are the set {x,y}, that is {"x", "y"}
+
+
+def isClosed (A : Formula) : Prop := Formula.freevars A = {}
+def isClosed_check (A : Formula) : Bool := (Formula.freevars A) = {}       -- Prints true or false dependendo se temos var livres ou não
+
+#eval isClosed_check ex_freevars_formula                                    -- Since ex_freevars_formula has x and y as free variables, the output is false
+-- TODO: acrescentar um exemplo que dê true
 
 -- ------------------------------------------------------
 -- CHECKING FORMULAS:
@@ -372,10 +479,56 @@ inductive Formula_TypeChecking : Formula → Prop
 -- FORMULA SUBSTITUTION IN L^ω_*
 -- -------------------------------------
 
+/-
+inductive Formula : Type
+| L_Form : LFormula → Formula
+| rel : String → List Term → Formula                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
+| eq : Term → Term → Formula                                      -- t =σ q
+| mem : Term → Term → Formula                                     -- t ∈σ q
+| not : Formula → Formula                                         -- If A is a formula, then so is (¬A)
+| or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
+| unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
+| bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
 
+
+def term_substitution (x : String) (replacement : Term) : Term → Term
+| .lcons t => match replacement with
+              | .lcons r => .lcons (LTerm.Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+              | _ => .lcons t
+| .var y => if x = y
+          then replacement
+          else (.var y)
+| .app t₁ t₂ => .app (term_substitution x replacement t₁) (term_substitution x replacement t₂)  -- In an application, we do the substitution in each term
+| t => t                                                                              -- The combinators Π, Σ and the star constants 𝔰, ∪, ind_⋃ are constants and hence are not affected by substitution
+
+
+| (L_Form A) => match replacement with
+              | (L_Form B) => L_Form (LFormula.Lsubstitution_formula x B A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+              | _ => (L_Form A)
+
+| (L_Form A) => match replacement with
+              | (L_Form B) => L_Form (LFormula.Lsubstitution_formula x replacement A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+              | _ => (L_Form A)
+
+THIS IS THE NEWER VERSION (18 de julho)
+def substitution_formula (x : String) (replacement : Term) : Formula → Formula
+| (L_Form A) => L_Form (LFormula.Lsubstitution_formula x replacement A)
+| (rel P terms) => rel P (terms.map (term_substitution x replacement))
+| (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution  x replacement t₂)
+| (t₁ ∈₁ t₂) => (term_substitution x replacement t₁) ∈₁ (term_substitution  x replacement t₂)
+| (Formula.not A) => ¬₁ (substitution_formula x replacement A)                                                       -- recursivamente em A
+| (Formula.or A B) => (substitution_formula x replacement A) ∨₁ (substitution_formula x replacement B)              -- recursivamente em A e B
+| (V₁ y A) => if x = y then V₁ y A
+              else V₁ y (substitution_formula x replacement A)
+| (bV₁ y t A) => if x = y then bV₁ y t A
+              else (bV₁ y t (substitution_formula x replacement A))            -- TODO: problema que tbm é preciso substituir no y?
+
+
+-/
 
 
 -- TO DO
+
 
 
 
@@ -434,7 +587,7 @@ inductive Equivalent : Formula → Formula → Prop
 
 inductive isTrue : Formula → Prop
 | lem : isTrue (A ∨₁ (¬₁A))
--- TODO: Primeiro definir closed_under, depois substition e isto funciona
+-- TODO: Primeiro definir closed_under, depois substition e isto funciona ∀x A(x) → A(t)
 -- | substitution {t:Term} {x:String} :
 --       x ∈ xs →
 --       A.closed_under xs →   -- TODO: definir o closed_under para Formula

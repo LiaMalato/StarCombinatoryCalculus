@@ -10,23 +10,6 @@ import Init.Data.List.Basic
 namespace FOL
 
 -- --------------------
--- CONSTANTES
--- --------------------
-
--- Variáveis
-
-def LVar : Type := String     -- a tirar
-
--- Logical connectives (∨ , ¬)
-
-inductive LogCon : Type       -- a tirar
-| Ldisj                       -- a tirar
-| Lnot                        -- a tirar
-| Lforall                     -- a tirar
-
-open LogCon                   -- a tirar
-
--- --------------------
 -- TERMOS String para term
 -- --------------------
 
@@ -36,44 +19,37 @@ inductive LTerm : Type
 | Lfunc : String → List LTerm → LTerm
 deriving BEq, Repr
 
-/-
-inductive term_is_wellformed2 : List String → LTerm → Prop
-| bc :
-  x ∈ xs →
-  ------------------------------
- term_is_wellformed xs (.Lvar x)
- -/
+open LTerm
 
-inductive term_is_wellformed : List String → LTerm → Prop           -- Why do we really need this?
-| bc_var :
-    (x ∈ xs) →
-    term_is_wellformed xs (LTerm.Lvar x)
-| bc_const :
-    term_is_wellformed xs (LTerm.Lconst c)
-| bc_func :
-    (∀ t ∈ ts, term_is_wellformed xs t) →
-    term_is_wellformed xs (LTerm.Lfunc f ts)
+-- Definition: well-formed terms
+inductive LTerm_is_wellformed : List String → LTerm → Prop
+| bc_var : (x ∈ xs) → LTerm_is_wellformed xs (Lvar x)                                     -- A variable Lvar x is well-formed if x is in the list
+| bc_const : LTerm_is_wellformed xs (Lconst c)                                            -- A constant is always well-formed
+| bc_func : (∀ t ∈ ts, LTerm_is_wellformed xs t) → LTerm_is_wellformed xs (Lfunc f ts)    -- If t₁,...,tₙ are well-formed, then so is f(t₁,...,tₙ)
 
 
-def var_x := LTerm.Lvar "x"
-def const_a := LTerm.Lconst "a"
-def func_f := LTerm.Lfunc "f" [var_x, const_a]
+def var_x := Lvar "x"
+def const_a := Lconst "a"
+def func_f := Lfunc "f" [var_x, const_a]
 
-example : term_is_wellformed ["x", "y"] var_x :=
-  term_is_wellformed.bc_var (List.Mem.head _)
+-- Example: proof that var_x is well-formed
+example : LTerm_is_wellformed ["x", "y"] var_x :=
+  LTerm_is_wellformed.bc_var (List.Mem.head _)
 
--- Example proof of well-formedness for const_a
-example : term_is_wellformed ["x", "y"] const_a :=
-  term_is_wellformed.bc_const
+-- Example proof that const_a is well-formed
+example : LTerm_is_wellformed ["x", "y"] const_a :=
+  LTerm_is_wellformed.bc_const
+
+
 
 /-
 -- Example proof of well-formedness for func_f   NOT WORKING AINDA
-theorem func_f_wellformed : term_is_wellformed ["x", "y"] func_f :=
-  term_is_wellformed.bc_func
+theorem func_f_wellformed : LTerm_is_wellformed ["x", "y"] func_f :=
+  LTerm_is_wellformed.bc_func
     (λ t ht =>
       match t with
-      | LTerm.Lvar x => term_is_wellformed.bc_var _
-      | LTerm.Lconst c => term_is_wellformed.bc_const)
+      | LTerm.Lvar x => LTerm_is_wellformed.bc_var _
+      | LTerm.Lconst c => LTerm_is_wellformed.bc_const)
 -/
 
 
@@ -157,7 +133,7 @@ inductive LFormula : Type     -- VARIAVEIS
 | atomic_L : LPred → List LTerm → LFormula      -- Atomic formulas: recebem um Predicate Symbol e uma lista de termos
 | not_L : LFormula → LFormula                   -- Negation
 | or_L : LFormula → LFormula → LFormula         -- Disjunction
-| forall_L : LVar → LFormula → LFormula         -- Universal quantification
+| forall_L : String → LFormula → LFormula         -- Universal quantification
 -- deriving BEq, Repr NOT WORKING
 
 open LFormula
@@ -165,6 +141,25 @@ open LFormula
 -- Verificamos se uma formula de FOL é atómica
 inductive isLAtomic : LFormula → Prop
 | at_LForm : isLAtomic (atomic_L x l_LTerm)
+
+
+-- Definition: well-formed formulas
+inductive LFormula_is_wellformed : List String → LFormula → Prop
+| wf_atomic {xs P ts} :
+    (∀ t ∈ ts, LTerm_is_wellformed xs t) →
+    LFormula_is_wellformed xs (atomic_L P ts)                -- If t₁,...,tₙ are well-formed terms, then so is P(t₁,...,tₙ)
+| wf_not {xs A} :
+    LFormula_is_wellformed xs A →
+    LFormula_is_wellformed xs (not_L A)                      -- If A is a well-formed formula, then so is ¬A.
+| wf_or {xs A B} :
+    LFormula_is_wellformed xs A →
+    LFormula_is_wellformed xs B →
+    LFormula_is_wellformed xs (or_L A B)                     -- If A and B are well-formed formulas, then so is A∨B.
+| wf_forall {xs x A} :
+    LFormula_is_wellformed (x :: xs) A →
+    LFormula_is_wellformed xs (forall_L x A)                 -- If A is a well-formed formula (for our list xs and the bound variable x), then so is ∀x A.
+
+
 
 namespace LFormula
 
@@ -196,7 +191,7 @@ def iff_L (A B : LFormula) : LFormula :=
   (A →₀ B) ∧₀ (B →₀ A)
 
 -- Existential quantification:  ∃x A := ¬ (∀x (¬ A))
-def exists_L (x : LVar) (A : LFormula) : LFormula :=
+def exists_L (x : String) (A : LFormula) : LFormula :=
   ¬₀ (V₀ x (¬₀ A))
 -- not_L (forall_L x (not_L A))
 
@@ -227,10 +222,10 @@ def ex_Lfreevars_formula := (atomic_L "P" [Lvar "x", Lvar "y"]) ∨₀ (V₀ "z"
 -- SENTENCES (CLOSED FORMULAS)
 -- ----------------------------
 
-def isClosed (A : LFormula) : Prop := A.Lfreevars_formula = {}
-def isClosed_check (A : LFormula) : Bool := (Lfreevars_formula A) = {}       -- Prints true or false dependendo se temos var livres ou não
+def isClosed_L (A : LFormula) : Prop := A.Lfreevars_formula = {}
+def isClosed_L_check (A : LFormula) : Bool := (Lfreevars_formula A) = {}       -- Prints true or false dependendo se temos var livres ou não
 
-#eval isClosed_check ex_Lfreevars_formula                                    -- Since ex_Lfreevars_formula has x and y as free variables, the output is false
+#eval isClosed_L_check ex_Lfreevars_formula                                    -- Since ex_Lfreevars_formula has x and y as free variables, the output is false
 
 
 -- ----------------------------
@@ -241,8 +236,8 @@ def Lsubstitution_formula (x : String) (replacement : LTerm) : LFormula → LFor
 | (atomic_L pred terms) => atomic_L pred (terms.map (Lsubstitution x replacement))                           -- substituimos em cada termo da formula atomica
 | (¬₀ A) => ¬₀ (Lsubstitution_formula x replacement A)                                                       -- recursivamente em A
 | (A ∨₀ B) => (Lsubstitution_formula x replacement A) ∨₀ (Lsubstitution_formula x replacement B)              -- recursivamente em A e B
-| (V₀ y A) => if x = y then V₀ y A     -- If x is the same as the bound variable y, we don't substitute inside the quantifier
-              else V₀ y (Lsubstitution_formula x replacement A)  -- If x is different from the bound variable y, we perform the Lsubstitution inside the quantifier
+| (V₀ y A) => if x = y then V₀ y A
+              else V₀ y (Lsubstitution_formula x replacement A)
 
 -- Example
 def ex_formula : LFormula :=

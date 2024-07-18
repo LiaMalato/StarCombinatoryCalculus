@@ -4,6 +4,31 @@
 
 import LeanProjeto2.FOL
 
+-- --------------------
+-- CONSTANTES
+-- --------------------
+
+-- Variáveis
+
+def LVar : Type := String     -- a tirar
+
+-- Logical connectives (∨ , ¬)
+
+inductive LogCon : Type       -- a tirar
+| Ldisj                       -- a tirar
+| Lnot                        -- a tirar
+| Lforall                     -- a tirar
+
+open LogCon                   -- a tirar
+
+/-
+inductive term_is_wellformed2 : List String → LTerm → Prop
+| bc :
+  x ∈ xs →
+  ------------------------------
+ term_is_wellformed xs (.Lvar x)
+ -/
+
 namespace StarLang_old
 
 -- Finite types [def 1.1]
