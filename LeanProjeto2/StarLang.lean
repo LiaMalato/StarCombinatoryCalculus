@@ -101,6 +101,27 @@ inductive
 
 namespace Term
 
+inductive Subterm : Term → Term → Prop
+| refl (t : Term) : Subterm t t                                                             -- Terms are always subterms of themselves
+| app_left {t₁ t₂ t' : Term} : Subterm t' t₁ → Subterm t' (Term.app t₁ t₂)                  -- Subterms of applications (LHS)
+| app_right {t₁ t₂ t' : Term} : Subterm t' t₂ → Subterm t' (Term.app t₁ t₂)                 -- Subterms of applications (RHS)
+
+open Subterm
+
+-- Example: example of a subterm
+example : Subterm (var "x") (app (var "x") (var "y")) :=
+  by
+    have H := Subterm.refl (var "x")
+    exact app_left H
+
+/-
+-- Examples of subterms
+example : Subterm (var "x") ((var "x")·(var "y")) :=
+  app_left refl
+
+example : Subterm (Term.var "y") (Term.app (Term.var "x") (Term.var "y")) :=
+  app_right refl
+-/
 
 -- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
 inductive closed_under : Term → Finset String → Prop                      -- TODO: estas coisas em baixo é para tirar?
@@ -116,7 +137,6 @@ inductive closed_under : Term → Finset String → Prop                      --
     closed_under (var x) α
 | cu_app : closed_under t₁ α → closed_under t₂ β → closed_under (app t₁ t₂) (α ∪ β)
 -- TODO: o de cima ou | cu_app : closed_under t₁ α → closed_under t₂ α → closed_under (app t₁ t₂) α ?
-
 
 -- -------------------------------------
 -- FREE VARIABLES PARA TERMOS EM L^ω_*
@@ -532,6 +552,8 @@ def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 -/
 
 
+
+
 -- TO DO
 
 
@@ -557,6 +579,7 @@ inductive Formula : Type
 
 -- Definition: closed_under for formulas inStar
 -- Cuidado: cada vez que temos um termo t ele pode ou não ser um LTerm => pattern matching
+-- o que não acrescenta novas coisas => universally closed under any set of variables
 
 -- operations or constants that are universally considered to be closed under any set of variables without additional conditions. TODO: change descript
 inductive closed_under : Formula → Finset String → Prop
@@ -696,17 +719,33 @@ def g : Term := var "g"
 
 --lemma eq_transitivity (x y z : String) : ((((var x) =₁ (var y)) ∧₁ ((var y) =₁ (var z))) →₁ ((var x) =₁ (var z))) := sorry
 
--- --------------------------------------
--- COVERSIONS
--- --------------------------------------
 
--- Checks whether a term converts to another one
-inductive ConvertsTo : Term → Term → Prop
-| c1_pi {t₁ t₂}: ConvertsTo ((Π₁·t₁)·t₂) t₁
-| c2_sigma {t₁ t₂ t₃}: ConvertsTo (((Σ₁·t₁)·t₂)·t₃) ((t₁·t₃)·(t₂·t₃))
-| c3_indU {t₁ t₂} : ConvertsTo ((ind_⋃₁·(𝔰₁·t₁))·t₂) (t₂·t₁)
-| c4_indU_binU {t₁ t₂ t₃}: ConvertsTo ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
 
+
+-- ----------------------------------------------------
+-- ------------ COMBINATORIAL COMPLETENESS ------------ (Section 1.2.4)
+-- ----------------------------------------------------
+
+-- theorem (x : var "x") (t : Term) (h : closed_under t {x}) TODO
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- ----------------------------------------------------
+-- ------------------- CONVERSIONS -------------------- (Section 1.2.5)
+-- ----------------------------------------------------
+
+-- Definition 1.14 (Conversions)
+@[simp]
 def conv : Term → Term
 | ((Π₁·t₁)·t₂) => t₁
 | (((Σ₁·t₁)·t₂)·t₃) => ((t₁·t₃)·(t₂·t₃))
@@ -714,45 +753,29 @@ def conv : Term → Term
 | ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) => ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
 | t => t
 
-def examplinho (q t : Term) := ((Π₁·q)·t)
---#eval examplinho                                FALTA: falta o REPR que está a dar erro
+notation t "▹" => conv t
 
---notation t "▹" => conv t
+-- Checks whether a term converts to another one
+inductive ConvertsTo : Term → Term → Prop
+| c1_pi (t₁ t₂): ConvertsTo ((Π₁·t₁)·t₂) t₁
+| c2_sigma (t₁ t₂ t₃): ConvertsTo (((Σ₁·t₁)·t₂)·t₃) ((t₁·t₃)·(t₂·t₃))
+| c3_indU (t₁ t₂) : ConvertsTo ((ind_⋃₁·(𝔰₁·t₁))·t₂) (t₂·t₁)
+| c4_indU_binU (t₁ t₂ t₃): ConvertsTo ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
 
---def p₁ : Term := var "p₁"
---def p₂ : Term := var "p₂"
+-- Examples
+def examplinho (q t : Term) := ((Π₁·q)·t)         -- TODO: Why is eval not directly working?
 
---#eval conv ((Π₁·p₁)·p₂)
+def p₁ : Term := var "p₁"
+def p₂ : Term := var "p₂"
 
--- FALTA: conversions preserve types
-
-
-
-
-
-/-
-Definir um Conv_TypeChecking?
-
-inductive Term_TypeChecking : Term → FType → Prop
-| tcLcons (t : LTerm) : Term_TypeChecking (lcons t) G                                                           -- L-constants have type G
-| tcPi {σ τ} : Term_TypeChecking pi (σ ⟶ (τ ⟶ σ))                                                             -- Π_{σ,τ} : σ ⟶ (τ ⟶ σ)
-| tcSigma {σ τ ρ}: Term_TypeChecking sigma ((σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ)))                           -- Σ_{σ,τ,ρ} : (σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ))
-| tcSing {σ}: Term_TypeChecking sing (σ ⟶ σ⋆)                                                                  -- 𝔰_{σ} : σ⋆
-| tcBUnion {σ}: Term_TypeChecking bUnion (σ⋆ ⟶ (σ⋆ ⟶ σ⋆))                                                      -- ∪_{σ} : σ⋆ ⟶ (σ⋆ ⟶ σ⋆)
-| tcIUnion {σ τ} : Term_TypeChecking iUnion (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆))                                            -- ∪_{σ} : σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆)
-| tcVar {x σ}: Term_TypeChecking (var x) σ                                                                       -- Variables x : σ
-| tcApp {t₁ t₂ σ τ}: Term_TypeChecking t₁ (σ ⟶ τ) → Term_TypeChecking t₂ σ → Term_TypeChecking (app t₁ t₂) τ    -- If t₁ : (σ ⟶ τ) and t₂ : σ, then t₁t₂ : τ
-
--- Ex1.4(1). t₁t₂ : τ where t₁ : σ → τ and t₂ : σ
-example (σ τ : FType) (t₁ t₂ : Term) (h1: TypeChecking t₁ (σ ⟶ τ)) (h2 : TypeChecking t₂ σ) : TypeChecking (app t₁ t₂) τ :=
-  by
-    exact TypeChecking.tcApp h1 h2
-
--- Π₁ : σ⟶τ⟶σ, t₁ : σ  and t₂ : τ, then TypeChecking (conv ((Π₁·t₁)·t₂)) σ
-example (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := sorry
+#eval conv ((Π₁·p₁)·p₂)
+#eval ((Π₁·p₁)·p₂) ▹
 
 
--/
+
+-- --------------------------
+-- Conversions preserve types
+-- --------------------------
 
 -- ---------------------
 -- REMARK 1.21 (p.26):
@@ -760,26 +783,215 @@ example (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (
 -- ---------------------
 
 
-lemma Conv1_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by
-  exact ht₁
+lemma Conv1_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by sorry
+  --exact ht₁
+  --let H : Term := conv ((Π₁·t₁)·t₂)
+  --have H2 := conv ((Π₁·t₁)·t₂)            -- TODO: queria o resultado da conv as a new assumption
+
 
 lemma Conv2_TypeChecking (σ τ ρ : FType) (t₁ t₂ t₃ : Term) (ht₁ : Term_TypeChecking t₁ (ρ ⟶ σ ⟶ τ)) (ht₂ : Term_TypeChecking t₂ (ρ ⟶ σ)) (ht₃ : Term_TypeChecking t₃ ρ) : Term_TypeChecking (conv ((Σ₁·t₁)·t₂)·t₃) τ := sorry
 
+-- MANUALMENTE:
+
+-- TODO: mudar hPi? not needed? Mudar Term_Checking.tcPi de {σ τ} para (σ τ : FType) ?
+
+-- Conversion 1 preserves types - ((Π₁·t₁)·t₂) ▹ t₁
+example (σ τ : FType) (t₁ t₂ : Term)
+    (ht₁ : Term_TypeChecking t₁ σ)
+    (ht₂ : Term_TypeChecking t₂ τ)
+    (hPi : Term_TypeChecking Π₁ (σ ⟶ τ ⟶ σ)) : Term_TypeChecking ((Π₁·t₁)·t₂) σ :=
+  by
+    have H := Term_TypeChecking.tcApp hPi ht₁
+    exact Term_TypeChecking.tcApp H ht₂
+
+-- Conversion 2 preserves types - (((Σ₁·t₁)·t₂)·t₃) ▹ ((t₁·t₃)·(t₂·t₃))
+example (σ τ ρ : FType) (t₁ t₂ t₃ : Term)
+    (ht₁ : Term_TypeChecking t₁ (σ ⟶ (τ ⟶ ρ)))
+    (ht₂ : Term_TypeChecking t₂ (σ ⟶ τ))
+    (ht₃ : Term_TypeChecking t₃ σ) : Term_TypeChecking ((t₁·t₃)·(t₂·t₃)) ρ :=
+  by
+    have H1 := Term_TypeChecking.tcApp ht₁ ht₃
+    have H2 := Term_TypeChecking.tcApp ht₂ ht₃
+    exact Term_TypeChecking.tcApp H1 H2
+
+example (σ τ ρ : FType) (t₁ t₂ t₃ : Term)
+    (ht₁ : Term_TypeChecking t₁ (σ ⟶ (τ ⟶ ρ)))
+    (ht₂ : Term_TypeChecking t₂ (σ ⟶ τ))
+    (ht₃ : Term_TypeChecking t₃ σ)
+    (hSigma : Term_TypeChecking Σ₁ ((σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ)))) : Term_TypeChecking (((Σ₁·t₁)·t₂)·t₃) ρ :=
+  by
+    have H1 := Term_TypeChecking.tcApp hSigma ht₁
+    have H2 := Term_TypeChecking.tcApp H1 ht₂
+    exact Term_TypeChecking.tcApp H2 ht₃
+
+-- Conversion 3 preserves types - (((ind_⋃₁·(𝔰₁·t₁))·t₂)) ▹ (t₂·t₁)
+example (σ τ : FType) (t₁ t₂ : Term)
+    (ht₁ : Term_TypeChecking t₁ σ)
+    (ht₂ : Term_TypeChecking t₂ (σ ⟶ τ⋆))
+    (hSing : Term_TypeChecking 𝔰₁ (σ ⟶ σ⋆))
+    (hIUnion : Term_TypeChecking ind_⋃₁ (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆))) : Term_TypeChecking ((ind_⋃₁·(𝔰₁·t₁))·t₂) (τ⋆) :=
+  by
+    have H1 := Term_TypeChecking.tcApp hSing ht₁
+    have H2 := Term_TypeChecking.tcApp hIUnion H1
+    exact Term_TypeChecking.tcApp H2 ht₂
+
+example (σ τ : FType) (t₁ t₂ : Term)
+    (ht₁ : Term_TypeChecking t₁ σ)
+    (ht₂ : Term_TypeChecking t₂ (σ ⟶ (τ⋆))) : Term_TypeChecking (t₂·t₁) (τ⋆) :=
+  by
+    exact Term_TypeChecking.tcApp ht₂ ht₁
+
+-- Conversion 4 preserves types - ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) ▹ ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
+example (σ τ : FType) (t₁ t₂ t₃: Term)
+    (ht₁ : Term_TypeChecking t₁ (σ⋆))
+    (ht₂ : Term_TypeChecking t₂ (σ⋆))
+    (ht₃ : Term_TypeChecking t₃ (σ ⟶ τ⋆))
+    (hBUnion : Term_TypeChecking ∪₁ (σ⋆ ⟶ σ⋆ ⟶ σ⋆))
+    (hIUnion : Term_TypeChecking ind_⋃₁ (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆))) : Term_TypeChecking ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) (τ⋆) :=
+  by
+    have H1 := Term_TypeChecking.tcApp (Term_TypeChecking.tcApp hBUnion ht₁) ht₂
+    exact Term_TypeChecking.tcApp (Term_TypeChecking.tcApp hIUnion H1) ht₃
+
+example (σ τ : FType) (t₁ t₂ t₃: Term)
+    (ht₁ : Term_TypeChecking t₁ (σ⋆))
+    (ht₂ : Term_TypeChecking t₂ (σ⋆))
+    (ht₃ : Term_TypeChecking t₃ (σ ⟶ τ⋆))
+    (hBUnion : Term_TypeChecking ∪₁ (τ⋆ ⟶ τ⋆ ⟶ τ⋆))
+    (hIUnion : Term_TypeChecking ind_⋃₁ (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆))) : Term_TypeChecking ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃)) (τ⋆) :=
+  by
+    have H1 := Term_TypeChecking.tcApp (Term_TypeChecking.tcApp hIUnion ht₁) ht₃
+    have H2 := Term_TypeChecking.tcApp (Term_TypeChecking.tcApp hIUnion ht₂) ht₃
+    exact Term_TypeChecking.tcApp (Term_TypeChecking.tcApp hBUnion H1) H2
+
 /-
-lemma Conv2_TypeChecking (σ τ ρ : FType) (t₁ t₂ t₃ : Term) (ht₁ : Term_TypeChecking t₁ (ρ ⟶ σ ⟶ τ)) (ht₂ : Term_TypeChecking t₂ (ρ ⟶ σ)) (ht₃ : Term_TypeChecking t₃ ρ) : Term_TypeChecking (conv ((Σ₁·t₁)·t₂)·t₃) τ := by
-  exact ht₁
+CINCO TENTATIVAS PARA CONVERSIONS PRESERVE TYPES
 
-lemma Conv3_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by
-  exact ht₁
+inductive Conv_TypeChecking : Term → FType → Prop                 -- Definir um Conv_TypeChecking?
+| tcConv1
+| tcConv2
+| tcConv3
+| tcConv4
 
-lemma Conv4_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by
-  exact ht₁
+lemma conv1_preserves_types (t t' : Term) (σ τ ρ ρ' : FType)
+                            (ht₁ : Term_TypeChecking t₁ σ)
+                            (ht₂ : Term_TypeChecking t₂ τ)
+                            (hPi : Term_TypeChecking Π₁ (σ ⟶ τ ⟶ σ))
+                            (H : Term_TypeChecking ((Π₁·t₁)·t₂) ρ) :
+    Term_TypeChecking t₁ ρ :=
+by
+  have H1 := Term_TypeChecking.tcApp hPi ht₁
+  have H2 := Term_TypeChecking.tcApp H1 ht₂
+  have H3 := ((Π₁·t₁)·t₂)
+
+lemma conv1_preserves_types :
+  (t₁ t₂ : Term) (σ τ ρ ρ' : FType) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ),
+    Term_TypeChecking ((Π₁·t₁)·t₂) ρ →
+    Term_TypeChecking t₁ ρ' →
+    ρ = ρ' := by sorry
+
+lemma conv_preserve_types :
+  (t₁ t₂ : Term) (σ : FType),
+    ConvertsTo t₁ t₂ →
+    Term_TypeChecking t₁ σ →
+    Term_TypeChecking t₂ σ →
+    σ = σ := by sorry
+
+lemma terms_have_same_type (t₁ t₂ : Term) (σ : FType) :     -- TODO: problema -> o cases devia ser para inductive def de conversions
+    ConvertsTo t₁ t₂ →
+    Term_TypeChecking t₁ σ →
+    Term_TypeChecking t₂ σ →
+    σ = σ := by
+    cases t₁ with                                           -- that's not it :/
+    | lcons _ => sorry
+    | pi => sorry
+    | sigma => sorry
+    | sing => sorry
+    | bUnion => sorry
+    | iUnion => sorry
+    | var _ => sorry
+    | app _ _ => sorry
+
+
+TODO: Lema auxiliar? TypeChecking é único?
+lemma Type_Uniqueness (t : Term) (σ τ : FType) :
+  Term_TypeChecking t σ →
+  Term_TypeChecking t τ →
+  σ = τ :=
+by sorry
 -/
 
 
--- EXAMPLE 1.10 (p.28)
+
+inductive ReducesTo : Term → Term → Prop
+| reflex (t) : ReducesTo t t                                                -- A term reduces to itself
+| app_left {t₁ t₂ t₁'} : ReducesTo t₁ t₁' → ReducesTo (t₁·t₂) (t₁'·t₂)      -- Reduction in the left subterm of an application
+| app_right {t₁ t₂ t₂'} : ReducesTo t₂ t₂' → ReducesTo (t₁·t₂) (t₁·t₂')     -- Reduction in the right subterm of an application
+| one_step {t₁ t₂} : ConvertsTo t₁ t₂ → ReducesTo t₁ t₂
+| n_step {t₁ t₂ t₃} : ReducesTo t₁ t₂ → ReducesTo t₂ t₃ → ReducesTo t₁ t₃   -- Transitivity -> TODO: devia ser lemma?
+
+open ReducesTo
+
+-- Example: Conversions are one-step reductions (example with C1 conversion)
+example (t₁ t₂ : Term) : ReducesTo ((Π₁·t₁)·t₂) t₁ :=
+  by
+    have H1 := ConvertsTo.c1_pi t₁ t₂
+    exact ReducesTo.one_step H1
 
 
+-- ------------------------------------------
+-- EXAMPLE 1.10 (p.28): Example of reductions
+-- ------------------------------------------
+
+lemma Ex1_10_1 (t₁ t₂ t₃ : Term) : ReducesTo ((Σ₁·t₁)·((Π₁·t₂)·t₃)) ((Σ₁·t₁)·t₂) :=
+by
+  have H1 := ConvertsTo.c1_pi t₂ t₃     -- ConvertsTo ((Π₁·t₂)·t₃) t₂
+  have H2 := ReducesTo.one_step H1
+  exact @ReducesTo.app_right (Σ₁·t₁) ((Π₁·t₂)·t₃) t₂ H2
+
+lemma Ex1_10_2 (t₁ t₂ t₃ : Term) : ReducesTo (((ind_⋃₁·(𝔰₁·t₁))·t₂)·t₃) ((t₂·t₁)·t₃) :=
+by
+  have H1 := ConvertsTo.c3_indU t₁ t₂
+  have H2 := ReducesTo.one_step H1
+  exact @ReducesTo.app_left ((ind_⋃₁·(𝔰₁·t₁))·t₂) t₃ (t₂·t₁) H2
+
+lemma Ex1_10_3 (t q r : Term) : ReducesTo ((ind_⋃₁·((∪₁·(𝔰₁·t))·q))·r) ((∪₁·(r·t))·((ind_⋃₁·q)·r)) :=
+by
+  have H1 := ConvertsTo.c4_indU_binU (𝔰₁·t) q r
+  have H2 := ReducesTo.one_step H1
+  have H3 := ConvertsTo.c3_indU t r
+  have H4 := ReducesTo.one_step H3
+  have H5 := @ReducesTo.app_right ∪₁ ((ind_⋃₁·(𝔰₁·t))·r) (r·t) H4
+  have H6 := @ReducesTo.app_left (∪₁·((ind_⋃₁·(𝔰₁·t))·r)) ((ind_⋃₁·q)·r) (∪₁·(r·t)) H5
+  exact ReducesTo.n_step H2 H6
+
+-- ----------------------------------------------------------------------
+-- EXAMPLE 1.11 (p.29): Example of different possible reduction sequences
+-- ----------------------------------------------------------------------
+
+lemma Ex1_11_Seq1 (r q t s : Term) : ReducesTo (((Σ₁·r)·((Π₁·q)·t))·s) ((r·s)·(q·s)) :=
+by
+  have H1 := ConvertsTo.c1_pi q t
+  have H2 := ReducesTo.one_step H1
+  have H3 := ConvertsTo.c2_sigma r q s
+  have H4 := ReducesTo.one_step H3
+  have H5 := @ReducesTo.app_right (Σ₁·r) ((Π₁·q)·t) q H2
+  have H6 := @ReducesTo.app_left ((Σ₁·r)·((Π₁·q)·t)) s ((Σ₁·r)·q) H5
+  exact ReducesTo.n_step H6 H4
+
+lemma Ex1_11_Seq2 (r q t s : Term) : ReducesTo (((Σ₁·r)·((Π₁·q)·t))·s) ((r·s)·(q·s)) :=
+by
+  have H1 := ConvertsTo.c2_sigma r ((Π₁·q)·t) s
+  have H2 := ReducesTo.one_step H1
+  have H3 := ConvertsTo.c1_pi q t
+  have H4 := ReducesTo.one_step H3
+  have H5 := @ReducesTo.app_left ((Π₁·q)·t) s q H4
+  have H6 := @ReducesTo.app_right (r·s) (((Π₁·q)·t)·s) (q·s) H5
+  exact ReducesTo.n_step H2 H6
+
+
+-- ---------------------------------------------------------------------------------------------------------------
+--                          "PRENEXIFICATION RULES"
+-- ---------------------------------------------------------------------------------------------------------------
 
 
 
