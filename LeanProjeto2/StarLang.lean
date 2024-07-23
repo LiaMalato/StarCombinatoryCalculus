@@ -222,6 +222,7 @@ decreasing_by sorry             -- TODO (net-ech)
 
 -/
 
+-- Definition: term substitution, we replace x by replacement in some term t (lcons, var, app, rest)
 def term_substitution (x : String) (replacement : Term) : Term → Term
 | .lcons t => match replacement with
               | .lcons r => .lcons (LTerm.Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
@@ -231,10 +232,6 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
           else (.var y)
 | .app t₁ t₂ => .app (term_substitution x replacement t₁) (term_substitution x replacement t₂)  -- In an application, we do the substitution in each term
 | t => t                                                                              -- The combinators Π, Σ and the star constants 𝔰, ∪, ind_⋃ are constants and hence are not affected by substitution
-
-
-
--- TO DO
 
 
 
@@ -535,12 +532,23 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
               | (L_Form B) => L_Form (LFormula.Lsubstitution_formula x replacement A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
               | _ => (L_Form A)
 
+| (L_Form A) => match replacement with
+              | LTerm => L_Form (LFormula.Lsubstitution_formula x replacement A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+              | _ => (L_Form A)
+
+| (L_Form A) => L_Form (LFormula.Lsubstitution_formula x replacement A)
+
+| LTerm => L_Form (LFormula.Lsubstitution_formula x r A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+
+
 THIS IS THE NEWER VERSION (18 de julho)
 def substitution_formula (x : String) (replacement : Term) : Formula → Formula
-| (L_Form A) => L_Form (LFormula.Lsubstitution_formula x replacement A)
+| (L_Form A) => match replacement with
+              | .lcons r => L_Form (LFormula.Lsubstitution_formula x r A)
+              | _ => (L_Form A)
 | (rel P terms) => rel P (terms.map (term_substitution x replacement))
-| (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution  x replacement t₂)
-| (t₁ ∈₁ t₂) => (term_substitution x replacement t₁) ∈₁ (term_substitution  x replacement t₂)
+| (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)
+| (t₁ ∈₁ t₂) => (term_substitution x replacement t₁) ∈₁ (term_substitution x replacement t₂)
 | (Formula.not A) => ¬₁ (substitution_formula x replacement A)                                                       -- recursivamente em A
 | (Formula.or A B) => (substitution_formula x replacement A) ∨₁ (substitution_formula x replacement B)              -- recursivamente em A e B
 | (V₁ y A) => if x = y then V₁ y A
@@ -551,6 +559,19 @@ def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 
 -/
 
+def substitution_formula (x : String) (replacement : Term) : Formula → Formula
+| (L_Form A) => match replacement with
+              | .lcons r => L_Form (LFormula.Lsubstitution_formula x r A)     -- TODO: not good enough
+              | _ => (L_Form A)
+| (rel P terms) => rel P (terms.map (term_substitution x replacement))
+| (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)
+| (t₁ ∈₁ t₂) => (term_substitution x replacement t₁) ∈₁ (term_substitution x replacement t₂)
+| (Formula.not A) => ¬₁ (substitution_formula x replacement A)                                                       -- recursivamente em A
+| (Formula.or A B) => (substitution_formula x replacement A) ∨₁ (substitution_formula x replacement B)              -- recursivamente em A e B
+| (V₁ y A) => if x = y then V₁ y A
+              else V₁ y (substitution_formula x replacement A)
+| (bV₁ y t A) => if x = y then bV₁ y t A
+              else (bV₁ y t (substitution_formula x replacement A))            -- TODO: problema que tbm é preciso substituir no y?
 
 
 
@@ -944,7 +965,7 @@ example (t₁ t₂ : Term) : ReducesTo ((Π₁·t₁)·t₂) t₁ :=
 
 lemma Ex1_10_1 (t₁ t₂ t₃ : Term) : ReducesTo ((Σ₁·t₁)·((Π₁·t₂)·t₃)) ((Σ₁·t₁)·t₂) :=
 by
-  have H1 := ConvertsTo.c1_pi t₂ t₃     -- ConvertsTo ((Π₁·t₂)·t₃) t₂
+  have H1 := ConvertsTo.c1_pi t₂ t₃
   have H2 := ReducesTo.one_step H1
   exact @ReducesTo.app_right (Σ₁·t₁) ((Π₁·t₂)·t₃) t₂ H2
 
@@ -987,6 +1008,44 @@ by
   have H5 := @ReducesTo.app_left ((Π₁·q)·t) s q H4
   have H6 := @ReducesTo.app_right (r·s) (((Π₁·q)·t)·s) (q·s) H5
   exact ReducesTo.n_step H2 H6
+
+
+
+-- ---------------------
+-- Normal form of a term
+-- ---------------------
+
+-- Definition: checks whether a term is in normal form
+def isNormal : Term → Prop
+| t => (conv t = t)                                         -- TODO: isto assim não deixa converter subterms
+
+-- Definition: checks whether a term is in normal form
+def isNormal_check : Term → Bool
+| t => if conv t = t then true else false
+
+-- Definition: normal form of a term
+def normal_form (t : Term) : Term :=
+if (isNormal_check t) = true then t else conv t
+
+-- Ex1_10_1: ((Σ₁·t₁)·((Π₁·t₂)·t₃)) reduces to ((Σ₁·t₁)·t₂)
+def example_term_Ex1_10_1_A := ((Σ₁·(var "t₁"))·((Π₁·(var "t₂"))·(var "t₃")))
+def example_term_Ex1_10_1_B := ((Σ₁·(var "t₁"))·(var "t₂"))
+
+#eval isNormal_check example_term_Ex1_10_1_A              -- TODO: not working, diz que é Normal mas não é
+#eval isNormal_check example_term_Ex1_10_1_B
+
+-- Example: using Ex1_11_Seq2 to see that ((Σ₁·r)·((Π₁·q)·t))·s is not normal, while (r·s)·(q·s) is
+--          we will consider the terms to be variables (using the above term names for the strings).
+
+def example_term_Ex1_11_Seq2_A := (((Σ₁·(var "r"))·((Π₁·(var "q"))·(var "t")))·(var "s"))
+def example_term_Ex1_11_Seq2_B := (((var "r")·(var "s"))·((var "q")·(var "s")))
+
+#eval isNormal_check example_term_Ex1_11_Seq2_A           -- Output is false since ((Σ₁·r)·((Π₁·q)·t))·s is not normal
+#eval isNormal_check example_term_Ex1_11_Seq2_B           -- Output is true since (r·s)·(q·s) is not normal
+
+#eval normal_form example_term_Ex1_11_Seq2_A              -- TODO: not working -> problem with subterms?
+
+
 
 
 -- ---------------------------------------------------------------------------------------------------------------
