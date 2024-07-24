@@ -671,34 +671,48 @@ inductive Equivalent : Formula → Formula → Prop
 --| nf_left : Equivalent A B → Equivalent (normal_form A) B
 --| nf_right : Equivalent A B → Equivalent A (normal_form B)
 
+-- ---------------------------------------------------------------------------------
+-- -------------------------------   AXIOMATIC   -----------------------------------
+-- ---------------------------------------------------------------------------------
+
 inductive isTrue : Formula → Prop
-| lem : isTrue (A ∨₁ (¬₁A))
--- TODO: Primeiro definir closed_under, depois substition e isto funciona ∀x A(x) → A(t)
-| substitution {t:Term} {x:String} :
+-- AXIOM SCHEMA (Shoenfield)
+| lem :                                       -- A ∨ (¬A)
+      isTrue (A ∨₁ (¬₁A))
+| substitution {t:Term} {x:String} :          -- ∀x A(x) → A(t)
        x ∈ xs →
        closed_under_formula A xs →
        isTrue (.unbForall x A) →
        --------------
        isTrue (substitution_formula x t A)
 
-| expansion:
+-- INFERENCE RULES (Shoenfield)
+| expansion:                                  -- A => A∨B
       isTrue A →
       ---------------
       isTrue (A ∨₁ B)
-| contraction :
+| contraction :                               -- A∨A => A
       isTrue (A ∨₁ A) →
       ---------------
       isTrue A
-| associativity :
+| associativity :                             -- A∨(B∨C) => (A∨B)∨C
       isTrue (A ∨₁ (B ∨₁ C)) →
       ---------------
       isTrue ((A ∨₁ B) ∨₁ C)
-| cut :
+| cut :                                       -- A∨B, (¬A)∨C => B∨C
       isTrue (A ∨₁ B) →
       isTrue ((¬₁A)∨₁C) →
       ---------------
       isTrue (B ∨₁ C)
---| forall_introduction : FALTA
+| forall_introduction:                        -- A(x) ∨ B => ∀x A(x) ∨ B
+      x ∈ xs →
+      closed_under_formula A xs →
+      isTrue (A ∨₁ B) →
+      x ∉ B.freevars →                        -- provided that x does not occur free in B   (TODO: check this)
+      ---------------
+      isTrue ((unbForall x A) ∨₁ B)
+
+-- OTHER AXIOMS
 | equivalence :
       (Equivalent A B) →
       isTrue A →
