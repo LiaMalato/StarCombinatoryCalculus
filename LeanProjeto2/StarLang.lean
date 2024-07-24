@@ -125,7 +125,7 @@ example : Subterm (Term.var "y") (Term.app (Term.var "x") (Term.var "y")) :=
 
 -- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
 inductive closed_under : Term → Finset String → Prop                      -- TODO: estas coisas em baixo é para tirar?
-| cu_lcons : closed_under (lcons xs) α
+| cu_lcons : L_closed_under_term t α → closed_under (lcons t) α  -- HERE
 | cu_pi : closed_under (pi) α                                             -- a tirar? Π não tem variáveis
 | cu_sigma : closed_under (sigma) α                                       -- a tirar? Σ não tem variáveis
 | cu_sing : closed_under (sing) α                                         -- a tirar? 𝔰 não tem variáveis
@@ -143,7 +143,7 @@ inductive closed_under : Term → Finset String → Prop                      --
 -- -------------------------------------
 
 def freevars : Term → Finset String
-| lcons x => x.Lfreevars
+| lcons t => t.Lfreevars
 | pi
 | sigma
 | sing
@@ -567,15 +567,12 @@ def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 | (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)
 | (t₁ ∈₁ t₂) => (term_substitution x replacement t₁) ∈₁ (term_substitution x replacement t₂)
 | (Formula.not A) => ¬₁ (substitution_formula x replacement A)                                                       -- recursivamente em A
-| (Formula.or A B) => (substitution_formula x replacement A) ∨₁ (substitution_formula x replacement B)              -- recursivamente em A e B
+| (Formula.or A B) => (substitution_formula x replacement A) ∨₁ (substitution_formula x replacement B)               -- recursivamente em A e B
 | (V₁ y A) => if x = y then V₁ y A
               else V₁ y (substitution_formula x replacement A)
 | (bV₁ y t A) => if x = y then bV₁ y t A
-              else (bV₁ y t (substitution_formula x replacement A))            -- TODO: problema que tbm é preciso substituir no y?
+              else (bV₁ y t (substitution_formula x replacement A))
 
-
-
--- TO DO
 
 
 
@@ -602,56 +599,56 @@ inductive Formula : Type
 -- Cuidado: cada vez que temos um termo t ele pode ou não ser um LTerm => pattern matching
 -- o que não acrescenta novas coisas => universally closed under any set of variables
 
--- operations or constants that are universally considered to be closed under any set of variables without additional conditions. TODO: change descript
-inductive closed_under : Formula → Finset String → Prop
+-- operations or constants that are closed under any set of variables. TODO: change descript
+inductive closed_under_formula : Formula → Finset String → Prop
 
-| cu_L_Form : --∀ (A : LFormula) (α : Finset String),
-    L_closed_under_formula A α →                                      -- A formula in Star is closed_under a set of variables if it was closed_under in L for the same set of variables
-    closed_under (L_Form A) α
+| cu_L_Form : --GOOD-- ∀ (A : LFormula) (α : Finset String),
+    L_closed_under_formula A α →                                      -- A formula in StarL is closed_under a set of variables if it was closed_under in L for the same set of variables.
+    closed_under_formula (L_Form A) α
 
 | cu_rel : --∀ (R : String) (ts : List Term) (α : Finset String),
     (∀ t, t ∈ ts → (match t with
                      | lcons lt => L_closed_under_term lt α
-                     | _ => true)) →
-    closed_under (rel R ts) α
+                     | _ => true))                                      -- TODO: não é sempre true, só se forem ground terms
+    → closed_under_formula (rel R ts) α
 
 | cu_eq : --∀ (t₁ t₂ : Term) (α : Finset String),
     (match t₁ with
-     | Term.lcons lt₁ => L_closed_under_term lt₁ α
+     | lcons lt₁ => L_closed_under_term lt₁ α
      | _ => true) →
     (match t₂ with
-     | Term.lcons lt₂ => L_closed_under_term lt₂ α
+     | lcons lt₂ => L_closed_under_term lt₂ α                           -- TODO: aqui não devia ser lt₁ com α e lt₂ com β? para depois ser a união?
      | _ => true) →
-    closed_under (t₁ =₁ t₂) α
+    closed_under_formula (t₁ =₁ t₂) α
 
 | cu_mem : --∀ (t₁ t₂ : Term) (α : Finset String),
     (match t₁ with
-     | Term.lcons lt₁ => L_closed_under_term lt₁ α
+     | lcons lt₁ => L_closed_under_term lt₁ α
      | _ => true) →
     (match t₂ with
-     | Term.lcons lt₂ => L_closed_under_term lt₂ α
+     | lcons lt₂ => L_closed_under_term lt₂ α                           -- TODO: aqui não devia ser lt₁ com α e lt₂ com β? para depois ser a união?
      | _ => true) →
-    closed_under (t₁ ∈₁ t₂) α
+    closed_under_formula (t₁ ∈₁ t₂) α
 
-| cu_not : --∀ (A : Formula) (α : Finset String),
-    closed_under A α →                                            -- The negation of a formula is closed_under as long as the formula is closed_under
-    closed_under (¬₁ A) α
+| cu_not : --GOOD-- ∀ (A : Formula) (α : Finset String),
+    closed_under_formula A α →                                            -- The negation of a formula is closed_under as long as the formula is closed_under
+    closed_under_formula (¬₁ A) α
 
-| cu_or : --∀ (A B : Formula) (α β : Finset String),
-    closed_under A α →                                            -- The disjunction of two formulas is closed_under as long as both formulas are closed_under
-    closed_under B β →
-    closed_under (A ∨₁ B) (α ∪ β)
+| cu_or : --GOOD-- ∀ (A B : Formula) (α β : Finset String),
+    closed_under_formula A α →                                            -- The disjunction of two formulas is closed_under as long as both formulas are closed_under
+    closed_under_formula B β →
+    closed_under_formula (A ∨₁ B) (α ∪ β)
 
-| cu_unbForall : --∀ (x : String) (A : Formula) (α : Finset String),
-    closed_under A (α ∪ {x}) →                                    -- If a formula A is closed under a finite set α with the bound variable x, then ∀x A is closed under it as well
-    closed_under (V₁ x A) (α ∪ {x})
+| cu_unbForall : --GOOD-- ∀ (x : String) (A : Formula) (α : Finset String),
+    closed_under_formula A (α ∪ {x}) →                                    -- If a formula A is closed under a finite set α with the bound variable x, then ∀x A is closed under it as well
+    closed_under_formula (V₁ x A) (α ∪ {x})
 
 | cu_bForall : --∀ (x : String) (t : Term) (A : Formula) (α : Finset String),
     (match t with
      | Term.lcons lt => L_closed_under_term lt α
      | _ => true) →
-    closed_under A (α ∪ {x}) →
-    closed_under (bV₁ x t A) (α ∪ {x})
+    closed_under_formula A (α ∪ {x}) →
+    closed_under_formula (bV₁ x t A) (α ∪ {x})
 
 
 
@@ -677,12 +674,12 @@ inductive Equivalent : Formula → Formula → Prop
 inductive isTrue : Formula → Prop
 | lem : isTrue (A ∨₁ (¬₁A))
 -- TODO: Primeiro definir closed_under, depois substition e isto funciona ∀x A(x) → A(t)
--- | substitution {t:Term} {x:String} :
---       x ∈ xs →
---       A.closed_under xs →   -- TODO: definir o closed_under para Formula
---       isTrue (.unbForall x A) →
---       --------------
---       isTrue (Formula.substitution x t A) -- TODO: Definir substituion para Formula
+| substitution {t:Term} {x:String} :
+       x ∈ xs →
+       closed_under_formula A xs →
+       isTrue (.unbForall x A) →
+       --------------
+       isTrue (substitution_formula x t A)
 
 | expansion:
       isTrue A →
