@@ -40,14 +40,15 @@ example : LTerm_is_wellformed ["x", "y"] var_x :=
 example : LTerm_is_wellformed ["x", "y"] const_a :=
   LTerm_is_wellformed.bc_const
 
+
+-- Example proof of well-formedness for func_f   TODO: NOT WORKING AINDA
 /-
--- Example proof of well-formedness for func_f   NOT WORKING AINDA
 theorem func_f_wellformed : LTerm_is_wellformed ["x", "y"] func_f :=
   LTerm_is_wellformed.bc_func
     (λ t ht =>
       match t with
-      | LTerm.Lvar x => LTerm_is_wellformed.bc_var _
-      | LTerm.Lconst c => LTerm_is_wellformed.bc_const)
+      | Lvar x => LTerm_is_wellformed.bc_var _
+      | Lconst c => LTerm_is_wellformed.bc_const)
 -/
 
 
@@ -141,7 +142,7 @@ inductive LFormula : Type     -- VARIAVEIS
 | not_L : LFormula → LFormula                   -- Negation
 | or_L : LFormula → LFormula → LFormula         -- Disjunction
 | forall_L : String → LFormula → LFormula         -- Universal quantification
--- deriving BEq, Repr NOT WORKING
+--deriving BEq, Repr --NOT WORKING
 
 open LFormula
 
@@ -168,14 +169,14 @@ inductive LFormula_is_wellformed : List String → LFormula → Prop
 
 
 -- Definition: permite associar um conjunto de variáveis a uma fórmula (para lidarmos com coisas como t(x) em axiomas, etc)
-inductive L_closed_under_formula : LFormula → Finset String → Prop  -- TODO: change descripts here
+inductive L_closed_under_formula : LFormula → Finset String → Prop
 | cu_atomic_L : ∀ (P : LPred) (ts : List LTerm) (α : Finset String),        -- An atomic formula atomic_L P ts is closed under a set α if all terms in the list ts are closed under α
     (∀ t, t ∈ ts → L_closed_under_term t α) →
     L_closed_under_formula (atomic_L P ts) α
-| cu_not_L : ∀ (A : LFormula) (α : Finset String),                          -- The negation ¬₀A is closed under a set α if A is closed under α.
+| cu_not_L : ∀ (A : LFormula) (α : Finset String),                          -- ¬₀A is closed under a set α if A is closed under α.
     L_closed_under_formula A α →
     L_closed_under_formula (not_L A) α
-| cu_or_L : ∀ (A B : LFormula) (α β : Finset String),                       -- The disjuction A∨₀B is closed under a union of two sets α and β if A is closed under α and B is closed under β.
+| cu_or_L : ∀ (A B : LFormula) (α β : Finset String),                       -- A∨₀B is closed under a union of two sets α and β if A is closed under α and B is closed under β.
     L_closed_under_formula A α →
     L_closed_under_formula B β →
     L_closed_under_formula (or_L A B) (α ∪ β)
@@ -267,7 +268,7 @@ def ex_formula : LFormula :=
 
 def example_Lsubstitution := Lsubstitution_formula "x" (LTerm.Lconst "a") ex_formula               -- substitui a variável x pela constante a em ex_formula
 
--- #eval example_Lsubstitution     PRECISAMOS DE REPR, mas para isso precisamos de decidable para formulas
+--#eval example_Lsubstitution     --PRECISAMOS DE REPR, mas para isso precisamos de decidable para formulas
 
 -- ----------------------------
 -- TERM FREE FOR A VARIABLE IN A FORMULA
