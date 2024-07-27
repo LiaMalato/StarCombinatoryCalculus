@@ -123,6 +123,7 @@ example : Subterm (Term.var "y") (Term.app (Term.var "x") (Term.var "y")) :=
   app_right refl
 -/
 
+/-
 -- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
 inductive closed_under : Term → Finset String → Prop                      -- TODO: estas coisas em baixo é para tirar?
 | cu_lcons : L_closed_under_term t α → closed_under (lcons t) α
@@ -137,6 +138,7 @@ inductive closed_under : Term → Finset String → Prop                      --
     closed_under (var x) α
 | cu_app : closed_under t₁ α → closed_under t₂ β → closed_under (app t₁ t₂) (α ∪ β)
 -- TODO: o de cima ou | cu_app : closed_under t₁ α → closed_under t₂ α → closed_under (app t₁ t₂) α ?
+-/
 
 -- -------------------------------------
 -- FREE VARIABLES PARA TERMOS EM L^ω_*
@@ -536,7 +538,7 @@ def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 
 def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 | (L_Form A) => match replacement with
-              | .lcons r => L_Form (LFormula.Lsubstitution_formula x r A)     -- TODO: not good enough, neste momento é só para constantes e não para variáveis, etc
+              | .lcons r => L_Form (LFormula.Lsubstitution_formula x r A)     -- TODO looks good: not good enough, neste momento é só para constantes e não para variáveis, etc
               | _ => (L_Form A)
 | (rel P terms) => rel P (terms.map (term_substitution x replacement))
 | (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)
@@ -574,6 +576,7 @@ inductive Formula : Type
 -- Cuidado: cada vez que temos um termo t ele pode ou não ser um LTerm => pattern matching
 -- o que não acrescenta novas coisas => universally closed under any set of variables
 
+/-
 -- operations or constants that are closed under any set of variables.
 inductive closed_under_formula : Formula → Finset String → Prop
 
@@ -624,7 +627,7 @@ inductive closed_under_formula : Formula → Finset String → Prop
      | _ => true) →
     closed_under_formula A (α ∪ {x}) →
     closed_under_formula (bV₁ x t A) (α ∪ {x})                            -- TODO: aqui também com o _∪{x}
-
+-/
 
 
 
@@ -655,8 +658,9 @@ inductive isTrue : Formula → Prop
 | lem :                                       -- A ∨ (¬A)
       isTrue (A ∨₁ (¬₁A))
 | substitution {t:Term} {x:String} :          -- ∀x A(x) → A(t)
-       x ∈ xs →
-       closed_under_formula A xs →
+       --x ∈ xs →
+       --closed_under_formula A xs →
+       x ∈ A.freevars →
        isTrue (.unbForall x A) →
        --------------
        isTrue (substitution_formula x t A)
@@ -680,10 +684,11 @@ inductive isTrue : Formula → Prop
       ---------------
       isTrue (B ∨₁ C)
 | forall_introduction:                        -- A(x) ∨ B => ∀x A(x) ∨ B
-      x ∈ xs →                                -- TODO: sempre que A(x) precisamos das 2 primeiras linhas?
-      closed_under_formula A xs →
+      --x ∈ xs →                                -- TODO yes: sempre que A(x) precisamos das 2 primeiras linhas?
+      --closed_under_formula A xs →
+      x ∈ A.freevars →
       isTrue (A ∨₁ B) →
-      x ∉ B.freevars →                        -- provided that x does not occur free in B   (TODO: check this)
+      x ∉ B.freevars →                        -- provided that x does not occur free in B   (TODO yes: check this)
       ---------------
       isTrue ((unbForall x A) ∨₁ B)
 
@@ -735,10 +740,24 @@ def g : Term := var "g"
 
 -- theorem (x : var "x") (t : Term) (h : closed_under t {x}) TODO
 
+theorem combinatorial_completeness (x : String) (t : Term) : ∀(t:Term), ∃(q:Term), ∀(s:Term), ((q·s) = (term_substitution x s t)) :=
+by
+  intro t₀
+  cases t₀ with
+  | lcons _ => sorry
+  | pi => sorry
+  | sigma => sorry
+  | sing => sorry
+  | bUnion => sorry
+  | iUnion => sorry
+  | var y => sorry --match y with
+            --| x => intro ((Σ₁·Π₁)·Π₁)
+            --| _ => var y
+            --sorry --intro ((Σ₁·Π₁)·Π₁) FAZER PATTERNMATCH
+  | app _ _ => sorry
 
 
-
-
+--def term_substitution (x : String) (replacement : Term) : Term → Term
 
 
 
@@ -770,10 +789,12 @@ inductive ConvertsTo : Term → Term → Prop
 | c4_indU_binU (t₁ t₂ t₃): ConvertsTo ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
 
 -- Examples
-def examplinho (q t : Term) := ((Π₁·q)·t)         -- TODO: Why is eval not directly working?
+def examplinho (q t : Term) := ((Π₁·q)·t)         -- TODO -> faltava argumentos: Why is eval not directly working?
 
 def p₁ : Term := var "p₁"
 def p₂ : Term := var "p₂"
+
+#eval examplinho p₁ p₂
 
 #eval conv ((Π₁·p₁)·p₂)
 #eval ((Π₁·p₁)·p₂) ▹
@@ -902,39 +923,68 @@ lemma conv_preserve_types :
     Term_TypeChecking t₁ σ →
     Term_TypeChecking t₂ τ →
     σ = τ := by sorry
+-/
 
-lemma terms_have_same_type (t₁ t₂ : Term) (σ τ : FType) :     -- TODO: problema -> o cases devia ser para inductive def de conversions
+--TODO yes: Lema auxiliar? TypeChecking é único? -- se não funcionar => induction no tipo ou termo
+lemma Type_Uniqueness (t : Term) (σ τ : FType) :
+  Term_TypeChecking t σ →
+  Term_TypeChecking t τ →
+  σ = τ := by
+  intro tc1 tc2
+  induction tc1 with
+  | tcLcons t =>
+      cases tc2
+      rfl
+  | tcPi => sorry
+      --cases tc2
+  | tcSigma => sorry
+  | tcSing => sorry
+  | tcBUnion => sorry
+  | tcIUnion => sorry
+  | tcVar => sorry
+  | tcApp _ _ _ _ => sorry
+
+
+
+-- Conversions preserve types
+lemma conversions_preserve_types (t₁ t₂ : Term) (σ τ : FType) :     -- TODO yes: problema -> o cases devia ser para inductive def de conversions
     ConvertsTo t₁ t₂ →
     Term_TypeChecking t₁ σ →
     Term_TypeChecking t₂ τ →
     σ = τ := by
-    cases t₁ with                                           -- that's not it :/
-    | lcons _ => sorry
-    | pi => sorry
-    | sigma => sorry
-    | sing => sorry
-    | bUnion => sorry
-    | iUnion => sorry
-    | var _ => sorry
-    | app _ _ => sorry
+    intro ct tc1 tc2                              -- ct (ConvertsTo hypothesis), tc1 tc2 (Term_TypeChecking hypothesis)
+    induction ct with                             -- induction on the hypothesis ConvertsTo
+    | c1_pi t₁ t₂ => sorry    -- olhar para a versão manual acima
+        --2match tc1 with
+        --2| tcApp _ _ (tcApp _ _ tcPi _) _ => rfl
+        --2| _ => by_contra
+        --let H : (conv (((Π₁·t₁)·t₂)) = t₁) := by simp [conv]
+        --1 let H : ((conv ((Π₁·t₁)·t₂)) = t₁) := by simp [conv]
+        --1 in
+        --1 match tc1, H with
+        --let T := conv ((Π₁·t₁)·t₂)
+        --have H : (T = t₁) := by exact rfl
+        --sorry
+        --refine Type_Uniqueness _ σ τ ?c1_pi.a _
+    | c2_sigma t₁ t₂ t₃ => sorry
+    | c3_indU t₁ t₂ => sorry
+        --let H : ((ind_⋃₁·𝔰₁·t₁)·t₂) ▹ (t₂·t₁) := by simp [conv]
+        --in
+        --match tc1, H with
+        --| Term_TypeChecking.tcApp _ _ (Term_TypeChecking.tcApp _ _ Term_TypeChecking.tcIUnion _), _ =>
+      -- Using type-checking information
+        --have : σ = τ :=
+        --match tc2 with
+      --| _ => rfl
+      --exact this
+    | c4_indU_binU t₁ t₂ t₃ => sorry
 
-
-TODO: Lema auxiliar? TypeChecking é único?
-lemma Type_Uniqueness (t : Term) (σ τ : FType) :
-  Term_TypeChecking t σ →
-  Term_TypeChecking t τ →
-  σ = τ :=
-by sorry
--/
-
-
-
-inductive ReducesTo : Term → Term → Prop          -- TODO: aqui temos de then dar sempre para que é que se reduz
+inductive ReducesTo : Term → Term → Prop          -- TODO yes keep: aqui temos de then dar sempre para que é que se reduz
 | reflex (t) : ReducesTo t t                                                -- A term reduces to itself
 | app_left {t₁ t₂ t₁'} : ReducesTo t₁ t₁' → ReducesTo (t₁·t₂) (t₁'·t₂)      -- Reduction in the left subterm of an application
 | app_right {t₁ t₂ t₂'} : ReducesTo t₂ t₂' → ReducesTo (t₁·t₂) (t₁·t₂')     -- Reduction in the right subterm of an application
 | one_step {t₁ t₂} : ConvertsTo t₁ t₂ → ReducesTo t₁ t₂
-| n_step {t₁ t₂ t₃} : ReducesTo t₁ t₂ → ReducesTo t₂ t₃ → ReducesTo t₁ t₃   -- Transitivity -> TODO not now: devia ser lemma?
+| n_step {t₁ t₂ t₃} : ReducesTo t₁ t₂ → ReducesTo t₂ t₃ → ReducesTo t₁ t₃   -- Transitivity -> TODO yes: devia ser lemma? No.
 
 open ReducesTo
 
@@ -944,6 +994,21 @@ example (t₁ t₂ : Term) : ReducesTo ((Π₁·t₁)·t₂) t₁ :=
     have H1 := ConvertsTo.c1_pi t₁ t₂
     exact ReducesTo.one_step H1
 
+/-
+-- Reductions preserve types
+lemma terms_have_same_type2 (t₁ t₂ : Term) (σ τ : FType) :     -- TODO yes: problema -> o cases devia ser para inductive def de conversions
+    ReducesTo t₁ t₂ →
+    Term_TypeChecking t₁ σ →
+    Term_TypeChecking t₂ τ →
+    σ = τ := by sorry
+-/
+
+-- Reductions preserve types
+lemma reductions_preserve_types (t₁ t₂ : Term) (σ τ : FType) :     -- TODO yes: problema -> o cases devia ser para inductive def de conversions
+    ReducesTo t₁ t₂ →
+    Term_TypeChecking t₁ σ →
+    Term_TypeChecking t₂ τ →
+    σ = τ := by sorry
 
 -- ------------------------------------------
 -- EXAMPLE 1.10 (p.28): Example of reductions
@@ -1003,11 +1068,14 @@ by
 
 -- Definition: checks whether a term is in normal form
 def isNormal : Term → Prop
-| t => (conv t = t)                                         -- TODO: isto assim não deixa converter subterms
-                                                            --
+| t => (conv t = t)                                         -- TODO not now: isto assim não deixa converter subterms
+                                                            -- a tirar
+
+@[simp]
+def isNormal2 (t:Term): Prop := ∀x, ReducesTo t x → x=t
 
 -- Definition: checks whether a term is in normal form
-def isNormal_check : Term → Bool
+def isNormal_check : Term → Bool                            -- a tirar, vai ter de ser Prop e não Bool
 | t => if conv t = t then true else false
 
 -- Definition: normal form of a term
@@ -1018,8 +1086,33 @@ if (isNormal_check t) = true then t else conv t
 def example_term_Ex1_10_1_A := ((Σ₁·(var "t₁"))·((Π₁·(var "t₂"))·(var "t₃")))
 def example_term_Ex1_10_1_B := ((Σ₁·(var "t₁"))·(var "t₂"))
 
+#eval example_term_Ex1_10_1_A
+#eval conv example_term_Ex1_10_1_A
+
 #eval isNormal_check example_term_Ex1_10_1_A              -- TODO: not working, diz que é Normal mas não é
 #eval isNormal_check example_term_Ex1_10_1_B
+
+/-
+example : isNormal2 example_term_Ex1_10_1_B := by         -- TODO (future); might need additional lemmas
+  unfold example_term_Ex1_10_1_B
+  unfold isNormal2
+  intro x rt
+  cases rt with
+  | reflex t => exact rfl
+  | app_left _ => sorry
+  | app_right _ => sorry
+  | one_step h => cases h
+  | n_step h1 h2 => cases h1 <;> cases h2 <;> simp <;> rfl
+                    . rename_i a b                        -- . para ir só para o primeiro goal
+                      cases b with
+                      | reflex t => sorry
+                      | app_left _ => sorry
+                      | app_right _ => sorry
+                      | one_step _ => sorry
+                      | n_step _ _ => sorry
+-/
+
+  --cases x <;> cases rt    -> fazer todos os goals
 
 -- Example: using Ex1_11_Seq2 to see that ((Σ₁·r)·((Π₁·q)·t))·s is not normal, while (r·s)·(q·s) is
 --          we will consider the terms to be variables (using the above term names for the strings).

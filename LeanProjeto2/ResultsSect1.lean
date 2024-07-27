@@ -3,8 +3,8 @@ import LeanProjeto2.StarLang
 open StarLang
 open FType
 open Term
-open AtomicFormula
-open BaseFormula
+--open AtomicFormula
+--open BaseFormula
 open Formula
 
 

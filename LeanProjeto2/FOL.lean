@@ -41,7 +41,7 @@ example : LTerm_is_wellformed ["x", "y"] const_a :=
   LTerm_is_wellformed.bc_const
 
 
--- Example proof of well-formedness for func_f   TODO: NOT WORKING AINDA
+-- Example proof of well-formedness for func_f    TODO not now: NOT WORKING AINDA
 /-
 theorem func_f_wellformed : LTerm_is_wellformed ["x", "y"] func_f :=
   LTerm_is_wellformed.bc_func
@@ -51,7 +51,7 @@ theorem func_f_wellformed : LTerm_is_wellformed ["x", "y"] func_f :=
       | Lconst c => LTerm_is_wellformed.bc_const)
 -/
 
-
+/-
 -- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
 inductive L_closed_under_term : LTerm → Finset String → Prop
 | Lcu_Lvar : x ∈ α → L_closed_under_term (Lvar x) α                   -- A variables (Lvar x) is closed under the set of variables α if x is an element of α.
@@ -59,7 +59,15 @@ inductive L_closed_under_term : LTerm → Finset String → Prop
 | Lcu_Lfunc :
     (∀ t, t ∈ ts → L_closed_under_term t α) →                         -- A function term (Lfunc f ts) is closed under α if every term t in the list ts is closed under α.
     L_closed_under_term (Lfunc f ts) α
--- TODO: tem de ser sempre o mesmo conjunto α? Em princípio cada t podia ter outro conjunto...
+-- TODO (future): tem de ser sempre o mesmo conjunto α? Em princípio cada t podia ter outro conjunto...
+-/
+
+/-
+t1 : x=x
+t2 : y=z
+f(t1,t2)
+-/
+
 
 /-
 DEFINITION FOR DECIDABLE (for terms)
@@ -168,6 +176,7 @@ inductive LFormula_is_wellformed : List String → LFormula → Prop
     LFormula_is_wellformed xs (forall_L x A)                 -- If A is a well-formed formula (for our list xs and the bound variable x), then so is ∀x A.
 
 
+/-
 -- Definition: permite associar um conjunto de variáveis a uma fórmula (para lidarmos com coisas como t(x) em axiomas, etc)
 inductive L_closed_under_formula : LFormula → Finset String → Prop
 | cu_atomic_L : ∀ (P : LPred) (ts : List LTerm) (α : Finset String),        -- An atomic formula atomic_L P ts is closed under a set α if all terms in the list ts are closed under α
@@ -182,7 +191,10 @@ inductive L_closed_under_formula : LFormula → Finset String → Prop
     L_closed_under_formula (or_L A B) (α ∪ β)
 | cu_forall_L : ∀ (x : String) (A : LFormula) (α : Finset String),          -- ∀₀ x A is closed under a set α if A is closed under the set α with the variable x added to it.
     L_closed_under_formula A (α ∪ {x}) →
-    L_closed_under_formula (forall_L x A) (α ∪ {x})       -- TODO: check this with the ∪ {x}
+    L_closed_under_formula (forall_L x A) α      -- DONE: check this with the ∪ {x}
+
+A(x)    x ∈ A.freevars
+-/
 
 namespace LFormula
 
