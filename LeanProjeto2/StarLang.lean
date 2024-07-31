@@ -16,6 +16,7 @@ inductive FType : Type
 | ground : FType                        -- G
 | arrow : FType → FType → FType         -- σ → τ
 | star : FType → FType                  -- σ*
+deriving Repr, DecidableEq
 
 open FType
 
@@ -42,8 +43,8 @@ example (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
 -- DEFINITION 1.2 (p.8-9): Terms of L^{omega}_*
 inductive Term --where
 | lcons : LTerm → Term                  -- L-constants
-| pi                                    -- combinators:     Π
-| sigma                                 --                  Σ
+| pi --{σ τ: FType} : Term                                    -- combinators:     Π
+| sigma --{σ τ ρ: FType} : Term                                --                  Σ
 | sing                                  -- star constants:  𝔰
 | bUnion                                --                  ∪ (binary union)
 | iUnion                                --                  ∪ (indexed union)
@@ -101,51 +102,37 @@ inductive
 
 namespace Term
 
-inductive Subterm : Term → Term → Prop
-| refl (t : Term) : Subterm t t                                                             -- Terms are always subterms of themselves
-| app_left {t₁ t₂ t' : Term} : Subterm t' t₁ → Subterm t' (Term.app t₁ t₂)                  -- Subterms of applications (LHS)
-| app_right {t₁ t₂ t' : Term} : Subterm t' t₂ → Subterm t' (Term.app t₁ t₂)                 -- Subterms of applications (RHS)
+-- DEFINITION: subterm _ of a term _
+inductive isSubterm : Term → Term → Prop
+| refl (t : Term) : isSubterm t t                                                             -- Terms are always subterms of themselves
+| app_left {t₁ t₂ t' : Term} : isSubterm t' t₁ → isSubterm t' (Term.app t₁ t₂)                  -- Subterms of applications (LHS)
+| app_right {t₁ t₂ t' : Term} : isSubterm t' t₂ → isSubterm t' (Term.app t₁ t₂)                 -- Subterms of applications (RHS)
 
-open Subterm
+open isSubterm
 
 -- Example: example of a subterm
-example : Subterm (var "x") (app (var "x") (var "y")) :=
+example : isSubterm (var "x") (app (var "x") (var "y")) :=
   by
-    have H := Subterm.refl (var "x")
+    have H := isSubterm.refl (var "x")
     exact app_left H
 
 /-
 -- Examples of subterms
-example : Subterm (var "x") ((var "x")·(var "y")) :=
+example : isSubterm (var "x") ((var "x")·(var "y")) :=
   app_left refl
 
-example : Subterm (Term.var "y") (Term.app (Term.var "x") (Term.var "y")) :=
+example : isSubterm (Term.var "y") (Term.app (Term.var "x") (Term.var "y")) :=
   app_right refl
 -/
 
-/-
--- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
-inductive closed_under : Term → Finset String → Prop                      -- TODO: estas coisas em baixo é para tirar?
-| cu_lcons : L_closed_under_term t α → closed_under (lcons t) α
-| cu_pi : closed_under (pi) α                                             -- a tirar? Π não tem variáveis
-| cu_sigma : closed_under (sigma) α                                       -- a tirar? Σ não tem variáveis
-| cu_sing : closed_under (sing) α                                         -- a tirar? 𝔰 não tem variáveis
-| cu_bUnion : closed_under (bUnion) α                                     -- a tirar? ∪ não tem variáveis
-| cu_iUnion : closed_under (iUnion) α                                     -- a tirar? ind_U não tem variáveis
-| cu_var :
-    x ∈ α →
-    -----------
-    closed_under (var x) α
-| cu_app : closed_under t₁ α → closed_under t₂ β → closed_under (app t₁ t₂) (α ∪ β)
--- TODO: o de cima ou | cu_app : closed_under t₁ α → closed_under t₂ α → closed_under (app t₁ t₂) α ?
--/
 
 -- -------------------------------------
 -- FREE VARIABLES PARA TERMOS EM L^ω_*
 -- -------------------------------------
 
-def freevars : Term → Finset String
-| lcons t => t.Lfreevars
+-- DEFINITION: all the (free) variables of terms in StarLang
+def freevars : Term → Finset String                           -- TODO: mudar este nome para term_vars?
+| lcons t => t.Lfreevars                                      --       since para terms: vars and free_vars it's the same
 | pi
 | sigma
 | sing
@@ -155,12 +142,6 @@ def freevars : Term → Finset String
 | app t₁ t₂ => t₁.freevars ∪ t₂.freevars
 
 end Term
-
--- example (x:String) (α: Finset String) (h:{x : Term | x.closed_under α})
---   (y:Term) (h: y.closed_under α)
--- :
---    by sorry
-
 
 -- ------------------------------------------------------------
 -- NOTATION FOR THE COMBINATORS AND THE STAR CONSTANTS IN L^ω_* (and the application of terms)
@@ -198,7 +179,6 @@ open Term_TypeChecking
 -- TERM SUBSTITUTION IN L^ω_*
 -- -------------------------------------
 
-
 -- Definition: term substitution, we replace x by replacement in some term t (lcons, var, app, rest)
 def term_substitution (x : String) (replacement : Term) : Term → Term
 | .lcons t => match replacement with
@@ -210,7 +190,12 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
 | .app t₁ t₂ => .app (term_substitution x replacement t₁) (term_substitution x replacement t₂)  -- In an application, we do the substitution in each term
 | t => t                                                                              -- The combinators Π, Σ and the star constants 𝔰, ∪, ind_⋃ are constants and hence are not affected by substitution
 
+-- EXAMPLES: substituting in terms
 
+#eval term_substitution "x" Π₁ (var "x")                                        -- Replacing x by Π₁ in x gives Π₁
+#eval term_substitution "x" Π₁ (var "y")                                        -- Replacing x by Π₁ in y gives y
+#eval term_substitution "x" ∪₁ (((var "x")·(var "y"))·(var "z"))                -- Replacing x by ∪₁ in (x·y)·z gives (∪₁·y)·z
+#eval term_substitution "x" (lcons (LTerm.Lvar "b")) (lcons (LTerm.Lvar "a"))   -- Replacing x by (Lvariable b) in (Lvariable a) gives (Lvariable a) -> nothing happens
 
 
 -- ------------------
@@ -233,6 +218,8 @@ inductive Formula : Type
 | or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
 | unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
 | bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
+--| bForall {x: String} {t:Term} {h: x ∉ t.freevars} : String → Term → Formula → Formula          -- TO DO: passar para well-formed temos de acrescentar isto
+-- deriving Repr, DecidableEq           TODO: falta incluir isto
 
 open Formula
 
@@ -274,17 +261,43 @@ inductive Formula_is_wellformed : List String → Formula → Prop
 -- FREE VARIABLES PARA FORMULAS EM L^ω_*
 -- -------------------------------------
 
+-- DEFINITION: the free variables of a formula in StarLang
 def Formula.freevars : Formula → Finset String
-| .L_Form (A : LFormula) => LFormula.Lfreevars_formula A                         --| .L_Form _ => by sorry -- TODO not anymore: criar o LFormula.freevars e chamar aqui
+| .L_Form (A : LFormula) => LFormula.Lfreevars_formula A
 | .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset
 | .eq t₁ t₂
-| .or t₁ t₂
 | .mem t₁ t₂ => t₁.freevars ∪ t₂.freevars
+| .or A B => A.freevars ∪ B.freevars
 | .not A => A.freevars
 | .unbForall x A
 | .bForall x t A => A.freevars \ ([x].toFinset)
 
 
+-- DEFINITION: all the variables of a formula in StarLang
+def Formula.allvars : Formula → Finset String
+| .L_Form A => LFormula.Lallvars_formula A                                    -- The variables of a Formula are the ones of the formula when seen as an LFormula
+| .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset    -- All the variables from the list of terms used in the predicate
+| .eq t₁ t₂
+| .mem t₁ t₂ => t₁.freevars ∪ t₂.freevars                                     -- For both terms, we collect the variables from both and consider the union of those sets
+| .or A B => A.allvars ∪ B.allvars                                            -- Take the variables from both subformulas and consider the union of those sets
+| .not A => A.allvars                                                         -- The variables of ¬A are the ones of A
+| .unbForall x A => A.allvars ∪ {x}                                           -- The variables of ∀x A are the ones of A together with the bound variable
+| .bForall x t A => t.freevars ∪ A.allvars ∪ {x}                              -- The variables of ∀x∈t A are the ones of A together with the bound variable and the variables in t
+
+-- Example after notation
+
+/-
+With these definitions, we can create assumptions such as:
+    x is a free variable of formula A       -> In Lean: x ∈ A.freevars
+    x is not a free variable of formula A   -> In Lean: x ∉ A.freevars
+
+    x is a variable of formula A            -> In Lean: x ∈ A.allvars
+    x is not a variable of formula A        -> In Lean: x ∉ A.allvars
+-/
+
+-- --------
+-- NOTATION
+-- --------
 
 -- NOTATION: Notation for the equality and the membership symbols
 notation t₁ "=₁" t₂ => Formula.eq t₁ t₂
@@ -344,21 +357,35 @@ def F_iff (A B : Formula) : Formula :=
 
 notation A "↔₁" B => F_iff A B
 
+-- EXAMPLE OF FREE VARIABLES AND VARIABLES OF A FORMULA
+
+-- EXAMPLE 1: Formula R(x,y) ∨ (∀z∈t Q(z)) - Free variables and check whether sentence
+def ex_freevars_formula := (rel "R" [var "x", var "y"]) ∨₁ (bV₁ "z" (var "t") (rel "Q" [var "z"]))
+#eval Formula.freevars ex_freevars_formula                         -- The set of free variables is the set {x,y}, that is {"x", "y"}
+#eval Formula.allvars ex_freevars_formula             -- TODO: aqui aparece t como variável, é preciso mudar var "t" aqui e nos exemplos em baixo
+
 -- ----------------------------
 -- SENTENCES (CLOSED FORMULAS)
 -- ----------------------------
 
--- TODO not now: Este exemplo é o mesmo que temos em FOL
--- Exemplo para calcular as free variables da fórmula R(x,y) ∨ (∀ z Q(z))
-def ex_freevars_formula := (rel "R" [var "x", var "y"]) ∨₁ (V₁ "z" (rel "Q" [var "z"]))
-#eval Formula.freevars ex_freevars_formula                                  -- The free variables of the formula are the set {x,y}, that is {"x", "y"}
-
-
 def isClosed (A : Formula) : Prop := Formula.freevars A = {}
 def isClosed_check (A : Formula) : Bool := (Formula.freevars A) = {}       -- Prints true or false dependendo se temos var livres ou não
 
-#eval isClosed_check ex_freevars_formula                                    -- Since ex_freevars_formula has x and y as free variables, the output is false
--- TODO not now: acrescentar um exemplo que dê true
+-- EXAMPLE 1: Formula R(x,y) ∨ (∀z∈t Q(z)) - Free variables and check whether sentence
+def ex1_freevars_formula := (rel "R" [var "x", var "y"]) ∨₁ (bV₁ "z" (var "t") (rel "Q" [var "z"]))
+#eval Formula.freevars ex1_freevars_formula                         -- The set of free variables is the set {x,y}, that is {"x", "y"}
+#eval isClosed_check ex1_freevars_formula                           -- Since ex1_freevars_formula has x and y as free variables, the output is false
+
+-- EXAMPLE 2: Formula R(x,y) - Free variables and check whether sentence
+def ex2_freevars_formula := (rel "R" [var "x", var "y"])
+#eval Formula.freevars ex2_freevars_formula                         -- The set of free variables is the set {x,y}, that is {"x", "y"}
+#eval isClosed_check ex2_freevars_formula                           -- Since ex2_freevars_formula has x and y as free variables, the output is false
+
+-- EXAMPLE 3: Formula ∀z∈t Q(z) - Free variables and check whether sentence
+def ex3_freevars_formula := (bV₁ "z" (var "t") (rel "Q" [var "z"]))
+#eval Formula.freevars ex3_freevars_formula                         -- The set of free variables is the empty set ∅
+#eval isClosed_check ex3_freevars_formula                           -- Since ex3_freevars_formula has no free variables, the output is true
+
 
 -- ------------------------------------------------------
 -- CHECKING FORMULAS:
@@ -478,67 +505,9 @@ inductive Formula_TypeChecking : Formula → Prop
 -- FORMULA SUBSTITUTION IN L^ω_*
 -- -------------------------------------
 
-/-
-inductive Formula : Type
-| L_Form : LFormula → Formula
-| rel : String → List Term → Formula                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
-| eq : Term → Term → Formula                                      -- t =σ q
-| mem : Term → Term → Formula                                     -- t ∈σ q
-| not : Formula → Formula                                         -- If A is a formula, then so is (¬A)
-| or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
-| unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
-| bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
-
-
-def term_substitution (x : String) (replacement : Term) : Term → Term
-| .lcons t => match replacement with
-              | .lcons r => .lcons (LTerm.Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
-              | _ => .lcons t
-| .var y => if x = y
-          then replacement
-          else (.var y)
-| .app t₁ t₂ => .app (term_substitution x replacement t₁) (term_substitution x replacement t₂)  -- In an application, we do the substitution in each term
-| t => t                                                                              -- The combinators Π, Σ and the star constants 𝔰, ∪, ind_⋃ are constants and hence are not affected by substitution ⋃₁
-
-
-| (L_Form A) => match replacement with
-              | (L_Form B) => L_Form (LFormula.Lsubstitution_formula x B A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
-              | _ => (L_Form A)
-
-| (L_Form A) => match replacement with
-              | (L_Form B) => L_Form (LFormula.Lsubstitution_formula x replacement A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
-              | _ => (L_Form A)
-
-| (L_Form A) => match replacement with
-              | LTerm => L_Form (LFormula.Lsubstitution_formula x replacement A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
-              | _ => (L_Form A)
-
-| (L_Form A) => L_Form (LFormula.Lsubstitution_formula x replacement A)
-
-| LTerm => L_Form (LFormula.Lsubstitution_formula x r A)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
-
-
-THIS IS THE NEWER VERSION (18 de julho)
 def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 | (L_Form A) => match replacement with
               | .lcons r => L_Form (LFormula.Lsubstitution_formula x r A)
-              | _ => (L_Form A)
-| (rel P terms) => rel P (terms.map (term_substitution x replacement))
-| (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)
-| (t₁ ∈₁ t₂) => (term_substitution x replacement t₁) ∈₁ (term_substitution x replacement t₂)
-| (Formula.not A) => ¬₁ (substitution_formula x replacement A)                                                       -- recursivamente em A
-| (Formula.or A B) => (substitution_formula x replacement A) ∨₁ (substitution_formula x replacement B)              -- recursivamente em A e B
-| (V₁ y A) => if x = y then V₁ y A
-              else V₁ y (substitution_formula x replacement A)
-| (bV₁ y t A) => if x = y then bV₁ y t A
-              else (bV₁ y t (substitution_formula x replacement A))
-
-
--/
-
-def substitution_formula (x : String) (replacement : Term) : Formula → Formula
-| (L_Form A) => match replacement with
-              | .lcons r => L_Form (LFormula.Lsubstitution_formula x r A)     -- TODO looks good: not good enough, neste momento é só para constantes e não para variáveis, etc
               | _ => (L_Form A)
 | (rel P terms) => rel P (terms.map (term_substitution x replacement))
 | (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)
@@ -550,84 +519,38 @@ def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 | (bV₁ y t A) => if x = y then bV₁ y t A
               else (bV₁ y t (substitution_formula x replacement A))
 
+-- TESTE daqui ( )
+--example : substitution_formula b ((Term.var "x")·(Term.var "y")) A := by sorry
+--example (x : String) (t : Term) (A : Formula) : (substitution_formula x t A) := by sorry
+def ex0_subst (A:Formula) : Formula :=
+    A
 
+def ex00_subst (x : String) (t : Term) (A:Formula) : Formula :=
+    substitution_formula x t A
+-- até aqui
 
+-- EXAMPLES: formula substitution           -- TODO: falta o repr para podermos ter estes examplos com #eval
 
-
-
-
--- -------------------------------------
--- FORMULA CLOSED UNDER
--- -------------------------------------
-
-/-
-inductive Formula : Type
-| L_Form : LFormula → Formula
-| rel : String → List Term → Formula                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
-| eq : Term → Term → Formula                                      -- t =σ q
-| mem : Term → Term → Formula                                     -- t ∈σ q
-| not : Formula → Formula                                         -- If A is a formula, then so is (¬A)
-| or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
-| unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
-| bForall : String → Term → Formula → Formula
--/
-
--- Definition: closed_under for formulas inStar
--- Cuidado: cada vez que temos um termo t ele pode ou não ser um LTerm => pattern matching
--- o que não acrescenta novas coisas => universally closed under any set of variables
+-- Example 1:
+--#eval substitution_formula "x" Π₁ (rel "R" [var "x", var "y"])        -- gives rel "R" [Π₁, Term.var "y"]
 
 /-
--- operations or constants that are closed under any set of variables.
-inductive closed_under_formula : Formula → Finset String → Prop
+-- Example 2:
+def ex2_subst : Formula :=
+    (¬₁( (var "x")∈₁(var "y") )) ∨₁ ((var "z")=₁(var "w"))
 
-| cu_L_Form : --GOOD-- ∀ (A : LFormula) (α : Finset String),
-    L_closed_under_formula A α →                                      -- A formula in StarL is closed_under a set of variables if it was closed_under in L for the same set of variables.
-    closed_under_formula (L_Form A) α
+#eval substitution_formula "x" ∪₁ ex2_subst                             -- gives (¬₁(∪₁ ∈₁ (var "y"))) ∨₁ ((var "z")=₁(var "w"))
 
-| cu_rel : --∀ (R : String) (ts : List Term) (α : Finset String),
-    (∀ t, t ∈ ts → (match t with
-                     | lcons lt => L_closed_under_term lt α
-                     | _ => true))                                      -- TODO: não é sempre true, só se forem ground terms
-    → closed_under_formula (rel R ts) α
+-- Example 3:
+def ex3_subst : Formula :=
+  bForall "y" (var "a") ((var "x")=₁(var "y"))
 
-| cu_eq : --∀ (t₁ t₂ : Term) (α : Finset String),
-    (match t₁ with
-     | lcons lt₁ => L_closed_under_term lt₁ α
-     | _ => true) →
-    (match t₂ with
-     | lcons lt₂ => L_closed_under_term lt₂ α                           -- TODO: aqui não devia ser lt₁ com α e lt₂ com β? para depois ser a união?
-     | _ => true) →
-    closed_under_formula (t₁ =₁ t₂) α
+#eval substitution_formula "x" ind_⋃₁ ex3_subst                         -- gives ∀ "y" ∈ (var "a") (ind_⋃₁ =₁ (var "y"))
 
-| cu_mem : --∀ (t₁ t₂ : Term) (α : Finset String),
-    (match t₁ with
-     | lcons lt₁ => L_closed_under_term lt₁ α
-     | _ => true) →
-    (match t₂ with
-     | lcons lt₂ => L_closed_under_term lt₂ α                           -- TODO: aqui não devia ser lt₁ com α e lt₂ com β? para depois ser a união?
-     | _ => true) →
-    closed_under_formula (t₁ ∈₁ t₂) α
-
-| cu_not : --GOOD-- ∀ (A : Formula) (α : Finset String),
-    closed_under_formula A α →                                            -- The negation of a formula is closed_under as long as the formula is closed_under
-    closed_under_formula (¬₁ A) α
-
-| cu_or : --GOOD-- ∀ (A B : Formula) (α β : Finset String),
-    closed_under_formula A α →                                            -- The disjunction of two formulas is closed_under as long as both formulas are closed_under
-    closed_under_formula B β →
-    closed_under_formula (A ∨₁ B) (α ∪ β)
-
-| cu_unbForall : --GOOD-- ∀ (x : String) (A : Formula) (α : Finset String),
-    closed_under_formula A (α ∪ {x}) →                                    -- If a formula A is closed under a finite set α with the bound variable x, then ∀x A is closed under it as well
-    closed_under_formula (V₁ x A) (α ∪ {x})
-
-| cu_bForall : --∀ (x : String) (t : Term) (A : Formula) (α : Finset String),
-    (match t with
-     | Term.lcons lt => L_closed_under_term lt α
-     | _ => true) →
-    closed_under_formula A (α ∪ {x}) →
-    closed_under_formula (bV₁ x t A) (α ∪ {x})                            -- TODO: aqui também com o _∪{x}
 -/
+
+
+
 
 
 
@@ -646,6 +569,8 @@ inductive closed_under_formula : Formula → Finset String → Prop
 inductive Equivalent : Formula → Formula → Prop
 | id : Equivalent A A
 | comm : Equivalent A B → Equivalent B A
+| double_neg : Equivalent (¬₁(¬₁A)) A
+| comm_or : Equivalent (A∨₁B) (B∨₁A)                              -- TODO: the same with other obvious stuff
 --| nf_left : Equivalent A B → Equivalent (normal_form A) B
 --| nf_right : Equivalent A B → Equivalent A (normal_form B)
 
@@ -684,11 +609,9 @@ inductive isTrue : Formula → Prop
       ---------------
       isTrue (B ∨₁ C)
 | forall_introduction:                        -- A(x) ∨ B => ∀x A(x) ∨ B
-      --x ∈ xs →                                -- TODO yes: sempre que A(x) precisamos das 2 primeiras linhas?
-      --closed_under_formula A xs →
       x ∈ A.freevars →
       isTrue (A ∨₁ B) →
-      x ∉ B.freevars →                        -- provided that x does not occur free in B   (TODO yes: check this)
+      x ∉ B.freevars →                        -- provided that x does not occur free in B
       ---------------
       isTrue ((unbForall x A) ∨₁ B)
 
@@ -738,30 +661,57 @@ def g : Term := var "g"
 -- ------------ COMBINATORIAL COMPLETENESS ------------ (Section 1.2.4)
 -- ----------------------------------------------------
 
--- theorem (x : var "x") (t : Term) (h : closed_under t {x}) TODO
-
-theorem combinatorial_completeness (x : String) (t : Term) : ∀(t:Term), ∃(q:Term), ∀(s:Term), ((q·s) = (term_substitution x s t)) :=
+theorem combinatorial_completeness (x : String) : ∀(t:Term), ∃(q:Term), ∀(s:Term),
+  isTrue ((q·s) =₁ (term_substitution x s t)) :=
 by
-  intro t₀
-  cases t₀ with
-  | lcons _ => sorry
-  | pi => sorry
-  | sigma => sorry
-  | sing => sorry
-  | bUnion => sorry
-  | iUnion => sorry
-  | var y => sorry --match y with
+  intro t
+  have t₂ := t
+  cases t with                                     -- TO DO: AQUI como fazer os meus cases? ver def 1.11
+  | var y =>
+      by_cases h: x = y
+      . existsi ((Σ₁·Π₁)·Π₁)
+        intro s
+        unfold term_substitution
+        rewrite [h]
+        simp
+        have H1 := isTrue.AxC₁ s (Π₁·s)
+        have H2 := isTrue.AxC₂ Π₁ Π₁ s    -- usar simetria/transitivity da igualdade
+        sorry
+      . existsi (Π₁·(var y))
+        intro s
+        rewrite [term_substitution]
+        rewrite [if_neg h]
+        exact isTrue.AxC₁ (var y) s
+          --match y with
             --| x => intro ((Σ₁·Π₁)·Π₁)
             --| _ => var y
             --sorry --intro ((Σ₁·Π₁)·Π₁) FAZER PATTERNMATCH
-  | app _ _ => sorry
+  | _ =>
+      by_cases h: x∈ t₂.freevars
+      . sorry         -- same as
+      . existsi (Π₁·t₂)           -- TODO: vai precisar de lemas auxiliares (se a variavel não esta nas freevars, não muda nada na substituiçao)
+        intro s
+        unfold term_substitution
+        --rewrite [if_neg h]
+        --exact isTrue.AxC₁ (var y) s
+        sorry
+
+
+
 
 
 --def term_substitution (x : String) (replacement : Term) : Term → Term
 
 
+-- TO DO: precisamos de conseguir dizer "Consider t(x), where x is a variable of t"
+-- chega dizer x ∈ t.allvars ?
+
+-- TO DO: notação para A(x) se A:Formula e x ∈ A.allvars ?
+
+example : {F:Formula // {"x","y"} ⊆ F.allvars} → Prop := by sorry
 
 
+-- REMARK 1.14: Every type is inhabited by at least one term (TODO)
 
 
 
@@ -779,6 +729,7 @@ def conv : Term → Term
 | ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) => ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
 | t => t
 
+
 notation t "▹" => conv t
 
 -- Checks whether a term converts to another one
@@ -788,17 +739,23 @@ inductive ConvertsTo : Term → Term → Prop
 | c3_indU (t₁ t₂) : ConvertsTo ((ind_⋃₁·(𝔰₁·t₁))·t₂) (t₂·t₁)
 | c4_indU_binU (t₁ t₂ t₃): ConvertsTo ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
 
--- Examples
-def examplinho (q t : Term) := ((Π₁·q)·t)         -- TODO -> faltava argumentos: Why is eval not directly working?
+def ConvertsTo_check (t₁ t₂ : Term): Bool := if conv t₁ = t₂ then true else false
+
+
+-- EXAMPLE: using conv to convert ((Π₁·p₁)·p₂) to p₁ for terms p₁ p₂
+--          and using ConvertsTo_check to check whether a term converts to another term
+
+def ex_conv (q t : Term) := ((Π₁·q)·t)
 
 def p₁ : Term := var "p₁"
 def p₂ : Term := var "p₂"
 
-#eval examplinho p₁ p₂
+#eval ex_conv p₁ p₂                         -- evaluates to (Π₁·p₁)·p₂
+#eval conv ((Π₁·p₁)·p₂)                     -- evaluates to p₁ (i.e. (Π₁·p₁)·p₂ converts to p₁)
+#eval ((Π₁·p₁)·p₂) ▹                        -- evaluates to p₁ (i.e. (Π₁·p₁)·p₂ converts to p₁)
 
-#eval conv ((Π₁·p₁)·p₂)
-#eval ((Π₁·p₁)·p₂) ▹
-
+#eval ConvertsTo_check ((Π₁·p₁)·p₂) p₁      -- true: the term (Π₁·p₁)·p₂ converts to p₁
+#eval ConvertsTo_check ((Π₁·p₁)·p₂) p₂      -- false: the term (Π₁·p₁)·p₂ does not convert to p₁
 
 
 -- --------------------------
@@ -811,10 +768,12 @@ def p₂ : Term := var "p₂"
 -- ---------------------
 
 
-lemma Conv1_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by sorry
+lemma Conv1_TypeChecking (σ τ : FType) (t₁ t₂ : Term) (ht₁ : Term_TypeChecking t₁ σ) (ht₂ : Term_TypeChecking t₂ τ) : Term_TypeChecking (conv ((Π₁·t₁)·t₂)) σ := by
   --exact ht₁
   --let H : Term := conv ((Π₁·t₁)·t₂)
-  --have H2 := conv ((Π₁·t₁)·t₂)            -- TODO: queria o resultado da conv as a new assumption
+  have H2 : conv ((Π₁·t₁)·t₂) = t₁ := by simp [conv]              -- Ter o resultado da conv as a new assumption
+  rw [H2]
+  exact ht₁
 
 
 lemma Conv2_TypeChecking (σ τ ρ : FType) (t₁ t₂ t₃ : Term) (ht₁ : Term_TypeChecking t₁ (ρ ⟶ σ ⟶ τ)) (ht₂ : Term_TypeChecking t₂ (ρ ⟶ σ)) (ht₃ : Term_TypeChecking t₃ ρ) : Term_TypeChecking (conv ((Σ₁·t₁)·t₂)·t₃) τ := sorry
@@ -925,36 +884,103 @@ lemma conv_preserve_types :
     σ = τ := by sorry
 -/
 
---TODO yes: Lema auxiliar? TypeChecking é único? -- se não funcionar => induction no tipo ou termo
-lemma Type_Uniqueness (t : Term) (σ τ : FType) :
+--Auxiliary lemma: Every term has exactly one type TODO
+lemma Type_Uniqueness {t : Term} {σ τ : FType} :
   Term_TypeChecking t σ →
   Term_TypeChecking t τ →
-  σ = τ := by
+  σ = τ := by sorry
+  /-                              -- Reunião / se não funcionar => induction no tipo ou termo
   intro tc1 tc2
-  induction tc1 with
-  | tcLcons t =>
-      cases tc2
-      rfl
-  | tcPi => sorry
-      --cases tc2
-  | tcSigma => sorry
-  | tcSing => sorry
-  | tcBUnion => sorry
-  | tcIUnion => sorry
-  | tcVar => sorry
-  | tcApp _ _ _ _ => sorry
+  induction t                       -- Do livro da reunião que sugere induction on the term
+  . cases tc1
+    cases tc2
+    rfl
+  . sorry                           -- Problema: dois Π's diferentes não têm de ter os mesmos tipos
+  --  cases tc1
+  --  cases tc2
+  . sorry
+  . sorry
+  -/
 
 
+-- Conversion 1 preserves types - ((Π₁·t₁)·t₂) ▹ t₁
+lemma xx {σ τ : FType} {t₁ t₂ : Term}
+    (ht₁ : Term_TypeChecking t₁ σ)
+    (ht₂ : Term_TypeChecking t₂ τ)
+    (hPi : Term_TypeChecking Π₁ (σ ⟶ τ ⟶ σ)) : Term_TypeChecking ((Π₁·t₁)·t₂) σ :=
+  by
+    have H := Term_TypeChecking.tcApp hPi ht₁
+    exact Term_TypeChecking.tcApp H ht₂
 
+-- ---------------
+-- Inversion lemma
+-- ---------------
+
+-- LEMMA: Inversion lemma       -- TODO: o livro
+/-
+lemma inv_lemma1 {t₁ t₂ t₃ : Term} {σ τ : FType} :
+    (Term_TypeChecking ((Π₁·t₁)·t₂) σ) →
+    (Term_TypeCheking (Π₁·t₁) τ) →
+    ((Term_TypeCheking (t₁) σ) ∧ (Term_TypeCheking t₂ τ)) := by sorry
+-/
+
+lemma inv_lemma_app_right {t₁ t₂ : Term} {σ τ : FType} :        -- TO DO: does this look right?
+    (Term_TypeChecking (t₁·t₂) τ) →
+    (Term_TypeChecking t₁ (σ⟶τ)) →
+    (Term_TypeChecking t₂ σ) := by
+    intro h1 h2
+    cases t₂ with
+    | lcons _ => sorry
+    /- mien
+        rename_i t
+        cases σ
+        have H := tcLcons t
+        exact H
+    -/
+    | pi => sorry
+    | sigma => sorry
+    | sing => sorry
+    | bUnion => sorry
+    | iUnion => sorry
+    | var _ => sorry
+    | app _ _ => sorry
+
+
+lemma inv_lemma_app_left {t₁ t₂ : Term} {σ τ : FType} :
+    (Term_TypeChecking (t₁·t₂) τ) →
+    (Term_TypeChecking t₂ σ) →
+    (Term_TypeChecking t₁ (σ⟶τ)) := by sorry
+    --intro h1 h2
+
+lemma inv_lemma_pi {t₁ t₂ : Term} {σ τ : FType} :
+    ((Term_TypeChecking ((Π₁·t₁)·t₂) σ) → ((Term_TypeChecking t₁ σ) ∧ (Term_TypeChecking t₂ τ))) := by sorry
+
+-- lemma inv_lemma_sigma
+
+-- --------------------------
 -- Conversions preserve types
-lemma conversions_preserve_types (t₁ t₂ : Term) (σ τ : FType) :     -- TODO yes: problema -> o cases devia ser para inductive def de conversions
+-- --------------------------
+
+-- LEMMA: Conversions preserve types
+lemma conversions_preserve_types {t₁ t₂ : Term} {σ τ : FType} :     -- Para que cases seja para inductive def de conversions -> induction nessa hipotese
     ConvertsTo t₁ t₂ →
     Term_TypeChecking t₁ σ →
     Term_TypeChecking t₂ τ →
     σ = τ := by
     intro ct tc1 tc2                              -- ct (ConvertsTo hypothesis), tc1 tc2 (Term_TypeChecking hypothesis)
     induction ct with                             -- induction on the hypothesis ConvertsTo
-    | c1_pi t₁ t₂ => sorry    -- olhar para a versão manual acima
+    | c1_pi t₁ t₂ => sorry
+      /-
+      cases tc1                                   -- Reunião
+      rename_i t₃ t₄ ρ tc_t₂ tc_pi
+      have y := xx tc2 tc_t₂ Term_TypeChecking.tcPi
+      have H2 : t₁ = conv ((Π₁·t₁)·t₂) := by simp [conv]        -- usar isTrue aqui para depois poder rw? (thinking)
+      rw [H2] at tc2
+      -/
+
+      -- fazer rewrite e depois usar Type_Uniqueness
+
+        -- TODO: versão manual different, here não sabemos o tipo de t₂
         --2match tc1 with
         --2| tcApp _ _ (tcApp _ _ tcPi _) _ => rfl
         --2| _ => by_contra
@@ -979,12 +1005,12 @@ lemma conversions_preserve_types (t₁ t₂ : Term) (σ τ : FType) :     -- TOD
       --exact this
     | c4_indU_binU t₁ t₂ t₃ => sorry
 
-inductive ReducesTo : Term → Term → Prop          -- TODO yes keep: aqui temos de then dar sempre para que é que se reduz
+inductive ReducesTo : Term → Term → Prop
 | reflex (t) : ReducesTo t t                                                -- A term reduces to itself
 | app_left {t₁ t₂ t₁'} : ReducesTo t₁ t₁' → ReducesTo (t₁·t₂) (t₁'·t₂)      -- Reduction in the left subterm of an application
 | app_right {t₁ t₂ t₂'} : ReducesTo t₂ t₂' → ReducesTo (t₁·t₂) (t₁·t₂')     -- Reduction in the right subterm of an application
 | one_step {t₁ t₂} : ConvertsTo t₁ t₂ → ReducesTo t₁ t₂
-| n_step {t₁ t₂ t₃} : ReducesTo t₁ t₂ → ReducesTo t₂ t₃ → ReducesTo t₁ t₃   -- Transitivity -> TODO yes: devia ser lemma? No.
+| n_step {t₁ t₂ t₃} : ReducesTo t₁ t₂ → ReducesTo t₂ t₃ → ReducesTo t₁ t₃   -- Transitivity to represent n-step reductions
 
 open ReducesTo
 
@@ -994,21 +1020,55 @@ example (t₁ t₂ : Term) : ReducesTo ((Π₁·t₁)·t₂) t₁ :=
     have H1 := ConvertsTo.c1_pi t₁ t₂
     exact ReducesTo.one_step H1
 
-/-
--- Reductions preserve types
-lemma terms_have_same_type2 (t₁ t₂ : Term) (σ τ : FType) :     -- TODO yes: problema -> o cases devia ser para inductive def de conversions
-    ReducesTo t₁ t₂ →
-    Term_TypeChecking t₁ σ →
-    Term_TypeChecking t₂ τ →
-    σ = τ := by sorry
+
+--def ReducesTo_check (t₁ t₂ : Term): Bool := if ((ReducesTo t₁ t₂) = true) then true else false
+
+-- TODO: isRedex, isReduct, isReducible (definition 1.15, p.27)
+
+/- TODO: Normalizar até não funcionar mais -> TODO yes: precisa de decreasing?
+def normalize (t : Term) : Term :=
+  let t' := conv t
+  if t = t' then t
+  else normalize t'
 -/
 
--- Reductions preserve types
-lemma reductions_preserve_types (t₁ t₂ : Term) (σ τ : FType) :     -- TODO yes: problema -> o cases devia ser para inductive def de conversions
+
+-- ---------------------------------------------
+-- REMARK 1.23 (p.28): Reductions preserve types
+-- ---------------------------------------------
+
+-- LEMMA: Reductions preserve types
+lemma reductions_preserve_types {t₁ t₂ : Term} {σ τ : FType} :     -- TODO now: yes: problema -> o cases devia ser para inductive def de conversions
     ReducesTo t₁ t₂ →
     Term_TypeChecking t₁ σ →
     Term_TypeChecking t₂ τ →
-    σ = τ := by sorry
+    σ = τ := by
+    intro red_t tc1 tc2
+    induction red_t with
+    | reflex t => exact Type_Uniqueness tc1 tc2
+    | app_left rd tc => sorry
+    | app_right rd tc => sorry
+    | one_step h_ct => exact (conversions_preserve_types h_ct tc1 tc2)       -- TODO: como rename as metavariables com as cruzes?
+    | n_step h_red_t1t2 h_red_t2t3 h_type_un_t1t2 h_type_un_t2t3 => sorry     -- Looking good, keep on doing this
+        --have h_red_t1t3 := ReducesTo.n_step h_red_t1t2 h_red_t2t3
+        --have H := h_type_un_t1t2 tc1
+
+
+-- ----------------------------------------------
+-- DEFINITION 1.16 (p.28): "Reduction sequences"
+-- ----------------------------------------------
+
+inductive steps_into : ℕ → Term → Term → Prop
+| single : steps_into 1 t (conv t)
+| multiple : steps_into n t₁ t₂ → steps_into m t₂ t₃ → steps_into (n+m) t₁ t₃
+
+/-
+-- TO DO: pq não funciona? Termination & Decreasing?
+def count_steps : Term → Term → ℕ
+| t₁, t₂ => if t₁ = t₂ then 0
+           else (1 + (count_steps (conv t₁) t₂))
+-/
+
 
 -- ------------------------------------------
 -- EXAMPLE 1.10 (p.28): Example of reductions
@@ -1066,19 +1126,19 @@ by
 -- Normal form of a term
 -- ---------------------
 
--- Definition: checks whether a term is in normal form
+-- DEFINITION: checks whether a term is in normal form
 def isNormal : Term → Prop
 | t => (conv t = t)                                         -- TODO not now: isto assim não deixa converter subterms
                                                             -- a tirar
 
 @[simp]
-def isNormal2 (t:Term): Prop := ∀x, ReducesTo t x → x=t
+def isNormal2 (t:Term): Prop := ∀ t', ReducesTo t t' → t = t'
 
--- Definition: checks whether a term is in normal form
+-- DEFINITION: checks whether a term is in normal form
 def isNormal_check : Term → Bool                            -- a tirar, vai ter de ser Prop e não Bool
 | t => if conv t = t then true else false
 
--- Definition: normal form of a term
+-- DEFINITION: normal form of a term
 def normal_form (t : Term) : Term :=
 if (isNormal_check t) = true then t else conv t
 
@@ -1126,17 +1186,60 @@ def example_term_Ex1_11_Seq2_B := (((var "r")·(var "s"))·((var "q")·(var "s")
 #eval normal_form example_term_Ex1_11_Seq2_A              -- TODO: not working -> problem with subterms?
 
 
+-- TODO: isNormalizable, isStronglyNormalizable
+-- TODO yes: How to define finite reduction sequences and strongly normalizable? (def 1.17, p.30)
+        -- Use ∃n natural e stepsinto
+
+-- TODO yes: Lemas e teoremas sem demo na dissertação (p.32/33)
+--        Newman's lemma, SN property, CR property -> how to avoid aviso? don't avoid it, leave sorry
+
+
+
+
+-- ---------------------------------------------------------------------------------------------------------------
+--             SECTION 1.2.6: Characterization of closed normal terms
+-- ---------------------------------------------------------------------------------------------------------------
+
+-- REMARK 1.29 (p.34): General form of closed terms -> fazer cases on constants?
+
+
+-- REMARK 1.30 (p.34): General form of closed normal terms -> fazer cases on constants?
+
+
+-- PROPOSITION 1.3 (p.34): Ground normal form
+
+
+-- DEFINITION 1.19 (p.36): set-like terms   --> needs isSetLike
+
+
+-- EXAMPLE 1.14 (p.36)
+
+
+-- PROPOSITION 1.4 (p.36): Star normal form
+
+
+-- REMARK 1.31 (p.37): Structure of closed normal terms
+
+
+
+
+
+
 
 
 -- ---------------------------------------------------------------------------------------------------------------
 --                          "PRENEXIFICATION RULES"
 -- ---------------------------------------------------------------------------------------------------------------
 
-
-
 -- PRENEXIFICATION RULES
 -- Definir novo inductive para termos as usual prenexification rules?
 -- ou usar um isFormula?
+
+-- FREE VARIABLES NOT WORKING :'(
+-- TODO: prenexificação para LFormula
+
+-- TODO: usar numero minimo de prenex rules e o resto def as lemmas com a boa notação
+
 def prenex : Formula → Formula
 | .not (Formula.unbForall x A)  => Formula.unbForall x (prenex (Formula.not A))
 | .not (Formula.bForall x t A)  => Formula.bForall x t (prenex (Formula.not A))
@@ -1153,6 +1256,79 @@ def prenex : Formula → Formula
 | Formula.or A B => Formula.or (prenex A) (prenex B)
 | x => x
 
--- FREE VARIABLES NOT WORKING :'(
+/- LOOKING GOOD, but falar de freevars?
+
+lemma DM1 (A B : Formula) : (¬₁(A∨₁B)) = ((¬₁A)∧₁(¬₁B)) := by sorry
+
+lemma DM2 (A B : Formula) : (¬₁(A∧₁B)) = ((¬₁A)∨₁(¬₁B)) := by sorry
+
+-----------
+
+lemma Prenex1 (x y : String) (A : Formula) : (E₁ x (E₁ y A)) = (E₁ y (E₁ x A)) := by sorry
+
+lemma Prenex2 (x y : String) (t : Term) (A : Formula) : (bE₁ x t (E₁ y A)) = (E₁ y (bE₁ x t A)) := by sorry
+
+lemma Prenex3 (x y : String) (q : Term) (A : Formula) : (E₁ x (bE₁ y q A)) = (bE₁ y q (E₁ x A)) := by sorry
+
+lemma Prenex4 (x y : String) (t q : Term) (A : Formula) : (E₁ x (bE₁ y q A)) = (bE₁ y q (E₁ x A)) := by sorry
+
+lemma Prenex5 (x y : String) (t q : Term) (A : Formula) : (bE₁ x t (bE₁ y q A)) = (bE₁ y q (bE₁ x t A)) := by sorry
+
+-----------
+
+lemma BiPrenex1 (x : String) (A B : Formula) (x ∈ A.freevars) (x ∈ B.freevars) :
+    ((E₁ x A) ∨₁ (E₁ x B)) = (E₁ x (A ∨₁ B)) := by sorry
+
+lemma BiPrenex2 (x : String) (t : Term) (A B : Formula) (x ∈ A.freevars) (x ∈ B.freevars) :
+    ((E₁ x t A) ∨₁ (E₁ x t B)) = (E₁ x t (A ∨₁ B)) := by sorry
+
+lemma BiPrenex3 (x : String) (A B : Formula) (x ∈ A.freevars) (x ∈ B.freevars) :
+    ((E₁ x A) ∧₁ (E₁ x B)) = (E₁ x (A ∧₁ B)) := by sorry
+
+lemma BiPrenex4 (x : String) (t : Term) (A B : Formula) (x ∈ A.freevars) (x ∈ B.freevars) :
+    ((bE₁ x t A) ∧₁ (bE₁ x t B)) = (bE₁ x t (A ∧₁ B)) := by sorry
+
+lemma BiPrenex5 (x : String) (A B : Formula) (x ∈ A.freevars) (x ∈ B.freevars) :
+    ((V₁ x A) ∧₁ (V₁ x B)) = (V₁ x (A ∧₁ B)) := by sorry
+
+lemma BiPrenex6 (x : String) (t : Term) (A B : Formula) (x ∈ A.freevars) (x ∈ B.freevars) :
+    ((bV₁ x t A) ∧₁ (bV₁ x t B)) = (bV₁ x t (A ∧₁ B)) := by sorry
+
+-----------
+
+lemma ThricePrenex1 (x y : String) (A B : Formula)
+    (x ∈ A.freevars) (x ∉ B.freevars)
+    (x ∉ A.freevars) (x ∈ B.freevars):
+    ((V₁ x A) ∧₁ (V₁ y B)) = (V₁ x (V₁ y (A ∧₁ B))) := by sorry
+
+lemma ThricePrenex2 (x y : String) (t q : Term) (A B : Formula)
+    (x ∈ A.freevars) (x ∉ B.freevars)
+    (x ∉ A.freevars) (x ∈ B.freevars):
+    ((bV₁ x t A) ∧₁ (bV₁ y q B)) = (bV₁ x t (bV₁ y q (A ∧₁ B))) := by sorry
+
+----------
+
+lemma HalfPrenex1 (x : String) (A B : Formula) (x ∈ A.freevars) (x ∉ B.freevars):                 -- TODO: versão com ∨₁ para def
+    ((V₁ x A) ∧₁ B) = (V₁ x (A ∧₁ B)) := by sorry
+
+lemma HalfPrenex1 (x : String) (t : Term) (A B : Formula) (x ∈ A.freevars) (x ∉ B.freevars):      -- TODO: versão com ∨₁ para def
+    ((bV₁ x t A) ∧₁ B) = (bV₁ x t (A ∧₁ B)) := by sorry
+
+lemma HalfPrenex3 (x : String) (A B : Formula) (x ∈ A.freevars) (x ∉ B.freevars):
+    ((E₁ x A) ∧₁ B) = (E₁ x (A ∧₁ B)) := by sorry
+
+lemma HalfPrenex4 (x : String) (t : Term) (A B : Formula) (x ∈ A.freevars) (x ∉ B.freevars):
+    ((bE₁ x t A) ∧₁ B) = (bE₁ x t (A ∧₁ B)) := by sorry
+
+lemma HalfPrenex5 (x : String) (A B : Formula) (x ∈ A.freevars) (x ∉ B.freevars):
+    ((E₁ x A) ∨₁ B) = (E₁ x (A ∨₁ B)) := by sorry
+
+lemma HalfPrenex6 (x : String) (t : Term) (A B : Formula) (x ∈ A.freevars) (x ∉ B.freevars):
+    ((bE₁ x t A) ∨₁ B) = (bE₁ x t (A ∨₁ B)) := by sorry
+
+TODO: what is missing?
+
+-/
+
 
 end StarLang

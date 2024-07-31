@@ -27,7 +27,7 @@ inductive LTerm_is_wellformed : List String → LTerm → Prop
 | bc_const : LTerm_is_wellformed xs (Lconst c)                                            -- A constant is always well-formed
 | bc_func : (∀ t ∈ ts, LTerm_is_wellformed xs t) → LTerm_is_wellformed xs (Lfunc f ts)    -- If t₁,...,tₙ are well-formed, then so is f(t₁,...,tₙ)
 
-
+-- EXAMPLE
 def var_x := Lvar "x"
 def const_a := Lconst "a"
 def func_f := Lfunc "f" [var_x, const_a]
@@ -50,24 +50,6 @@ theorem func_f_wellformed : LTerm_is_wellformed ["x", "y"] func_f :=
       | Lvar x => LTerm_is_wellformed.bc_var _
       | Lconst c => LTerm_is_wellformed.bc_const)
 -/
-
-/-
--- Definition: permite associar um conjunto de variáveis a um termo (para lidarmos com coisas como t(x) em axiomas, etc)
-inductive L_closed_under_term : LTerm → Finset String → Prop
-| Lcu_Lvar : x ∈ α → L_closed_under_term (Lvar x) α                   -- A variables (Lvar x) is closed under the set of variables α if x is an element of α.
-| Lcu_Lconst : L_closed_under_term (Lconst c) α                       -- A constant (Lconst c) is closed under any set of variables α since constants do not contain any variables.
-| Lcu_Lfunc :
-    (∀ t, t ∈ ts → L_closed_under_term t α) →                         -- A function term (Lfunc f ts) is closed under α if every term t in the list ts is closed under α.
-    L_closed_under_term (Lfunc f ts) α
--- TODO (future): tem de ser sempre o mesmo conjunto α? Em princípio cada t podia ter outro conjunto...
--/
-
-/-
-t1 : x=x
-t2 : y=z
-f(t1,t2)
--/
-
 
 /-
 DEFINITION FOR DECIDABLE (for terms)
@@ -121,19 +103,18 @@ decreasing_by sorry             -- TODO (net-ech)
 
 -- Exemplo: substituimos a variável x pela constante a em f(x,a). Output: f(a,a)
 #eval Lsubstitution "x" const_a func_f
--- #eval Lsubstitution var_x const_a func_f CHECK PQ NOT WORKING
 
--- Definição de variáveis livres num termo (Lfreevars devolve o conjunto das variáveis livres)
+
+-- DEFINITION: Definição de variáveis (livres) num termo (Lfreevars devolve o conjunto das variáveis livres)
 def Lfreevars : LTerm → Finset String
 | .Lvar s => {s}                                                                        -- Variáveis são livres
 | .Lconst _ => {}                                                                       -- Constantes não têm variáveis livres (Não interessa o nome da cst, daí _)
 | .Lfunc _ ls => Finset.fold (fun x y => x ∪ y) {} LTerm.Lfreevars (ls.toFinset)        -- Para símbolos funcionais (nome não interessa): ls é a lista dos argumentos (lista de LTerms), vamos recursivamente à procura das free variables
 decreasing_by sorry             -- TODO (net-ech)
 
--- Exemplo: Temos símbolo funcional f aplicado às variáveis x,y e à constante c
+-- Exemplo: termo f(x,y,c) tem x e y como variáveis livres (símbolo funcional f aplicado às variáveis x,y e à constante c)
 def ex_Lfreevars_term := LTerm.Lfunc "f" [LTerm.Lvar "x", LTerm.Lvar "y", LTerm.Lconst "c"]
--- O conjunto das variáveis livres em ex_Lfreevars_term é {x,y}, i.e. {"x", "y"}
-#eval Lfreevars ex_Lfreevars_term
+#eval Lfreevars ex_Lfreevars_term         -- O conjunto das variáveis livres em ex_Lfreevars_term é {x,y}, i.e. {"x", "y"}
 
 end LTerm
 
@@ -176,25 +157,6 @@ inductive LFormula_is_wellformed : List String → LFormula → Prop
     LFormula_is_wellformed xs (forall_L x A)                 -- If A is a well-formed formula (for our list xs and the bound variable x), then so is ∀x A.
 
 
-/-
--- Definition: permite associar um conjunto de variáveis a uma fórmula (para lidarmos com coisas como t(x) em axiomas, etc)
-inductive L_closed_under_formula : LFormula → Finset String → Prop
-| cu_atomic_L : ∀ (P : LPred) (ts : List LTerm) (α : Finset String),        -- An atomic formula atomic_L P ts is closed under a set α if all terms in the list ts are closed under α
-    (∀ t, t ∈ ts → L_closed_under_term t α) →
-    L_closed_under_formula (atomic_L P ts) α
-| cu_not_L : ∀ (A : LFormula) (α : Finset String),                          -- ¬₀A is closed under a set α if A is closed under α.
-    L_closed_under_formula A α →
-    L_closed_under_formula (not_L A) α
-| cu_or_L : ∀ (A B : LFormula) (α β : Finset String),                       -- A∨₀B is closed under a union of two sets α and β if A is closed under α and B is closed under β.
-    L_closed_under_formula A α →
-    L_closed_under_formula B β →
-    L_closed_under_formula (or_L A B) (α ∪ β)
-| cu_forall_L : ∀ (x : String) (A : LFormula) (α : Finset String),          -- ∀₀ x A is closed under a set α if A is closed under the set α with the variable x added to it.
-    L_closed_under_formula A (α ∪ {x}) →
-    L_closed_under_formula (forall_L x A) α      -- DONE: check this with the ∪ {x}
-
-A(x)    x ∈ A.freevars
--/
 
 namespace LFormula
 
@@ -237,15 +199,26 @@ notation "∃₀" => exists_L
 -- FREE VARIABLES IN FORMULAS
 -- ----------------------------
 
--- Definition: free variables of formulas in L (a set that stores free variables)
+-- DEFINITION: free variables of formulas in L (a set that stores free variables)
 def Lfreevars_formula : LFormula → Finset String
-| (LFormula.atomic_L _ ts) =>                                                                 -- Gives the union of the free variables of each term in the term list ts.
+| (LFormula.atomic_L _ ts) =>                                                                  -- Gives the union of the free variables of each term in the term list ts.
   let term_Lfreevars : List (Finset String) := List.map LTerm.Lfreevars ts;
   let all_Lfreevars : Finset String := term_Lfreevars.foldl (λ acc fvs => acc ∪ fvs) {};
   all_Lfreevars
 | (¬₀ A) => Lfreevars_formula A                                                                -- The free variables of ¬A are the same as those of A.
-| (A ∨₀ B) => Lfreevars_formula A ∪ Lfreevars_formula B                                         -- The free variables of A ∨ B are the union of the free variables of A and the free variables of B.
+| (A ∨₀ B) => Lfreevars_formula A ∪ Lfreevars_formula B                                        -- The free variables of A ∨ B are the union of the free variables of A and the free variables of B.
 | (V₀ x A) => Lfreevars_formula A \ {x}                                                        -- The free variables of ∀x A are the free variables of A except for the variable x.
+
+-- DEFINITION: all the variables of a formula in L
+def Lallvars_formula : LFormula → Finset String
+| (LFormula.atomic_L _ ts) =>
+  let term_Lallvars : List (Finset String) := List.map LTerm.Lfreevars ts;
+  let all_Lallvars : Finset String := term_Lallvars.foldl (λ acc fvs => acc ∪ fvs) {};
+  all_Lallvars
+| (¬₀ A) => Lallvars_formula A
+| (A ∨₀ B) => Lallvars_formula A ∪ Lallvars_formula B
+| (V₀ x A) => Lallvars_formula A ∪ {x}                                                          -- Here we guarantee to include the bound variable x
+
 
 open LTerm
 
