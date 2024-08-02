@@ -913,7 +913,7 @@ lemma xx {σ τ : FType} {t₁ t₂ : Term}
     exact Term_TypeChecking.tcApp H ht₂
 
 -- ---------------
--- Inversion lemma
+-- Inversion lemma      TODO: tentar fazer o global antes dos pequenos
 -- ---------------
 
 -- LEMMA: Inversion lemma       -- TODO: o livro
@@ -1063,7 +1063,7 @@ inductive steps_into : ℕ → Term → Term → Prop
 | multiple : steps_into n t₁ t₂ → steps_into m t₂ t₃ → steps_into (n+m) t₁ t₃
 
 /-
--- TO DO: pq não funciona? Termination & Decreasing?
+-- TO DO: pq não funciona? Termination & Decreasing?      IGNORE
 def count_steps : Term → Term → ℕ
 | t₁, t₂ => if t₁ = t₂ then 0
            else (1 + (count_steps (conv t₁) t₂))

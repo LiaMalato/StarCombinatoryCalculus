@@ -2,6 +2,7 @@ import LeanProjeto2.FOL
 import LeanProjeto2.StarLang
 import MathLib.Tactic
 import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Multiset.Basic
 
 open FOL
 open LFormula
@@ -94,6 +95,8 @@ def SH_int2 : Formula → Formula
 
 -- TO DO: como falar das lower SH-formulas?
 
+namespace StarLang.Formula
+
 def components_neg : Formula → (Finset String × Finset String × Formula)
 | .unbForall x F => let (a,b,rest) := components_neg F;
                     (a,{x} ∪ b,rest)
@@ -105,19 +108,27 @@ def components : Formula → (Finset String × Finset String × Formula)
 | .not F => components_neg F
 | F => ({},{},F)
 
+end StarLang.Formula
+
+noncomputable def recreate : (Finset String × Finset String × Formula) → Formula
+| (a,b,rest) => let ex := List.foldl (fun f x => .not (.unbForall x f)) rest (b.val.toList : List String)
+                List.foldl (fun f x => .unbForall x f) ex (a.val.toList : List String)
 
 inductive SH_int : Formula → Formula → Prop                 -- TO DO: ok but how can I make computations?
 | base : (h : StarLang.isBase A) → SH_int A A               -- TO DO: Doesn't capture the essence...
-| disj : --(a ∈ A.allvars) → (b ∈ A.allvars) →
-         --(c ∈ B.allvars) → (d ∈ B.allvars) →
-         ({a,b} ⊆ A.allvars) →
+| disj : SH_int A AuSH →
+         SH_int B BuSH →
+         AuSH.components = (a,b,A_SH) →
+         BuSH.components = (c,d,B_SH) →
+         --({a,b} ⊆ A.allvars) →
          -- TODO: dizer lista não tem conjuntos repetidos
-         ({c,d} ⊆ B.allvars) →
-         (SH_int A (V₁ a (E₁ b A_SH))) →
-         (SH_int B (V₁ c (E₁ d B_SH))) →
+         --({c,d} ⊆ B.allvars) →
+         --(SH_int A (V₁ a (E₁ b A_SH))) →
+         --(SH_int B (V₁ c (E₁ d B_SH))) →
          (hA : StarLang.isBase A_SH) →                                      -- A^SH = ∀a ∃b A_SH(a,b)
          (hB : StarLang.isBase B_SH) →                                      -- B^SH = ∀c ∃d B_SH(c,d)
-         (SH_int (A∨₁B) (V₁ a (V₁ c (E₁ b (E₁ d (A_SH ∨₁ B_SH))))))         -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+         (SH_int (A∨₁B) (recreate (a∪c,b∪d,(A_SH ∨₁ B_SH))))
+         --(SH_int (A∨₁B) (V₁ a (V₁ c (E₁ b (E₁ d (A_SH ∨₁ B_SH))))))         -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
 | neg {f:String}: ({a,b} ⊆ A.allvars) →
         (SH_int A (V₁ a (E₁ b A_SH))) →                                     -- A^SH = ∀a ∃b A_SH(a,b)
         (hA : StarLang.isBase A_SH) →
