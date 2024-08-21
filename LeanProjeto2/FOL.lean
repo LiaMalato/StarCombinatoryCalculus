@@ -4,7 +4,6 @@ import Init.Data.String.Basic
 import Mathlib.Data.Finset.Basic
 import Init.Data.List.Basic
 
-
 -- import data.string.basic
 
 namespace FOL
@@ -116,6 +115,17 @@ decreasing_by sorry             -- TODO (net-ech)
 def ex_Lfreevars_term := LTerm.Lfunc "f" [LTerm.Lvar "x", LTerm.Lvar "y", LTerm.Lconst "c"]
 #eval Lfreevars ex_Lfreevars_term         -- O conjunto das variáveis livres em ex_Lfreevars_term é {x,y}, i.e. {"x", "y"}
 
+
+-- DEFINITION: Closed term (a term without free variables)
+def isClosedTerm_L (t : LTerm) : Prop := Lfreevars t = {}
+def isClosedTerm_L_check (t : LTerm) : Bool := (Lfreevars t) = {}       -- Prints true or false dependendo se temos var livres ou não
+
+-- Exemplo: termo f(x,y,c) tem x e y como variáveis, logo não é fechado
+#eval isClosedTerm_L_check ex_Lfreevars_term
+-- Exemplo: term c (constante) não tem variáveis, logo é fechado
+def ex_Lclosed_term := LTerm.Lconst "c"
+#eval isClosedTerm_L_check ex_Lclosed_term
+
 end LTerm
 
 -- --------------------
@@ -123,15 +133,31 @@ end LTerm
 -- --------------------
 
 -- Predicate symbols
-def LPred : Type := String                  -- a tirar (fica logo no LFormula)
+--def LPred : Type := String                  -- a tirar (fica logo no LFormula)
 
 -- Formulas
 inductive LFormula : Type     -- VARIAVEIS
-| atomic_L : LPred → List LTerm → LFormula      -- Atomic formulas: recebem um Predicate Symbol e uma lista de termos
+| atomic_L : String → List LTerm → LFormula      -- Atomic formulas: recebem um Predicate Symbol e uma lista de termos
 | not_L : LFormula → LFormula                   -- Negation
 | or_L : LFormula → LFormula → LFormula         -- Disjunction
 | forall_L : String → LFormula → LFormula         -- Universal quantification
+deriving BEq, Repr
 --deriving BEq, Repr --NOT WORKING
+-- Mudança: 1. LPred mudar para String
+--          2. forall_L -> Fica List ou Finset
+
+-- -- -- Teste daqui -- -- --
+inductive LFormula2 : Type     -- VARIAVEIS
+| atomic_L : String → List LTerm → LFormula2      -- Atomic formulas: recebem um Predicate Symbol e uma lista de termos
+| not_L : LFormula2 → LFormula2                   -- Negation
+| or_L : LFormula2 → LFormula2 → LFormula2         -- Disjunction
+| forall_L : List String → LFormula2 → LFormula2         -- Universal quantification
+
+notation "∀₀" => LFormula2.forall_L
+
+def ex_Lfreevars_formula2 (z:String) := (∀₀ {z} (LFormula2.atomic_L "Q" [LTerm.Lvar "z"]))
+--#eval ex_Lfreevars_formula2                                  -- The free variables of the formula are the set {x,y}, that is {"x", "y"}
+-- -- -- até aqui -- -- --
 
 open LFormula
 
@@ -155,7 +181,7 @@ inductive LFormula_is_wellformed : List String → LFormula → Prop
 | wf_forall {xs x A} :
     LFormula_is_wellformed (x :: xs) A →
     LFormula_is_wellformed xs (forall_L x A)                 -- If A is a well-formed formula (for our list xs and the bound variable x), then so is ∀x A.
-
+-- Mudança: em vez de x :: xs pomos x∪xs?
 
 
 namespace LFormula
@@ -191,6 +217,7 @@ def iff_L (A B : LFormula) : LFormula :=
 def exists_L (x : String) (A : LFormula) : LFormula :=
   ¬₀ (V₀ x (¬₀ A))
 -- not_L (forall_L x (not_L A))
+-- Mudança: (x : List String)
 
 notation A "↔₀" B => iff_L A B
 notation "∃₀" => exists_L
@@ -208,6 +235,31 @@ def Lfreevars_formula : LFormula → Finset String
 | (¬₀ A) => Lfreevars_formula A                                                                -- The free variables of ¬A are the same as those of A.
 | (A ∨₀ B) => Lfreevars_formula A ∪ Lfreevars_formula B                                        -- The free variables of A ∨ B are the union of the free variables of A and the free variables of B.
 | (V₀ x A) => Lfreevars_formula A \ {x}                                                        -- The free variables of ∀x A are the free variables of A except for the variable x.
+-- Mudança: em vez de \ {x} apenas \ x?
+
+-- Mudança: falta simultaneous substitution?
+
+/- I GUESS TIRAR
+def LFormula.Lfreevars : LFormula → Finset String
+| .atomic_L _ lt => Finset.fold (fun x y => x ∪ y) {} LTerm.Lfreevars lt.toFinset
+| .not_L A => A.Lfreevars
+| .or_L A B => A.Lfreevars ∪ B.Lfreevars
+| .forall_L x A => A.Lfreevars \ ([x].toFinset)
+-/
+
+/-
+-- DO STARLANG FOLDER: A TIRAR after having solved Lfreevars_formula
+-- DEFINITION: the free variables of a formula in StarLang
+def Formula.freevars : Formula → Finset String
+| .L_Form (A : LFormula) => LFormula.Lfreevars_formula A
+| .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset
+| .eq t₁ t₂
+| .mem t₁ t₂ => t₁.freevars ∪ t₂.freevars
+| .not A => A.freevars
+| .or A B => A.freevars ∪ B.freevars
+| .unbForall x A
+| .bForall x t A => A.freevars \ ([x].toFinset)
+-/
 
 -- DEFINITION: all the variables of a formula in L
 def Lallvars_formula : LFormula → Finset String
@@ -218,13 +270,14 @@ def Lallvars_formula : LFormula → Finset String
 | (¬₀ A) => Lallvars_formula A
 | (A ∨₀ B) => Lallvars_formula A ∪ Lallvars_formula B
 | (V₀ x A) => Lallvars_formula A ∪ {x}                                                          -- Here we guarantee to include the bound variable x
-
+-- Mudança: em vez de \ {x} apenas \ x?
 
 open LTerm
 
 -- Exemplo para calcular as free variables da fórmula P(x,y) ∨ (∀ z Q(z))
 def ex_Lfreevars_formula := (atomic_L "P" [Lvar "x", Lvar "y"]) ∨₀ (V₀ "z" (atomic_L "Q" [Lvar "z"]))
 #eval Lfreevars_formula ex_Lfreevars_formula                                  -- The free variables of the formula are the set {x,y}, that is {"x", "y"}
+-- Mudança: aqui é preciso ver se se mantém [] ou {} se é List ou Finset
 
 -- ----------------------------
 -- SENTENCES (CLOSED FORMULAS)
@@ -246,6 +299,8 @@ def Lsubstitution_formula (x : String) (replacement : LTerm) : LFormula → LFor
 | (A ∨₀ B) => (Lsubstitution_formula x replacement A) ∨₀ (Lsubstitution_formula x replacement B)              -- recursivamente em A e B
 | (V₀ y A) => if x = y then V₀ y A
               else V₀ y (Lsubstitution_formula x replacement A)
+-- Mudança: if x=y agora seria sets or not? Substituição simultânea I guess?
+-- Mudança: acrescentar simultaneous substitution?
 
 -- Example
 def ex_formula : LFormula :=
@@ -255,9 +310,14 @@ def example_Lsubstitution := Lsubstitution_formula "x" (LTerm.Lconst "a") ex_for
 
 --#eval example_Lsubstitution     --PRECISAMOS DE REPR, mas para isso precisamos de decidable para formulas
 
--- ----------------------------
+
+
+
+
+
+-- -------------------------------------
 -- TERM FREE FOR A VARIABLE IN A FORMULA
--- ----------------------------
+-- -------------------------------------
 
 -- Verifica if a variable x is bound in a formula A
 def is_bound (x : String) : LFormula → Bool
@@ -285,6 +345,53 @@ def ex_formula2 := (V₀ "x" (atomic_L "P" [Lvar "x"])) ∨₀ (atomic_L "Q" [Lv
 def ex_formula2_check := is_free_for (LTerm.Lvar "y") "x" ex_formula2
 
 #eval ex_formula2_check  -- vai dar false
+
+-- ----------------------------------------------------------------------
+--                      "PRENEXIFICATION RULES"
+-- ----------------------------------------------------------------------
+
+/- Problema (14 ag) : Prenexification rules as axioms (keeps def and prim symbols)? Or as lemmas (does not keep)?
+axiom L_DM_or (A B : LFormula) : (¬₀(A∨₀B)) = ((¬₀A)∧₀(¬₀B))
+lemma L_DM_or (A B : LFormula) : (¬₀(A∨₀B)) = ((¬₀A)∧₀(¬₀B)) := by sorry
+-/
+
+-- DeMorgan laws
+axiom L_prenex_DM_or (A B : LFormula) : (¬₀(A∨₀B)) = ((¬₀A)∧₀(¬₀B))
+axiom L_prenex_DM_and (A B : LFormula) : (¬₀(A∧₀B)) = ((¬₀A)∨₀(¬₀B))
+
+-- Negation
+axiom L_prenex_neg_exists (A : LFormula) (x : String) : (¬₀(∃₀ x A)) = (V₀ x (¬₀A))
+axiom L_prenex_neg_forall (A : LFormula) (x : String) : (¬₀(V₀ x A)) = (∃₀ x (¬₀A))
+
+-- Conjunction
+axiom L_prenex_forall_and (A B : LFormula) (x : String): ((V₀ x A)∧₀B) = (V₀ x (A∧₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+axiom L_prenex_exists_and (A B : LFormula) (x : String) : ((∃₀ x A)∧₀B) = (∃₀ x (A∧₀B))    -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+
+-- Disjunction
+axiom L_prenex_forall_or (A B : LFormula) (x : String) : ((V₀ x A)∨₀B) = (V₀ x (A∨₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+axiom L_prenex_exists_or (A B : LFormula) (x : String) : ((∃₀ x A)∨₀B) = (∃₀ x (A∨₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+
+-- Implication
+axiom L_prenex_forall_imp (A B : LFormula) (x : String): ((V₀ x A)→₀B) = (∃₀ x (A→₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+axiom L_prenex_exists_imp (A B : LFormula) (x : String) : ((∃₀ x A)→₀B) = (V₀ x (A→₀B))    -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+
+axiom L_prenex_imp_forall (A B : LFormula) (x : String): (A→₀(V₀ x B)) = (V₀ x (A→₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+axiom L_prenex_imp_exists (A B : LFormula) (x : String) : (A→₀(V₀ x B)) = (∃₀ x (A→₀B))    -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+
+-- ------------------
+
+-- Conjunction commutativity
+axiom L_and_commut (A B : LFormula) : (A∧₀B) = (B∧₀A)
+
+-- Disjunction commutativity
+axiom L_or_commut (A B : LFormula) : (A∨₀B) = (B∨₀A)
+
+-- ------------------
+
+-- Double neg
+axiom L_double_neg (A : LFormula) : (¬₀(¬₀A)) = A
+
+
 
 
 end LFormula

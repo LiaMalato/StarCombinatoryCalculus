@@ -141,6 +141,8 @@ def freevars : Term → Finset String                           -- TODO: mudar e
 | var x => {x}
 | app t₁ t₂ => t₁.freevars ∪ t₂.freevars
 
+def isClosedTerm (t : Term) : Prop := freevars t = {}
+
 end Term
 
 -- ------------------------------------------------------------
@@ -218,8 +220,9 @@ inductive Formula : Type
 | or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
 | unbForall (x:String) : Formula → Formula                        -- If A is a base formula, then so is (∀x A)
 | bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
+deriving Repr
 --| bForall {x: String} {t:Term} {h: x ∉ t.freevars} : String → Term → Formula → Formula          -- TO DO: passar para well-formed temos de acrescentar isto
--- deriving Repr, DecidableEq           TODO: falta incluir isto
+-- deriving Repr, DecidableEq           --TODO: falta incluir isto
 
 open Formula
 
@@ -363,6 +366,7 @@ notation A "↔₁" B => F_iff A B
 def ex_freevars_formula := (rel "R" [var "x", var "y"]) ∨₁ (bV₁ "z" (var "t") (rel "Q" [var "z"]))
 #eval Formula.freevars ex_freevars_formula                         -- The set of free variables is the set {x,y}, that is {"x", "y"}
 #eval Formula.allvars ex_freevars_formula             -- TODO: aqui aparece t como variável, é preciso mudar var "t" aqui e nos exemplos em baixo
+
 
 -- ----------------------------
 -- SENTENCES (CLOSED FORMULAS)
@@ -565,7 +569,7 @@ def ex3_subst : Formula :=
 --| bForall x A => A
 --| t => t
 
--- Drei strecher ass gleich, wees net wei dat heescht
+-- Drei strescher ass gleich, wees net wei dat heescht, syntactic equality
 inductive Equivalent : Formula → Formula → Prop
 | id : Equivalent A A
 | comm : Equivalent A B → Equivalent B A
@@ -578,6 +582,15 @@ inductive Equivalent : Formula → Formula → Prop
 -- -------------------------------   AXIOMATIC   -----------------------------------
 -- ---------------------------------------------------------------------------------
 
+-- Reunião: acrescentar construtor para dizer que tem ou não freevars
+
+/- ISTO
+inductive Logic
+| PL
+| PL_bAC
+-/
+
+--ISTO inductive isTrue {L:Logic} : Formula → Prop
 inductive isTrue : Formula → Prop
 -- AXIOM SCHEMA (Shoenfield)
 | lem :                                       -- A ∨ (¬A)
@@ -622,10 +635,13 @@ inductive isTrue : Formula → Prop
       isTrue B
 | AxE₁ (x : String) :
     isTrue ((var x) =₁ (var x))
---| AxE₂ (x y : String) : isTrue ((((var x) =₁ (var y))∧₁ A) →₁ A)        FALTA: falta A(x) e A(y)
+-- Problema yes: falta A(x) e A(y) -> criar notação?
+--| AxE₂ (x y : String) (A : Formula) (h : x ∈ A.freevars): isTrue ((((var x) =₁ (var y))∧₁A) →₁ B) ∧ (y ∈ A.freevars)
+--| AxE₂ (x y : String) : isTrue ((((var x) =₁ (var y))∧₁ A) →₁ A)        FALTA: falta x=y ∧ A(x) → A[substituition](y)
+| Teste (x y : String) (A B : Formula) (h: x ∈ A.freevars) (Hy : y∉A.freevars) (HB : B = (substitution_formula x (var y) A)): isTrue ((((var x) =₁ (var y))∧₁A) →₁ B)
 | AxU (x : String) (t : Term) (A : Formula) :
     isTrue ((bV₁ x t A) ↔₁ (V₁ x (((var x) ∈₁ t) →₁ A)))
-| AxC₁ (t₁ t₂ : Term) :
+| AxC₁ (t₁ t₂ : Term) :                                         -- TODO: mudar isto tudo para variables em vez de terms
     isTrue (((Π₁·t₁)·t₂) =₁ t₁)
 | AxC₂ (t₁ t₂ t₃ : Term) :
     isTrue ((((Σ₁·t₁)·t₂)·t₃) =₁ ((t₁·t₃)·(t₂·t₃)))
@@ -637,8 +653,9 @@ inductive isTrue : Formula → Prop
     isTrue ((t₁ ∈₁ (𝔰₁·t₂)) ↔₁ (t₁ =₁ t₂))
 | AxS₂ (t₁ t₂ t₃ : Term) : isTrue ((t₁ ∈₁ ((∪₁·t₂)·t₃) ) ↔₁ ((t₁ ∈₁ t₂) ∨₁ (t₁ ∈₁ t₃)))
 | AxS₃ (a f b : Term) : isTrue ((b ∈₁ ((ind_⋃₁·a)·f)) ↔₁ (bE₁ x a (b ∈₁ (f·(var x)))))
-
--- FALTA: falta o bAC^ω_*
+| bAC {x y f : String} : isTrue ((V₁ x (E₁ y A)) →₁ (E₁ f (V₁ x (bE₁ y ((Term.var f)·(Term.var x)) A))))    -- bAC^ω_*
+-- ISTO | bAC {x y f : String} {H:L=Logic.PL_bAC}: isTrue ((V₁ x (E₁ y A)) →₁ (E₁ f (V₁ x (bE₁ y ((Term.var f)·(Term.var x)) A))))    -- bAC^ω_*
+-- Sempre que for para usar o isTrue é preciso escolher a lógica!
 
 -- TESTE: o lemma eq_symmetry está a dar erro, mas o teste com #check mostra que a sintaxe está good
 def f : Term := var "f"
@@ -646,7 +663,10 @@ def g : Term := var "g"
 
 #check (f =₁ g) →₁ (g =₁ f)
 
---lemma eq_symmetry : (f =₁ g) →₁ (g =₁ f) := sorry
+-- Problema: this ↓ is not working
+--lemma eq_symmetry (p q : Term): (p =₁ q) := sorry
+lemma eq_symmetry : ∀(p q:Term), isTrue ((p=₁q)→₁(q=₁p)) := sorry -- construtores de isTrue
+-- ISTO lemma eq_symmetry : ∀(p q:Term), isTrue (L := Logic.PL) ((p=₁q)→₁(q=₁p)) := sorry -- construtores de isTrue
 
 --theorem tastino (x y : String) : Formula
 
@@ -655,7 +675,8 @@ def g : Term := var "g"
 --lemma eq_transitivity (x y z : String) : ((((var x) =₁ (var y)) ∧₁ ((var y) =₁ (var z))) →₁ ((var x) =₁ (var z))) := sorry
 
 
-
+-- -------------------------------------------------------------------------------------
+-- -------------------------------------------------------------------------------------
 
 -- ----------------------------------------------------
 -- ------------ COMBINATORIAL COMPLETENESS ------------ (Section 1.2.4)
@@ -663,6 +684,7 @@ def g : Term := var "g"
 
 theorem combinatorial_completeness (x : String) : ∀(t:Term), ∃(q:Term), ∀(s:Term),
   isTrue ((q·s) =₁ (term_substitution x s t)) :=
+  -- ISTO isTrue (L := Logic.PL) ((q·s) =₁ (term_substitution x s t)) :=
 by
   intro t
   have t₂ := t
@@ -675,7 +697,9 @@ by
         rewrite [h]
         simp
         have H1 := isTrue.AxC₁ s (Π₁·s)
-        have H2 := isTrue.AxC₂ Π₁ Π₁ s    -- usar simetria/transitivity da igualdade
+        have H2 := isTrue.AxC₂ Π₁ Π₁ s
+        --ISTO have H1 := isTrue.AxC₁ (L := Logic.PL) s (Π₁·s)
+        --ISTO have H2 := isTrue.AxC₂ (L := Logic.PL) Π₁ Π₁ s    -- usar simetria/transitivity da igualdade
         sorry
       . existsi (Π₁·(var y))
         intro s
@@ -697,8 +721,62 @@ by
         sorry
 
 
+inductive lambda : Type
+| la (s : String) (body : Term): lambda
+
+def lambda.to_term : lambda → Term
+| .la x (var y) => if x=y then ((Σ₁·Π₁)·Π₁) else (Π₁·(var y))
+| .la x (t·s) => if x∉(t·s).freevars then (Π₁·t) else ((Σ₁·(lambda.la x t).to_term)·(lambda.la x s).to_term)
+| .la x t => if x∉t.freevars then (Π₁·t) else (by sorry) -- Reunião: do pattermatching por extenso com as constantes
+
+-- Problema: how to deal with this?
+theorem combinatorial_completeness2 (x : String) : ∀(t:Term), ∃(q:Term), ∀(s:Term),
+  isTrue ((q·s) =₁ (term_substitution x s t)) :=
+  --ISTO isTrue (L := Logic.PL) ((q·s) =₁ (term_substitution x s t)) :=
+by
+  intro t
+  have t₂ := t -- Reunião: é preciso tirar isto para reconstruir à mão
+  cases t with
+  | var y =>                              -- CASO 1: t é uma variável
+      by_cases h: x = y
+      . existsi ((Σ₁·Π₁)·Π₁)              --  Caso 1a: t é a variável x
+        intro s
+        unfold term_substitution
+        rewrite [h]
+        simp
+        have H1 := isTrue.AxC₁ s (Π₁·s)
+        have H2 := isTrue.AxC₂ Π₁ Π₁ s
+        --ISTO have H1 := isTrue.AxC₁ (L := Logic.PL) s (Π₁·s)
+        --ISTO have H2 := isTrue.AxC₂ (L := Logic.PL) Π₁ Π₁ s        -- usar simetria/transitivity da igualdade
+                                              -- acho que precisamos de extensionality de isTrue
+        sorry
+      . existsi (Π₁·(var y))              --  Caso 1b: t não é a variável x
+        intro s
+        rewrite [term_substitution]
+        rewrite [if_neg h]                -- porque x ≠ y (hipótese h), logo dá var y
+        exact isTrue.AxC₁ (var y) s
+        -- ISTO exact isTrue.AxC₁ (L := Logic.PL) (var y) s
+  | _ =>     -- Reunião: temos de fazer todos os casos das constantes                           -- CASO 2: t não é uma variável, é outra coisa (constante ou aplicação)
+      sorry
+      /-
+      by_cases h: x∈ t₂.freevars          --         dois casos: t não tem x (x does not occur in t) OU t tem x (e é aplicação)
+      . sorry
+      . existsi (Π₁·t₂)
+        intro s
+        unfold term_substitution
+        induction s
+        . rename_i b
+          --rename_i a
+          have d := isTrue.AxC₁ t₂
+          --have r1 : t₂ = lcons (LTerm.Lsubstitution x b a) := by sorry
+          --apply d
+          sorry
+      -/
 
 
+
+-- (λx.t)s = s[t/x] = q·s
+-- (λx.t) -> existsi (Σ₁·(λx.t))·(λx.q)
 
 --def term_substitution (x : String) (replacement : Term) : Term → Term
 
@@ -707,6 +785,7 @@ by
 -- chega dizer x ∈ t.allvars ?
 
 -- TO DO: notação para A(x) se A:Formula e x ∈ A.allvars ?
+-- Problema yes: preciso que isto seja uma Formula
 
 example : {F:Formula // {"x","y"} ⊆ F.allvars} → Prop := by sorry
 
@@ -1078,7 +1157,7 @@ lemma Ex1_10_1 (t₁ t₂ t₃ : Term) : ReducesTo ((Σ₁·t₁)·((Π₁·t₂
 by
   have H1 := ConvertsTo.c1_pi t₂ t₃
   have H2 := ReducesTo.one_step H1
-  exact @ReducesTo.app_right (Σ₁·t₁) ((Π₁·t₂)·t₃) t₂ H2
+  exact @ReducesTo.app_right (Σ₁·t₁) ((Π₁·t₂)·t₃) t₂ H2               -- @ permite inserir os argumentos implícitos
 
 lemma Ex1_10_2 (t₁ t₂ t₃ : Term) : ReducesTo (((ind_⋃₁·(𝔰₁·t₁))·t₂)·t₃) ((t₂·t₁)·t₃) :=
 by
@@ -1200,26 +1279,88 @@ def example_term_Ex1_11_Seq2_B := (((var "r")·(var "s"))·((var "q")·(var "s")
 --             SECTION 1.2.6: Characterization of closed normal terms
 -- ---------------------------------------------------------------------------------------------------------------
 
--- REMARK 1.29 (p.34): General form of closed terms -> fazer cases on constants?
+-- ---------------------------------------------------------
+-- REMARK 1.30 (p.32):
+-- General form of closed terms -> fazer cases on constants?
+-- ---------------------------------------------------------
 
 
--- REMARK 1.30 (p.34): General form of closed normal terms -> fazer cases on constants?
+-- ---------------------------------------------------------
+-- REMARK 1.31 (p.33):
+-- General form of closed normal terms -> fazer cases on constants?
+-- ---------------------------------------------------------
+
+-- ---------------------------------------------------------
+-- PROPOSITION 1.3 (p.33): Ground normal form
+-- ---------------------------------------------------------
+
+-- TO DO: Falta dizer que é ground
+lemma GroundNormalForm (t : Term) (tL : LTerm) (h1 : t.isClosedTerm) (h2 : isNormal t) : (t = Term.lcons tL) :=
+  by sorry
+
+-- ---------------------------------------------------------
+-- DEFINITION 1.19 (p.36):
+-- set-like terms   --> needs isSetLike
+-- ---------------------------------------------------------
 
 
--- PROPOSITION 1.3 (p.34): Ground normal form
+
+-- Problema: how to define isSetLike?
+/-
+def isSetLike (t : Term) : Prop := isSing ∨ isbUnion ∨ both
+-/
+
+def Term.isPartialSetLike : Term → Prop
+| .lcons _
+| pi                                 -- combinators:     Π
+| sigma => false                               --                  Σ
+| sing                                   -- star constants:  𝔰
+| bUnion => true                                --                  ∪ (binary union)
+| iUnion                                 --                  ∪ (indexed union)
+| var _ => false                -- variables
+| app a b => (a.isPartialSetLike) ∨ (b.isPartialSetLike)
+
+def Term.isSetLike (t:Term) (σ:FType): Prop := t.isPartialSetLike ∧ (Term_TypeChecking t (σ⋆))
 
 
--- DEFINITION 1.19 (p.36): set-like terms   --> needs isSetLike
+
+-- (h : a.isSetLike) Reunião: precisa de typechecking
 
 
+-- ---------------------------------------------------------
 -- EXAMPLE 1.14 (p.36)
+-- ---------------------------------------------------------
+
+/-
+TO DO: precisa de isSetLike_check com True/False
+-/
+
+def ex1_14_term1 (t : Term) := 𝔰₁·t                             -- true
+def ex1_14_term2 (r₁ r₂ : Term) := ((∪₁·r₁)·(𝔰₁·r₂))            -- true
+def ex1_14_term3 (p₁ p₂ q₁ q₂ : Term) := (∪₁·(p₁·p₂))·(q₁·q₂)   -- true
+def ex1_14_term4 (u₁ u₂ : Term) := 𝔰₁·((ind_⋃₁·u₁)·u₂)          -- true
+def ex1_14_term5 (u₁ u₂ : Term) := ((ind_⋃₁·u₁)·u₂)             -- false
 
 
--- PROPOSITION 1.4 (p.36): Star normal form
+-- ---------------------------------------------------------
+-- PROPOSITION 1.4 (p.36):
+-- Star normal form
+-- ---------------------------------------------------------
+
+/- TO DO: falta definir isSetLike
+lemma StarNormalForm
+  (σ:FType) (t:Term)
+  (h1 : t.isClosedTerm) (h2 : isNormal t) (h3 : Term_TypeChecking t σ⋆) :
+  (t : isSetLike) := by sorry
+-/
 
 
--- REMARK 1.31 (p.37): Structure of closed normal terms
+-- ---------------------------------------------------------
+-- REMARK 1.31 (p.37):
+-- Structure of closed normal terms
+-- ---------------------------------------------------------
 
+-- ORA ESTA FICA PARA O FIM
 
 
 
@@ -1303,7 +1444,7 @@ lemma ThricePrenex1 (x y : String) (A B : Formula)
 
 lemma ThricePrenex2 (x y : String) (t q : Term) (A B : Formula)
     (x ∈ A.freevars) (x ∉ B.freevars)
-    (x ∉ A.freevars) (x ∈ B.freevars):
+    (y ∉ A.freevars) (y ∈ B.freevars):
     ((bV₁ x t A) ∧₁ (bV₁ y q B)) = (bV₁ x t (bV₁ y q (A ∧₁ B))) := by sorry
 
 ----------
@@ -1329,6 +1470,120 @@ lemma HalfPrenex6 (x : String) (t : Term) (A B : Formula) (x ∈ A.freevars) (x 
 TODO: what is missing?
 
 -/
+
+
+
+-- Problema
+/- TODO (14 ag) : Prenexification rules as axioms (keeps def and prim symbols)? Or as lemmas (does not keep)?
+axiom L_DM_or (A B : LFormula) : (¬₀(A∨₀B)) = ((¬₀A)∧₀(¬₀B))
+lemma L_DM_or (A B : LFormula) : (¬₀(A∨₀B)) = ((¬₀A)∧₀(¬₀B)) := by sorry
+-/
+
+-- DeMorgan laws
+axiom prenex_DM_or (A B : Formula) :
+      (¬₁(A∨₁B)) = ((¬₁A)∧₁(¬₁B))
+axiom prenex_DM_and (A B : Formula) :
+      (¬₁(A∧₁B)) = ((¬₁A)∨₁(¬₁B))
+
+-- Negation
+axiom prenex_neg_exists (A : Formula) (x : String) :
+      (¬₁(E₁ x A)) = (V₁ x (¬₁A))
+axiom prenex_neg_forall (A : Formula) (x : String) :
+      (¬₁(V₁ x A)) = (E₁ x (¬₁A))
+
+-- Conjunction
+axiom prenex_forall_and (A B : Formula) (x : String) (hA : x ∈ A.freevars) (hB : x ∉ B.freevars) :
+      ((V₁ x A)∧₁B) = (V₁ x (A∧₁B))
+axiom prenex_exists_and (A B : Formula) (x : String) (hA : x ∈ A.freevars) (hB : x ∉ B.freevars) :
+      ((E₁ x A)∧₁B) = (E₁ x (A∧₁B))
+
+-- "Forall unite" (conj and disj)
+axiom prenex_forall_or_un (A B : Formula) (x : String) :
+      ((V₁ x A)∨₁(V₁ x B)) = (V₁ x (A∨₁B))
+axiom prenex_forall_and_un (A B : Formula) (x : String) :
+      ((V₁ x A)∧₁(V₁ x B)) = (V₁ x (A∧₁B))
+
+-- "Exists unite" (conj and disj)
+axiom prenex_exists_or_un (A B : Formula) (x : String) :
+      ((E₁ x A)∨₁(E₁ x B)) = (E₁ x (A∨₁B))
+axiom prenex_exists_and_un (A B : Formula) (x : String) :
+      ((E₁ x A)∧₁(E₁ x B)) = (E₁ x (A∧₁B))
+
+-- "Forall commutativity" (unbounded and bounded)
+axiom prenex_unbforall_comm (A B : Formula) (x y : String) :
+      (V₁ x (V₁ y A)) = (V₁ y (V₁ x A))
+axiom prenex_bforall_comm (A B : Formula) (x y : String) (t q : Term) :
+      (bV₁ x t (bV₁ y q A)) = (bV₁ y q (bV₁ x t A))
+
+-- "Exists commutativity" (unbounded and bounded)
+axiom prenex_unbexists_comm (A B : Formula) (x y : String) :
+      (E₁ x (E₁ y A)) = (E₁ y (E₁ x A))
+axiom prenex_bexists_comm (A B : Formula) (x y : String) (t q : Term) :
+      (bE₁ x t (bE₁ y q A)) = (bE₁ y q (bE₁ x t A))
+
+-- "Exists and forall comm" (unbounded and bounded)
+
+-- "Bounded and unbounded forall comm"
+axiom prenex_b_unb_forall_comm (A B : Formula) (x y : String) (t : Term) :
+      (bV₁ x t (V₁ y A)) = (V₁ y (bV₁ x t A))
+
+-- "Bounded and unbounded exists comm"
+axiom prenex_b_unb_exists_comm (A B : Formula) (x y : String) (t : Term) :
+      (bE₁ x t (E₁ y A)) = (E₁ y (bE₁ x t A))
+
+
+-- Disjunction
+axiom prenex_forall_or (A B : Formula) (x : String) (hA : x ∈ A.freevars) (hB : x ∉ B.freevars) :
+      ((V₁ x A)∨₁B) = (V₁ x (A∨₁B))
+axiom prenex_exists_or (A B : Formula) (x : String) (hA : x ∈ A.freevars) (hB : x ∉ B.freevars) :
+      ((E₁ x A)∨₁B) = (E₁ x (A∨₁B))
+
+-- Implication
+axiom prenex_forall_imp (A B : Formula) (x : String):
+      ((V₁ x A)→₁B) = (E₁ x (A→₁B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+axiom prenex_exists_imp (A B : Formula) (x : String) :
+      ((E₁ x A)→₁B) = (V₁ x (A→₁B))    -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+
+axiom prenex_imp_forall (A B : Formula) (x : String):
+      (A→₁(V₁ x B)) = (V₁ x (A→₁B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+axiom prenex_imp_exists (A B : Formula) (x : String) :
+      (A→₁(V₁ x B)) = (E₁ x (A→₁B))    -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+
+
+
+
+-- ------------------
+
+-- Conjunction commutativity
+axiom and_commut (A B : Formula) : (A∧₁B) = (B∧₁A)
+
+-- Disjunction commutativity
+axiom or_commut (A B : Formula) : (A∨₁B) = (B∨₁A)
+
+-- ------------------
+
+-- Double neg
+axiom double_neg (A : Formula) : (¬₁(¬₁A)) = A
+
+
+-- AGORA: 0. Which ones need the assumption of in and notin freevars?
+--        1. acrescentar as assumptions que em StarLang devem funcionar
+--        2. acabar as prenex rules aqui (falta os bounded chanesses pelo menos )
+
+
+
+
+
+
+
+
+
+/-
+t₁,...,tₙ
+∃t∈lt
+
+-/
+
 
 
 end StarLang
