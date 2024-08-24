@@ -6,6 +6,12 @@ import Init.Data.List.Basic
 
 -- import data.string.basic
 
+-- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+--                    FOL (versão sem tuplos)
+-- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+
 namespace FOL
 
 -- --------------------
@@ -103,6 +109,7 @@ decreasing_by sorry             -- TODO (net-ech)
 -- Exemplo: substituimos a variável x pela constante a em f(x,a). Output: f(a,a)
 #eval Lsubstitution "x" const_a func_f
 
+-- -------------------------------------------------------
 
 -- DEFINITION: Definição de variáveis (livres) num termo (Lfreevars devolve o conjunto das variáveis livres)
 def Lfreevars : LTerm → Finset String
@@ -142,8 +149,8 @@ inductive LFormula : Type     -- VARIAVEIS
 | or_L : LFormula → LFormula → LFormula         -- Disjunction
 | forall_L : String → LFormula → LFormula         -- Universal quantification
 deriving BEq, Repr
---deriving BEq, Repr --NOT WORKING
--- Mudança: 1. LPred mudar para String
+
+
 --          2. forall_L -> Fica List ou Finset
 
 -- -- -- Teste daqui -- -- --
@@ -151,11 +158,11 @@ inductive LFormula2 : Type     -- VARIAVEIS
 | atomic_L : String → List LTerm → LFormula2      -- Atomic formulas: recebem um Predicate Symbol e uma lista de termos
 | not_L : LFormula2 → LFormula2                   -- Negation
 | or_L : LFormula2 → LFormula2 → LFormula2         -- Disjunction
-| forall_L : List String → LFormula2 → LFormula2         -- Universal quantification
+| forall_L : Finset String → LFormula2 → LFormula2         -- Universal quantification
 
 notation "∀₀" => LFormula2.forall_L
 
-def ex_Lfreevars_formula2 (z:String) := (∀₀ {z} (LFormula2.atomic_L "Q" [LTerm.Lvar "z"]))
+def ex_Lfreevars_formula2 (z:String) := (∀₀ {z} (LFormula2.atomic_L "Q" [LTerm.Lvar z]))
 --#eval ex_Lfreevars_formula2                                  -- The free variables of the formula are the set {x,y}, that is {"x", "y"}
 -- -- -- até aqui -- -- --
 
@@ -312,7 +319,7 @@ def example_Lsubstitution := Lsubstitution_formula "x" (LTerm.Lconst "a") ex_for
 
 
 
-
+-- AQUI
 
 
 -- -------------------------------------

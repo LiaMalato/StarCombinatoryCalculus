@@ -95,7 +95,8 @@ theorem MainTheorem
 --    2. Falta que (E₁ x A) é derivable in PL+bAC mas que (bE₁ x t A) é só em PL
 theorem MainTheorem   -- erros vieram daqui
   (A : Formula) (x : String) (t : Term) (ht : t.isClosedTerm):
-  (isTrue (L := Logic.PL_bAC) (E₁ x A)) → (∃t, isTrue (L := Logic.PL) (bE₁ x t A)) := by sorry
+  (isTrue (E₁ x A)) → (∃t, isTrue (bE₁ x t A)) := by sorry
+  --ISTO(isTrue (L := Logic.PL_bAC) (E₁ x A)) → (∃t, isTrue (L := Logic.PL) (bE₁ x t A)) := by sorry
 
 /-
 theorem MainTheorem2

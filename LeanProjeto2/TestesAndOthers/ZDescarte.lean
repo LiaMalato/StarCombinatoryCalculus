@@ -1,5 +1,8 @@
 import MathLib.Tactic
 
+-- Para import de dentro de um folder, escrever:
+-- import LeanProjeto2.TestesAndOthers.Testes
+
 -- --------------------
 -- ------ FOL ---------
 -- --------------------
