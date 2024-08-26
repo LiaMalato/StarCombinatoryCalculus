@@ -1,5 +1,6 @@
 -- -------------------------------------------------------------
 --            Star Language (atualizada)
+--            (sem tuplos)
 -- -------------------------------------------------------------
 
 -- We import the definitions from the first-order language L:
@@ -100,6 +101,7 @@ inductive
 
 -/
 
+
 namespace Term
 
 -- DEFINITION: subterm _ of a term _
@@ -125,7 +127,6 @@ example : isSubterm (Term.var "y") (Term.app (Term.var "x") (Term.var "y")) :=
   app_right refl
 -/
 
-
 -- -------------------------------------
 -- FREE VARIABLES PARA TERMOS EM L^ω_*
 -- -------------------------------------
@@ -144,6 +145,8 @@ def freevars : Term → Finset String                           -- TODO: mudar e
 def isClosedTerm (t : Term) : Prop := freevars t = {}
 
 end Term
+
+-- STOP
 
 -- ------------------------------------------------------------
 -- NOTATION FOR THE COMBINATORS AND THE STAR CONSTANTS IN L^ω_* (and the application of terms)
@@ -177,6 +180,8 @@ inductive Term_TypeChecking : Term → FType → Prop
 
 open Term_TypeChecking
 
+
+
 -- -------------------------------------
 -- TERM SUBSTITUTION IN L^ω_*
 -- -------------------------------------
@@ -198,6 +203,9 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
 #eval term_substitution "x" Π₁ (var "y")                                        -- Replacing x by Π₁ in y gives y
 #eval term_substitution "x" ∪₁ (((var "x")·(var "y"))·(var "z"))                -- Replacing x by ∪₁ in (x·y)·z gives (∪₁·y)·z
 #eval term_substitution "x" (lcons (LTerm.Lvar "b")) (lcons (LTerm.Lvar "a"))   -- Replacing x by (Lvariable b) in (Lvariable a) gives (Lvariable a) -> nothing happens
+
+
+
 
 
 -- ------------------
@@ -368,6 +376,12 @@ def ex_freevars_formula := (rel "R" [var "x", var "y"]) ∨₁ (bV₁ "z" (var "
 #eval Formula.allvars ex_freevars_formula             -- TODO: aqui aparece t como variável, é preciso mudar var "t" aqui e nos exemplos em baixo
 
 
+
+
+-- STOP
+
+
+
 -- ----------------------------
 -- SENTENCES (CLOSED FORMULAS)
 -- ----------------------------
@@ -417,6 +431,8 @@ example (A : Formula) (h : isAtomic A)  : (isBase A) := by
 example (A B : Formula) (hA_at : isAtomic A) (hB_b : isBase B) : (isBase (A∨₁B)) := by
   have h := b_atom hA_at
   exact b_or h hB_b
+
+
 
 -- --------------------------------------------------------------------------
 -- LEMMAS: Defined symbols of base formulas are also base (Remark 1.11, p.14)
@@ -469,6 +485,8 @@ example (A B : Formula) (hA_b : isBase A) (hB_b : isBase B) (x y : String) (t q 
   have H_or_AB := b_or hA_b hB_b
   have H_bExists := bExists_base y q H_or_AB
   exact b_bForall x t H_bExists
+
+
 
 -- ------------------------------------------------------
 -- TYPECHECKING
@@ -554,6 +572,7 @@ def ex3_subst : Formula :=
 -/
 
 
+-- STOP
 
 
 
@@ -677,7 +696,7 @@ lemma eq_symmetry : ∀(p q:Term), isTrue ((p=₁q)→₁(q=₁p)) := sorry -- c
 
 -- -------------------------------------------------------------------------------------
 -- -------------------------------------------------------------------------------------
-
+-- STOP
 -- ----------------------------------------------------
 -- ------------ COMBINATORIAL COMPLETENESS ------------ (Section 1.2.4)
 -- ----------------------------------------------------

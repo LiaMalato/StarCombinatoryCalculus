@@ -264,8 +264,6 @@ lemma EmptyUniversalTuple (hC1 : SH_int C CuSH) (hC2 : CuSH.components = ({},c�
 -- Interpretation of ∀x∈z ∃y A(x,y) → ∃w ∀x∈z ∃y∈w A(x,y)
 -- ---------------------------------------------------------------------
 
--- TO DO / Problema yes: não consigo ter B = ... (both are formulas)
-
 lemma example_2_3
   (hA1 : SH_int A AuSH) (hA2 : AuSH.components = ({},{},A_SH)) (hA3 : StarLang.isBase A_SH)
   (B : Formula) (x y z w : String)

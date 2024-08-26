@@ -28,14 +28,14 @@ deriving BEq, Repr
 
 open LTerm
 
--- EXAMPLE: some terms to use in future examples
-def var_x := Lvar "x"
-def var_y := Lvar "y"
-def var_z := Lvar "z"
-def const_a := Lconst "a"
-def const_c := Lconst "c"
-def func_f := Lfunc "f" [var_x, const_a]
-def func_g := Lfunc "g"
+-- EXAMPLE: some terms in FOL to use in future examples
+def Lvar_x := Lvar "x"
+def Lvar_y := Lvar "y"
+def Lvar_z := Lvar "z"
+def Lconst_a := Lconst "a"
+def Lconst_k := Lconst "k"
+def Lfunc_f := Lfunc "f" [Lvar_x, Lconst_a]
+def Lfunc_g := Lfunc "g"
 
 -- --------------------------------
 -- TERMS OF TUPLES (new)
@@ -50,24 +50,24 @@ deriving BEq, Repr
 def LTermTuple2 := Finset LTerm
 
 -- This function takes a list of LTerm and makes a term tuple out of it
-def makeTuple (ts : List LTerm) : LTermTuple := ts
+def makeLTuple (ts : List LTerm) : LTermTuple := ts
 
 -- We define a function in order to access any element in the tuple
-def getElement (n : Nat) (t : LTermTuple) : Option LTerm :=           -- Option para ter some/none para o caso do tuple ter 2 elementos e pedirmos o terceiro
+def getLElement (n : Nat) (t : LTermTuple) : Option LTerm :=           -- Option para ter some/none para o caso do tuple ter 2 elementos e pedirmos o terceiro
   List.get? t n
 
 -- -------
 -- EXAMPLE: a tuple of terms + access to its elements (new)
 -- -------
 
-def exTermTuple : LTermTuple := makeTuple ([(Lvar "x"), Lconst "a"])  -- a tuple of terms (a list with the terms x and a)
+def exLTermTuple : LTermTuple := makeLTuple ([(Lvar_x), Lconst_a])  -- a tuple of terms (a list with the terms x and a)
 
-def exFirstElement := getElement 0 exTermTuple
-def exSecondElement := getElement 1 exTermTuple
-def exThirdElement := getElement 2 exTermTuple
-#eval exFirstElement
-#eval exSecondElement
-#eval exThirdElement
+def exLFirstElement := getLElement 0 exLTermTuple
+def exLSecondElement := getLElement 1 exLTermTuple
+def exLThirdElement := getLElement 2 exLTermTuple
+#eval exLFirstElement
+#eval exLSecondElement
+#eval exLThirdElement
 
 -- --------------------------------
 -- WELL-FORMED TERMS
@@ -87,15 +87,15 @@ inductive LTermTuple_is_wellformed : List String → List LTerm → Prop
 -- Example:
 -- --------
 
--- The variable var_x is well-formed
-lemma exA : LTerm_is_wellformed ["x", "y"] var_x :=
+-- The variable Lvar_x is well-formed
+lemma exA : LTerm_is_wellformed ["x", "y"] Lvar_x :=
   LTerm_is_wellformed.bc_var (List.Mem.head _)
 
-lemma exB : LTerm_is_wellformed ["x", "y"] var_y :=
-  LTerm_is_wellformed.bc_var (by simp [var_y])
+lemma exB : LTerm_is_wellformed ["x", "y"] Lvar_y :=
+  LTerm_is_wellformed.bc_var (by simp [Lvar_y])
 
--- The constant const_a is well-formed (constants are inherently well-formed)
-example : LTerm_is_wellformed ["x", "y"] const_a :=
+-- The constant Lconst_a is well-formed (constants are inherently well-formed)
+example : LTerm_is_wellformed ["x", "y"] Lconst_a :=
   LTerm_is_wellformed.bc_const
 
 
@@ -162,12 +162,12 @@ def LsubstitutionTuple (x : String) (replacement : LTerm) : LTermTuple → LTerm
 -- --------
 
 -- substituimos a variável x pela constante a em f(x,a). Output: f(a,a)
-#eval Lsubstitution "x" const_a func_f
-#eval LsubstitutionTuple "x" const_a [func_f]   -- does the same job as Lsubstitution when the list has only one element
+#eval Lsubstitution "x" Lconst_a Lfunc_f
+#eval LsubstitutionTuple "x" Lconst_a [Lfunc_f]   -- does the same job as Lsubstitution when the list has only one element
 
 -- substituimos a variável x pela constante a em [ x,a ]. Output: [ a,a ]
-def exTuple := [var_x, const_a]
-#eval LsubstitutionTuple "x" const_a exTuple
+def exTuple := [Lvar_x, Lconst_a]
+#eval LsubstitutionTuple "x" Lconst_a exTuple
 
 
 -- ---------------------------------------
@@ -202,8 +202,8 @@ foldl:
 -- Example: termo f(x,y,c) tem x e y como variáveis livres (símbolo funcional f aplicado às variáveis x,y e à constante c)
 -- --------
 
-def ex_Lfreevars_term := LTerm.Lfunc "f" [var_x, var_y, const_a]
-def ex_Lfreevars_tuple := [var_x, const_a, LTerm.Lfunc "g" [var_y]]
+def ex_Lfreevars_term := LTerm.Lfunc "f" [Lvar_x, Lvar_y, Lconst_a]
+def ex_Lfreevars_tuple := [Lvar_x, Lconst_a, LTerm.Lfunc "g" [Lvar_y]]
 
 -- O conjunto das variáveis livres em ex_Lfreevars_term é {x,y}, i.e. {"x", "y"}
 #eval Lfreevars ex_Lfreevars_term          -- Output: {"x", "y"}
@@ -227,16 +227,16 @@ def isClosedTupleTerm_L_check (t : LTermTuple) : Bool := (LfreevarsTuple t) = {}
 -- Exemplo: termo f(x,y,c) tem x e y como variáveis, logo não é fechado
 #eval isClosedTerm_L_check ex_Lfreevars_term
 -- Exemplo: term a (constante) não tem variáveis, logo é fechado
-#eval isClosedTerm_L_check const_a
+#eval isClosedTerm_L_check Lconst_a
 
 -- --------
 -- EXAMPLE: TUPLE TERMS (new)
 -- --------
 #eval isClosedTupleTerm_L_check ex_Lfreevars_tuple
-#eval isClosedTupleTerm_L_check [var_x, const_c, func_g [var_y, var_z]]
+#eval isClosedTupleTerm_L_check [Lvar_x, Lconst_k, Lfunc_g [Lvar_y, Lvar_z]]
 
 -- Outro exemplo
-def ex_Lterm_tuple := [const_c, func_g [const_a]]
+def ex_Lterm_tuple := [Lconst_k, Lfunc_g [Lconst_a]]
 #eval isClosedTupleTerm_L_check ex_Lterm_tuple
 
 end LTerm
@@ -268,7 +268,7 @@ def forallTuple_L (vars : List String) (A : LFormula) : LFormula :=
 
 -- We define the formula `P(x, y)`
 def exFormula : LFormula :=
-  LFormula.atomic_L "P" [var_x, var_y]
+  LFormula.atomic_L "P" [Lvar_x, Lvar_y]
 
 -- We now define the formula `forall x (forall y P(x, y))` by using the forallTuple_L
 def forall_exFormula : LFormula :=
@@ -393,10 +393,10 @@ def Lfreevars_forallTuple (xs : List String) (A : LFormula) : Finset String :=
 -- EXAMPLE:
 -- --------
 
-def example_formula := ∀₀ ["x", "y"] (atomic_L "P" [var_x, var_z])
+def example_formula := ∀₀ ["x", "y"] (atomic_L "P" [Lvar_x, Lvar_z])
 
-#eval Lfreevars_forallTuple ["x", "y"] (atomic_L "P" [var_x, var_z])   -- Output: {"z"}
-#eval Lfreevars_formula (∀₀ ["x", "y"] (atomic_L "P" [var_x, var_z]))  -- Output: {"z"}
+#eval Lfreevars_forallTuple ["x", "y"] (atomic_L "P" [Lvar_x, Lvar_z])   -- Output: {"z"}
+#eval Lfreevars_formula (∀₀ ["x", "y"] (atomic_L "P" [Lvar_x, Lvar_z]))  -- Output: {"z"}
 
 -- ----------------------------
 -- VARIABLES IN FORMULAS
@@ -417,15 +417,15 @@ def Lallvars_formula : LFormula → Finset String
 -- --------
 
 -- Exemplo para calcular as free variables da fórmula (∀ z Q(z))
-def ex_Lfreevars_atFormula := (∀₀₀ "z" (atomic_L "Q" [var_z]))
+def ex_Lfreevars_atFormula := (∀₀₀ "z" (atomic_L "Q" [Lvar_z]))
 #eval Lfreevars_formula ex_Lfreevars_atFormula
 
 -- Exemplo para calcular as free variables da fórmula P(x,y) ∨ (∀ z Q(z))
-def ex_Lfreevars_formula := (atomic_L "P" [var_x, var_y]) ∨₀ (∀₀₀ "z" (atomic_L "Q" [var_z]))
+def ex_Lfreevars_formula := (atomic_L "P" [Lvar_x, Lvar_y]) ∨₀ (∀₀₀ "z" (atomic_L "Q" [Lvar_z]))
 #eval Lfreevars_formula ex_Lfreevars_formula                                  -- The free variables of the formula are the set {x,y}, that is {"x", "y"}
 
 -- Exemplo para calcular as free variables da fórmula P(x,y) ∨ (∀ {x,z} Q(x,z))
-def ex_LfreevarsTuple_formula := (atomic_L "P" [var_x, var_y]) ∨₀ (∀₀ {"x","z"} (atomic_L "Q" [var_x,var_z]))
+def ex_LfreevarsTuple_formula := (atomic_L "P" [Lvar_x, Lvar_y]) ∨₀ (∀₀ {"x","z"} (atomic_L "Q" [Lvar_x,Lvar_z]))
 #eval Lfreevars_formula ex_LfreevarsTuple_formula
 
 
@@ -469,7 +469,7 @@ def LsubstitutionTuple_formula (x : String) (replacement : LTerm) (TermTuple : L
 def ex_formula : LFormula :=
     (atomic_L "P" [Lvar "x", Lvar "y"]) ∨₀ (∀₀₀ "z" (atomic_L "Q" [Lvar "z"]))
 
-def example_Lsubstitution := Lsubstitution_formula "x" (const_a) ex_formula       -- substitui a variável x pela constante a em ex_formula
+def example_Lsubstitution := Lsubstitution_formula "x" (Lconst_a) ex_formula       -- substitui a variável x pela constante a em ex_formula
 
 #eval example_Lsubstitution
 
@@ -478,14 +478,14 @@ def example_Lsubstitution := Lsubstitution_formula "x" (const_a) ex_formula     
 -- --------
 
 -- Another example: Atomic formula P(x,y)
-def exSubstTupleFormula := atomic_L "P" [var_x, var_y]
+def exSubstTupleFormula := atomic_L "P" [Lvar_x, Lvar_y]
 -- Substituir o 'x' pelo 'a' no tuplo {x,y} na fórmula P(x,y)
-#eval LsubstitutionTuple_formula "x" (const_a) [var_x, var_y] exSubstTupleFormula -- P[ a,y ]
+#eval LsubstitutionTuple_formula "x" (Lconst_a) [Lvar_x, Lvar_y] exSubstTupleFormula -- P[ a,y ]
 -- aplica a substituição (substituir x por a) em cada termo do tuplo {x,y} e aplica o resultado na formula
--- -- substitui x por a em var_x (fica a); substitui x por a em var_y (fica y); no final P(x,y) fica P(a,x)
+-- -- substitui x por a em Lvar_x (fica a); substitui x por a em Lvar_y (fica y); no final P(x,y) fica P(a,x)
 
 -- A definição LsubstitutionTuple_formula também funciona para o caso Lsubstitution_formula
-#eval LsubstitutionTuple_formula "x" (const_a) [var_x] ex_formula
+#eval LsubstitutionTuple_formula "x" (Lconst_a) [Lvar_x] ex_formula
 
 
 -- -------------------------------------
@@ -509,10 +509,10 @@ def is_bound_list (vars : List String) : LFormula → Bool
 -- --------
 -- Example: the variable x is bound in the formula, while the variable y is not
 -- --------
-#eval is_bound "x" ((∀₀₀ "x" (atomic_L "P" [var_x])) ∨₀ (atomic_L "Q" [var_x, var_y]))  -- Output: true
-#eval is_bound "y" ((∀₀₀ "x" (atomic_L "P" [var_x])) ∨₀ (atomic_L "Q" [var_x, var_y]))  -- Output: true
+#eval is_bound "x" ((∀₀₀ "x" (atomic_L "P" [Lvar_x])) ∨₀ (atomic_L "Q" [Lvar_x, Lvar_y]))  -- Output: true
+#eval is_bound "y" ((∀₀₀ "x" (atomic_L "P" [Lvar_x])) ∨₀ (atomic_L "Q" [Lvar_x, Lvar_y]))  -- Output: true
 
-def ex_isBoundFormula := ∀₀₀ "x" (atomic_L "P" [var_x, var_z]) -- ∀x P(x, z)
+def ex_isBoundFormula := ∀₀₀ "x" (atomic_L "P" [Lvar_x, Lvar_z]) -- ∀x P(x, z)
 
 #eval is_bound_list ["x", "z"] ex_isBoundFormula    -- Output: false (o z não é bound)
 #eval is_bound_list ["x", "y"] ex_isBoundFormula    -- Output: true (ambas são bound)
@@ -539,16 +539,16 @@ def is_free_for (t : LTerm) (x : String) : LFormula → Bool
 -- --------
 
 -- Example formulas: ∀x P(x) ∨ Q(x,y) and ∀x,y P(x) ∨ Q(x,y)
-def ex_formula2 := (∀₀₀ "x" (atomic_L "P" [var_x])) ∨₀ (atomic_L "Q" [var_x, var_y])
-def ex_formula22 := (∀₀ {"x"} (atomic_L "P" [var_x])) ∨₀ (atomic_L "Q" [var_x, var_y])
-def ex_formula222 := (∀₀ {"x","y"} (atomic_L "P" [var_x,var_y])) ∨₀ (atomic_L "Q" [var_x, var_y])
+def ex_formula2 := (∀₀₀ "x" (atomic_L "P" [Lvar_x])) ∨₀ (atomic_L "Q" [Lvar_x, Lvar_y])
+def ex_formula22 := (∀₀ {"x"} (atomic_L "P" [Lvar_x])) ∨₀ (atomic_L "Q" [Lvar_x, Lvar_y])
+def ex_formula222 := (∀₀ {"x","y"} (atomic_L "P" [Lvar_x,Lvar_y])) ∨₀ (atomic_L "Q" [Lvar_x, Lvar_y])
 
 -- Checks if term "y" is free for "x" in the example formulas
-#eval is_free_for (var_y) "x" ex_formula2                     -- Output: false
-#eval is_free_for (var_y) "x" ex_formula22                    -- Output: false
-#eval is_free_for (var_y) "x" ex_formula222                   -- Output: false
-#eval is_free_for (var_z) "x" (atomic_L "P" [var_x, var_y])   -- Output: true
-#eval is_free_for (var_y) "x" (atomic_L "P" [var_x, var_y])   -- Output: true
+#eval is_free_for (Lvar_y) "x" ex_formula2                     -- Output: false
+#eval is_free_for (Lvar_y) "x" ex_formula22                    -- Output: false
+#eval is_free_for (Lvar_y) "x" ex_formula222                   -- Output: false
+#eval is_free_for (Lvar_z) "x" (atomic_L "P" [Lvar_x, Lvar_y])   -- Output: true
+#eval is_free_for (Lvar_y) "x" (atomic_L "P" [Lvar_x, Lvar_y])   -- Output: true
 
 
 
@@ -562,39 +562,54 @@ lemma L_DM_or (A B : LFormula) : (¬₀(A∨₀B)) = ((¬₀A)∧₀(¬₀B)) :=
 -/
 
 -- DeMorgan laws
+@[simp]
 axiom L_prenex_DM_or (A B : LFormula) : (¬₀(A∨₀B)) = ((¬₀A)∧₀(¬₀B))
+@[simp]
 axiom L_prenex_DM_and (A B : LFormula) : (¬₀(A∧₀B)) = ((¬₀A)∨₀(¬₀B))
 
 -- Negation
+@[simp]
 axiom L_prenex_neg_exists (A : LFormula) (x : String) : (¬₀(∃₀₀ x A)) = (∀₀₀ x (¬₀A))
+@[simp]
 axiom L_prenex_neg_forall (A : LFormula) (x : String) : (¬₀(∀₀₀ x A)) = (∃₀₀ x (¬₀A))
 
 -- Conjunction
+@[simp]
 axiom L_prenex_forall_and (A B : LFormula) (x : String): ((∀₀₀ x A)∧₀B) = (∀₀₀ x (A∧₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+@[simp]
 axiom L_prenex_exists_and (A B : LFormula) (x : String) : ((∃₀₀ x A)∧₀B) = (∃₀₀ x (A∧₀B))    -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
 
 -- Disjunction
+@[simp]
 axiom L_prenex_forall_or (A B : LFormula) (x : String) : ((∀₀₀ x A)∨₀B) = (∀₀₀ x (A∨₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+@[simp]
 axiom L_prenex_exists_or (A B : LFormula) (x : String) : ((∃₀₀ x A)∨₀B) = (∃₀₀ x (A∨₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
 
 -- Implication
+@[simp]
 axiom L_prenex_forall_imp (A B : LFormula) (x : String): ((∀₀₀ x A)→₀B) = (∃₀₀ x (A→₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+@[simp]
 axiom L_prenex_exists_imp (A B : LFormula) (x : String) : ((∃₀₀ x A)→₀B) = (∀₀₀ x (A→₀B))    -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
 
+@[simp]
 axiom L_prenex_imp_forall (A B : LFormula) (x : String): (A→₀(∀₀₀ x B)) = (∀₀₀ x (A→₀B))     -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
+@[simp]
 axiom L_prenex_imp_exists (A B : LFormula) (x : String) : (A→₀(∃₀₀ x B)) = (∃₀₀ x (A→₀B))    -- TODO (14 ag) : (x ∈ (Lfreevars_formula A)) (x ∉ Lfreevars_formula B)
 
 -- ------------------
 
 -- Conjunction commutativity
+@[simp]
 axiom L_and_commut (A B : LFormula) : (A∧₀B) = (B∧₀A)
 
 -- Disjunction commutativity
+@[simp]
 axiom L_or_commut (A B : LFormula) : (A∨₀B) = (B∨₀A)
 
 -- ------------------
 
 -- Double neg
+@[simp]
 axiom L_double_neg (A : LFormula) : (¬₀(¬₀A)) = A
 
 
