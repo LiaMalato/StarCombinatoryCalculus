@@ -8,10 +8,13 @@ import LeanProjeto2.StarLanguage.FiniteTypes
 import MathLib.Tactic
 import Init.Data.List.Basic
 import Init.Data.List.Lemmas
+import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Multiset.Basic
+import Batteries
 
 open FOLang
 open LFormula
-
+open Batteries
 -- ----------------------------
 -- TERMS and CONSTANTS (p.9-12)
 -- ----------------------------
@@ -30,6 +33,7 @@ deriving Repr, DecidableEq
 
 open Term
 
+--namespace examples                  -- Boa pratica!
 -- EXAMPLE: some terms to use in future examples
 def var_x := var "x"
 def var_y := var "y"
@@ -37,7 +41,7 @@ def var_z := var "z"
 def lcons_a (a:LTerm) := lcons a
 def lcons_k (k:LTerm) := lcons k
 def lcons_var_y := lcons (Lvar_y)
-
+--end examples
 -- --------------------------------
 -- TERMS OF TUPLES (new)
 -- --------------------------------
@@ -48,6 +52,9 @@ deriving BEq, Repr
 -- This function takes a list of Term and makes a term tuple out of it
 def makeTuple (ts : List Term) : TermTuple := ts
 
+#eval makeTuple [var "x"]
+-- TBD: tirar
+
 -- We define a function in order to access any element in the tuple
 def getElement (n : Nat) (t : TermTuple) : Option Term :=           -- Option para ter some/none para o caso do tuple ter 2 elementos e pedirmos o terceiro
   List.get? t n
@@ -55,12 +62,108 @@ def getElement (n : Nat) (t : TermTuple) : Option Term :=           -- Option pa
 -- -------
 -- EXAMPLE: a tuple of terms + access to its elements (new)
 -- -------
-
+--namespace examples
 def exTermTuple : TermTuple := makeTuple ([var_x, var_y])  -- a tuple of terms (a list with the terms x and a)
 
 #eval getElement 0 exTermTuple          -- Output: var_x (the first element of exTermTuple)
 #eval getElement 1 exTermTuple          -- Output: var_y (the second element of exTermTuple)
 #eval getElement 2 exTermTuple          -- Output: none (there is no third element in exTermTuple)
+--end examples
+
+-- ------------------------
+-- Term tuple applications: Notation 1.4
+-- ------------------------
+
+-- result should be:
+-- [app (app (app t1 q1) q2) q3, app (app (app t2 q1) q2) q3]
+
+def TermTupleApp : TermTuple → TermTuple → TermTuple
+| [], _ => [] -- If the first tuple is empty, return an empty list
+| _ , [] => [] -- If the second tuple is empty, return an empty list
+| (t :: ts), qs =>
+  let appNested := qs.reverse.foldr (fun q acc => app acc q) t
+  (appNested :: (TermTupleApp ts qs))
+
+def TermTupleApp_list : List Term → List Term → List Term
+| [], _ => [] -- If the first tuple is empty, return an empty list
+| _ , [] => [] -- If the second tuple is empty, return an empty list
+| (t :: ts), qs =>
+  let appNested := qs.reverse.foldr (fun q acc => app acc q) t
+  (appNested :: (TermTupleApp_list ts qs))
+
+--def Finset String
+#check [Term.var "f"]                   -- Term -> List Term
+#eval makeTuple [Term.var "f"]          -- List Term -> TermTuple
+
+notation t₁ "⊙" t₂ => TermTupleApp t₁ t₂
+
+-- -------------------------------
+-- TRANSFORMAR LISTAS EM TERMTUPLE (para que a TermTupleApp funcione)
+-- -------------------------------
+
+-- Function to transform a list of Strings into a list of `Term.var`
+-- List String -> List Term (mas de Term.var)
+def ListStringToTermVars (lst : List String) : List Term :=
+  lst.map Term.var
+
+-- List String -> List Term (mas de Term.var) -> TermTuple (mas de Term.var)
+-- ListStringToTermVarsTuple
+def List.tt (lst : List String) : TermTuple :=
+  makeTuple (ListStringToTermVars lst)
+
+def tudo (lst : List String) : TermTuple :=
+  makeTuple (lst.map Term.var)
+
+#eval ["f"].tt
+#check ["f"].tt
+
+#eval tudo ["f"]
+#check tudo ["f"]
+
+notation "ls_lt" => ListStringToTermVars
+--notation "tt" => ListStringToTermVarsTuple          -- notação
+
+#eval ["f"].tt
+#check ["f"].tt
+
+#eval (["f"].tt)⊙(["f"].tt)
+
+-- Finset String -> List String
+noncomputable def FinsetStringToTermVars (fs : Finset String) : List String :=
+  fs.toList
+
+-- Finset Strings -> List String -> TermTuple -> List Term (mas de Term.var)
+noncomputable def FinsetStringToTermVarsTuple (fs : Finset String) : TermTuple :=
+  (fs.toList).tt
+
+
+
+/-
+def finsetToList (fs : Finset String) : List String :=
+  fs.toList
+
+-/
+
+--(TermTupleApp (makeTuple [Term.var f]) a)))) -- o 'a' é Finset String, precisaria de ser TermTuple
+/- Próximas tarefas:
+      0. Testar as duas defs acima e merge them
+      1. resolver a questão do a não ser TermTuple, logo não posso usar TermTupleApp
+          Finset String -> Finset Term.var -> .toList (para ser TermTuple) -> podemos fazer TermTupleApp
+          Finset String -> .toList ->
+-/
+
+-- ---------
+-- Examples:
+-- ---------
+
+def result : TermTuple := TermTupleApp [var "t1", var "t2"] [var "q1", var "q2", var "q3"]
+#eval result
+
+def result2 : TermTuple := TermTupleApp [var "t1", var "t2", var "t3"] [var "q1", var "q2", var "q3"]
+#eval result2
+
+def result3 : TermTuple := TermTupleApp [var "t1", var "t2"] [var "q1", var "q2", var "q3", var "q4"]
+#eval result3
 
 
 -- --------------------------------
@@ -233,6 +336,7 @@ def term_substitutionTuple (x : String) (replacement : Term) : TermTuple → Ter
 -- We substitute "x" by an lconstant a in the tuple [x, (y·z)]
 #eval term_substitutionTuple "x" (lcons (Lconst_a)) [var_x, (Π₁·var_y)]       -- Output: [a, (Π₁·z)]
 
+end Term
 
 -- ---------------------------------------------------------------------------------------
 
@@ -259,6 +363,30 @@ inductive Formula : Type
 deriving Repr
 --| bForall {x: String} {t:Term} {h: x ∉ t.freevars} : String → Term → Formula → Formula          -- TO DO: passar para well-formed temos de acrescentar isto
 
+
+def Term.subst (t:Term ) (substitutions:HashMap String Term) : Term :=
+match t with
+| var n => substitutions.findD n (var n)
+| app f a => app (f.subst substitutions) (a.subst substitutions)
+| _ => (by sorry)
+
+def Formula.subst (f:Formula) (substitutions:HashMap String Term) : Formula :=
+match f with
+| L_Form lf => (by sorry)
+| rel s ts => rel s (ts.map (fun t => Term.subst t substitutions))    -- para lista de termos é so this
+| eq t1 t2 => eq (t1.subst substitutions) (t2.subst substitutions)
+| mem t1 t2 => mem (t1.subst substitutions) (t2.subst substitutions)
+| not f' => not (f'.subst substitutions)
+| or f1 f2 => or (f1.subst substitutions) (f2.subst substitutions)
+| unbForall s f' => match substitutions.find? s with
+                    | .none => unbForall s (f'.subst substitutions)
+                    | .some _ => unbForall s f'
+| bForall s t f' => match substitutions.find? s with
+                    | .none => bForall s (t.subst substitutions) (f'.subst substitutions)
+                    | .some _ => bForall s (t.subst substitutions) f'
+
+
+
 -- Convertemos a lista de variáveis numa nested sequence de quantificadores `forall`
 def unbForallTuple (vars : List String) (A : Formula) : Formula :=
   vars.foldr (fun v acc =>
@@ -270,6 +398,15 @@ def bForallTuple (vars : List String) (t : Term) (A : Formula) : Formula :=
   vars.foldr (fun v acc =>
     Formula.bForall v t acc
   ) A
+
+def bForallTuple2 (vars : List String) (terms : List Term) (A : Formula) : Formula :=
+  -- Function to apply bForall using the variable and corresponding term
+  let applyBForall := List.zip vars terms
+  -- Fold over the list of (variable, term) pairs, applying bForall in the given order
+  applyBForall.foldr (fun (v, t) acc =>
+    Formula.bForall v t acc
+  ) A
+
 
 open Formula
 
@@ -310,6 +447,7 @@ inductive Formula_is_wellformed : List String → Formula → Prop
 -- -------------------------------------
 -- FREE VARIABLES PARA FORMULAS EM L^ω_*
 -- -------------------------------------
+
 
 -- DEFINITION: the free variables of a formula in StarLang
 def Formula.freevars : Formula → Finset String
@@ -528,6 +666,17 @@ example (A B : Formula) (hA_b : isBase A) (hB_b : isBase B) (x y : String) (t q 
   have H_bExists := bExists_base y q H_or_AB
   exact b_bForall x t H_bExists
 
+-- ---------------------------
+
+-- TBD: should this not be a consequence of the previous def + lemmas
+inductive isFullyBase : Formula → Prop
+| base {A:Formula}: isBase A → isFullyBase A                                          -- Base formulas are "fully base"
+| and {A B : Formula}: isFullyBase A → isFullyBase B → (isFullyBase (A∧₁B))           -- If A,B are fully base, then so is A∧B
+| imp {A B : Formula}: isFullyBase A → isFullyBase B → (isFullyBase (A→₁B))           -- If A,B are fully base, then so is A→B
+| equiv {A B : Formula}: isFullyBase A → isFullyBase B → (isFullyBase (A↔₁B))         -- If A,B are fully base, then so is A↔B
+| bEx {A : Formula} {x:String} {t:Term} : isFullyBase A → isFullyBase (b∃₁₁ x t A)    -- If A is fully base, then so is (∃x∈t A)
+
+
 -- ------------------------------------------------------
 -- TYPECHECKING
 -- We typecheck the components of the formulas of L^ω_*.
@@ -596,6 +745,96 @@ def ex3_subst : Formula :=
   bForall "y" (var "a") ((var "x")=₁(var "y"))
 #eval substitution_formula "x" ind_⋃₁ ex3_subst                   -- Output: ∀ y ∈ a (ind_⋃₁ =₁ y)
 
+
+-- ---------------------------------
+-- Simultaneous substitution?
+-- ---------------------------------
+
+
+
+
+
+-- TESTE
+
+inductive FormulaWithTuple : Type
+| L_FormT : LFormula → FormulaWithTuple
+| relT : String → List Term → FormulaWithTuple                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
+| eqT : List Term → List Term → FormulaWithTuple                                      -- t =σ q
+| memT : List Term → List Term → FormulaWithTuple                                     -- t ∈σ q
+| notT : FormulaWithTuple → FormulaWithTuple                                         -- If A is a formula, then so is (¬A)
+| orT : FormulaWithTuple → FormulaWithTuple → FormulaWithTuple                                -- If A and B are formulas, then so is (A∨B)
+| unbForallT : List String → FormulaWithTuple → FormulaWithTuple                       -- If A is a base formula, then so is (∀x A)
+| bForallT : List String → List Term → FormulaWithTuple → FormulaWithTuple                     -- If A is a formula, then so is (∀x∈t A)
+deriving Repr
+
+open FormulaWithTuple
+
+def term_substitutionT (x : String) (replacement : Term) : Term → Term
+| var y => if x = y then replacement else var y
+| app t₁ t₂ => app (term_substitutionT x replacement t₁) (term_substitutionT x replacement t₂) -- Handle `lcons` if needed
+| t => t -- These terms remain unchanged
+
+def formula_substitution (x : String) (replacement : Term) : FormulaWithTuple → FormulaWithTuple
+--| (L_Form A) => L_Form (LFormula.substitution x replacement A)  -- Assuming LFormula has a similar substitution
+| (relT P terms) => relT P (terms.map (term_substitutionT x replacement))
+| (eqT ts1 ts2) => eqT (ts1.map (term_substitutionT x replacement)) (ts2.map (term_substitutionT x replacement))
+| (memT ts1 ts2) => memT (ts1.map (term_substitutionT x replacement)) (ts2.map (term_substitutionT x replacement))
+| (notT A) => notT (formula_substitution x replacement A)
+| (orT A B) => orT (formula_substitution x replacement A) (formula_substitution x replacement B)
+| (unbForallT vars A) => unbForallT vars (formula_substitution x replacement A)
+| (bForallT vars terms A) =>
+    -- Substitute only if the variable `x` is among `vars`
+    if vars.contains x then
+      bForallT vars (terms.map (term_substitutionT x replacement)) (formula_substitution x replacement A)
+    else
+      bForallT vars (terms.map (term_substitutionT x replacement)) (formula_substitution x replacement A)
+| t => t
+
+def makeSubstitutionList (vars : List String) (replacements : List Term) : List (String × Term) :=
+  vars.zip replacements
+
+-- Term substitution with a list of replacements
+def term_substitution_list (subs : List (String × Term)) : Term → Term
+| var y =>
+  match subs with
+  | [] => var y -- No substitutions, return the variable as is
+  | (v, t) :: rest =>
+    if y = v then t
+    else term_substitution_list rest t
+| app t₁ t₂ => app (term_substitution_list subs t₁) (term_substitution_list subs t₂)
+--| lcons _ => lcons _ -- Handle `lcons` if needed
+| t => t -- These terms remain unchanged
+
+-- Formula substitution with a list of replacements
+def formula_substitution_list (vars : List String) (replacements : List Term) : FormulaWithTuple → FormulaWithTuple
+--| (L_Form A) =>
+  -- Assuming `LFormula.substitution_list` exists and handles L-Formula substitution
+--  L_Form (LFormula.substitution_list vars replacements A)
+| (relT P terms) =>
+  relT P (terms.map (term_substitution_list (makeSubstitutionList vars replacements)))
+| (eqT ts1 ts2) =>
+  eqT (ts1.map (term_substitution_list (makeSubstitutionList vars replacements)))
+     (ts2.map (term_substitution_list (makeSubstitutionList vars replacements)))
+| (memT ts1 ts2) =>
+  memT (ts1.map (term_substitution_list (makeSubstitutionList vars replacements)))
+      (ts2.map (term_substitution_list (makeSubstitutionList vars replacements)))
+| (notT A) =>
+  notT (formula_substitution_list vars replacements A)
+| (orT A B) =>
+  orT (formula_substitution_list vars replacements A) (formula_substitution_list vars replacements B)
+| (unbForallT varsA A) =>
+  if varsA ∩ vars = [] then
+    unbForallT varsA (formula_substitution_list vars replacements A)
+  else
+    unbForallT varsA (formula_substitution_list vars replacements A)
+| (bForallT varsA termsA A) =>
+  if varsA ∩ vars = [] then
+    bForallT varsA (termsA.map (term_substitution_list (makeSubstitutionList vars replacements)))
+                  (formula_substitution_list vars replacements A)
+  else
+    bForallT varsA (termsA.map (term_substitution_list (makeSubstitutionList vars replacements)))
+                  (formula_substitution_list vars replacements A)
+| t => t
 
 /- Próximas tarefas:
       1. Truly check a cena do ∀x∈t, what is tuple, what is not and how to interpretar

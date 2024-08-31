@@ -2,7 +2,6 @@
 --            STAR LANGUAGE - AXIOMS
 -- -------------------------------------------------------------
 
--- We import the definitions from the first-order language L:
 import LeanProjeto2.FOLanguage
 import LeanProjeto2.StarLanguage.FiniteTypes
 import LeanProjeto2.StarLanguage.Syntax
@@ -30,7 +29,8 @@ inductive Equivalent : Formula → Formula → Prop
 | id : Equivalent A A
 | comm : Equivalent A B → Equivalent B A
 | double_neg : Equivalent (¬₁(¬₁A)) A
-| comm_or : Equivalent (A∨₁B) (B∨₁A)                              -- TODO: the same with other obvious stuff
+| comm_or : Equivalent (A∨₁B) (B∨₁A)
+-- TODO: the same with other obvious stuff
 --| nf_left : Equivalent A B → Equivalent (normal_form A) B
 --| nf_right : Equivalent A B → Equivalent A (normal_form B)
 
@@ -46,8 +46,12 @@ inductive Logic
 | PL_bAC
 -/
 
---ISTO inductive isTrue {L:Logic} : Formula → Prop
-inductive isTrue : Formula → Prop
+inductive Logic
+| PL
+| PL_bAC
+
+inductive isTrue {L:Logic} : Formula → Prop
+--inductive isTrue : Formula → Prop
 -- AXIOM SCHEMA (Shoenfield)
 | lem :                                       -- A ∨ (¬A)
       isTrue (A ∨₁ (¬₁A))
@@ -109,8 +113,8 @@ inductive isTrue : Formula → Prop
     isTrue ((t₁ ∈₁ (𝔰₁·t₂)) ↔₁ (t₁ =₁ t₂))
 | AxS₂ (t₁ t₂ t₃ : Term) : isTrue ((t₁ ∈₁ ((∪₁·t₂)·t₃) ) ↔₁ ((t₁ ∈₁ t₂) ∨₁ (t₁ ∈₁ t₃)))
 | AxS₃ (a f b : Term) : isTrue ((b ∈₁ ((ind_⋃₁·a)·f)) ↔₁ (b∃₁₁ x a (b ∈₁ (f·(var x)))))
-| bAC {x y f : String} : isTrue ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((Term.var f)·(Term.var x)) A))))    -- bAC^ω_*
--- ISTO | bAC {x y f : String} {H:L=Logic.PL_bAC}: isTrue ((V₁ x (E₁ y A)) →₁ (E₁ f (V₁ x (bE₁ y ((Term.var f)·(Term.var x)) A))))    -- bAC^ω_*
+--| bAC {x y f : String} : isTrue ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((Term.var f)·(Term.var x)) A))))    -- bAC^ω_*
+| bAC {x y f : String} {H:L=Logic.PL_bAC}: isTrue ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((Term.var f)·(Term.var x)) A))))    -- bAC^ω_*
 -- Sempre que for para usar o isTrue é preciso escolher a lógica!
 
 
@@ -126,8 +130,8 @@ def g : Term := var "g"
 
 -- Problema: this ↓ is not working
 --lemma eq_symmetry (p q : Term): (p =₁ q) := sorry
-lemma eq_symmetry : ∀(p q:Term), isTrue ((p=₁q)→₁(q=₁p)) := sorry -- construtores de isTrue
--- ISTO lemma eq_symmetry : ∀(p q:Term), isTrue (L := Logic.PL) ((p=₁q)→₁(q=₁p)) := sorry -- construtores de isTrue
+--lemma eq_symmetry : ∀(p q:Term), isTrue ((p=₁q)→₁(q=₁p)) := sorry -- construtores de isTrue
+lemma eq_symmetry : ∀(p q:Term), isTrue (L := Logic.PL) ((p=₁q)→₁(q=₁p)) := sorry -- construtores de isTrue
 
 --theorem tastino (x y : String) : Formula
 

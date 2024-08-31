@@ -20,7 +20,6 @@ example
   (SH_int (  ) (Recreate ( , , ))) := by sorry
 -/
 
-
 -- SHOENFIELD'S FUNCTIONAL INTERPREATION
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -147,6 +146,8 @@ inductive SH_int : Formula → Formula → Prop
 
 -- TO DO (eu): a tirar este Teste e fazer um melhor
 def Teste (a b : String) (f : Term) (A_SH : Formula): Formula := substitution_formula b (f·(Term.var a)) A_SH
+
+-- STOP
 
 -- --------------------------------------------------------------
 -- EXAMPLE 2.1 (p.38)

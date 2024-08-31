@@ -27,6 +27,10 @@ def G := ground                         -- notation G => ground
 notation t "⟶" t1 => arrow t t1
 notation t "⋆" => star t
 
+def exCreateType (σ τ : FType) : FType := (σ⋆) ⟶ τ
+
+-- (G⋆) ⟶ (G ⟶ G)
+
 -- EXAMPLE:
 def s1ex2_1 : FType := G⋆
 def s1ex2_2 : FType := G ⟶ G
