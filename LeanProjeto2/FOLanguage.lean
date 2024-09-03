@@ -4,6 +4,9 @@ import Init.Data.String.Basic
 import Mathlib.Data.Finset.Basic
 import Init.Data.List.Basic
 import Mathlib.Data.List.Basic
+import Batteries
+
+open Batteries
 
 -- ---------------------------------------------------------------------
 -- ---------------------------------------------------------------------
@@ -142,6 +145,14 @@ instance : DecidableEq (List LTerm) := decEqListTerm
 
 namespace LTerm
 
+def LTerm.subst (t : LTerm) (substitutions : HashMap String LTerm) : LTerm :=
+match t with
+  | Lvar n => substitutions.findD n (Lvar n)
+  | Lconst c => Lconst c
+  | Lfunc f args => Lfunc f (args.map (fun t => subst t substitutions))
+decreasing_by sorry             -- TBD (net-ech)
+
+
 -- Definição de substituição de termos: Substituimos _ por _ em _
 def Lsubstitution (x : String) (replacement : LTerm) : LTerm → LTerm
 | .Lvar y => if x = y
@@ -149,7 +160,7 @@ def Lsubstitution (x : String) (replacement : LTerm) : LTerm → LTerm
           else (.Lvar y)
 | .Lfunc name args => .Lfunc name (args.map (Lsubstitution x replacement))
 | t => t
-decreasing_by sorry             -- TODO (net-ech)
+decreasing_by sorry             -- TBD (net-ech)
 
 -- Definição de substituição de tuple terms: Substituimos _ por _ em _ (new)
 def LsubstitutionTuple (x : String) (replacement : LTerm) : LTermTuple → LTermTuple

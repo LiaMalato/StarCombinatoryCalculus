@@ -1,13 +1,20 @@
-import LeanProjeto2.FOL
-import LeanProjeto2.StarLang
-import LeanProjeto2.ShoenfieldsFunctInterp
+import LeanProjeto2.FOLanguage
+import LeanProjeto2.StarLanguage
+import LeanProjeto2.StarLanguage.Axioms2
+import LeanProjeto2.StarLanguage.Syntax
+import LeanProjeto2.StarLanguage.FiniteTypes
+import LeanProjeto2.SHFunctInterp
 import MathLib.Tactic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic
 
-open FOL
+open FOLang
 open LFormula
-open StarLang
+open Term
+open Formula
+open Set
+open Batteries
+
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------------------------------------------
@@ -61,6 +68,7 @@ lemma MonotonicityLemma
 -- Problema: Como fazer isTrue com bAC to give A? O que está escrito doesn't work, to prove a conclusão, não precisamos de bAC
 
 /- Problema: same as before com String e Finset String
+
 theorem SoundnessTheorem
   (A : Formula) (t : Term)
   (hA1 : SH_int A AuSH) (hA2 : AuSH.components = (a,b,A_SH)) (hA3 : StarLang.isBase A_SH) :
@@ -69,6 +77,74 @@ theorem SoundnessTheorem
   (isTrue (V₁ a (substitution_formula b (t·(Term.var a)) A_SH))) := by sorry
 -/
 
+
+
+-- theorem Soundness (A : Formula) : (insert (bAC x y f B) ∅ ⊢ A) → (∃(t:Term), (Provable (∀₁ a A))) := by sorry    -- TBD: falta subst aqui
+example {x y f : List String} (A : Formula): (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
+
+lemma interp_b_ac
+  (A B:Formula) (x y f g Φ x' f' :List String) (hBase : isBase A)
+  (hA1 : SH_int2 A AuSH)
+  (hA2 : AuSH.components2 = (a,b,A_SH))
+  (hA3 : isBase A_SH) :
+  (SH_int2 (bAC x y f B) bACint) → bACint.components2 = (g∪Φ, x'∪f', ((bForallTuple2 x x'.tt (bExistsTuple2 y ((g.tt)⊙(x.tt)) A)) →₁ (bExistsTuple2 f f'.tt (bForallTuple2 a ((Φ.tt)⊙(f.tt)) (bExistsTuple2 b ((f.tt)⊙(a.tt)) A))))) := by sorry
+
+
+
+theorem SoundnessTheorem
+  (A B : Formula)
+  (t : List Term)
+  (x y f : List String)
+
+  (hA1 : SH_int2 A AuSH)
+  (hA2 : AuSH.components2 = (a,b,A_SH))
+  (hA3 : isBase A_SH)
+  (hG : Γ₁ = insert (bAC x y f B) Γ)
+  (pa : Γ₁ ⊢ A) :
+  --(Provable (bAC x y f A)) →
+  (Γ₁ ⊢ (∀₁ a (A_SH.subst (HashMap.ofList (b.zip (t⊙(a.tt))))))) := by sorry
+    /-
+    cases pa
+    . -- Ax
+      have h1 : A = bAC x y f B := by sorry
+      apply ProvableFrom.ax
+      sorry
+    . -- exMid
+      sorry
+    . -- subs
+      sorry
+    . -- exp
+      sorry
+    . -- contrad
+      sorry
+    . -- assoc
+      sorry
+    . -- cut
+      sorry
+    . -- forallInt
+      sorry
+    . -- Os axiomas que são universal closures of base formulas
+      sorry
+    -/
+
+/-
+Limpar o que está multiply defined
+tt -> eliminar
+melhorar ProvableFrom
+-/
+
+
+
+
+
+
+
+
+
+
+
+
+-- A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))))
 
 -- ---------------------------------------------------------------------
 -- EXAMPLE 3.1 (p.49-50):

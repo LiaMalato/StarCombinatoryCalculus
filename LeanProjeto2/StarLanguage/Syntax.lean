@@ -33,7 +33,7 @@ deriving Repr, DecidableEq
 
 open Term
 
---namespace examples                  -- Boa pratica!
+--namespace examples                  -- TBD: Boa pratica!
 -- EXAMPLE: some terms to use in future examples
 def var_x := var "x"
 def var_y := var "y"
@@ -46,10 +46,12 @@ def lcons_var_y := lcons (Lvar_y)
 -- TERMS OF TUPLES (new)
 -- --------------------------------
 
-def TermTuple := List Term
+@[simp]
+def TermTuple := List Term          -- TBD: tirar TermTuple, keep List Term
 deriving BEq, Repr
 
 -- This function takes a list of Term and makes a term tuple out of it
+@[simp, reducible]
 def makeTuple (ts : List Term) : TermTuple := ts
 
 #eval makeTuple [var "x"]
@@ -77,6 +79,7 @@ def exTermTuple : TermTuple := makeTuple ([var_x, var_y])  -- a tuple of terms (
 -- result should be:
 -- [app (app (app t1 q1) q2) q3, app (app (app t2 q1) q2) q3]
 
+@[simp]
 def TermTupleApp : TermTuple → TermTuple → TermTuple
 | [], _ => [] -- If the first tuple is empty, return an empty list
 | _ , [] => [] -- If the second tuple is empty, return an empty list
@@ -84,6 +87,7 @@ def TermTupleApp : TermTuple → TermTuple → TermTuple
   let appNested := qs.reverse.foldr (fun q acc => app acc q) t
   (appNested :: (TermTupleApp ts qs))
 
+@[simp]
 def TermTupleApp_list : List Term → List Term → List Term
 | [], _ => [] -- If the first tuple is empty, return an empty list
 | _ , [] => [] -- If the second tuple is empty, return an empty list
@@ -95,6 +99,7 @@ def TermTupleApp_list : List Term → List Term → List Term
 #check [Term.var "f"]                   -- Term -> List Term
 #eval makeTuple [Term.var "f"]          -- List Term -> TermTuple
 
+@[simp]
 notation t₁ "⊙" t₂ => TermTupleApp t₁ t₂
 
 -- -------------------------------
@@ -103,11 +108,13 @@ notation t₁ "⊙" t₂ => TermTupleApp t₁ t₂
 
 -- Function to transform a list of Strings into a list of `Term.var`
 -- List String -> List Term (mas de Term.var)
+@[simp]
 def ListStringToTermVars (lst : List String) : List Term :=
   lst.map Term.var
 
 -- List String -> List Term (mas de Term.var) -> TermTuple (mas de Term.var)
 -- ListStringToTermVarsTuple
+@[simp]
 def List.tt (lst : List String) : TermTuple :=
   makeTuple (ListStringToTermVars lst)
 
@@ -358,17 +365,59 @@ inductive Formula : Type
 | mem : Term → Term → Formula                                     -- t ∈σ q
 | not : Formula → Formula                                         -- If A is a formula, then so is (¬A)
 | or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
-| unbForall : String → Formula → Formula                        -- If A is a base formula, then so is (∀x A)
+| unbForall : String → Formula → Formula                          -- If A is a base formula, then so is (∀x A)
 | bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
 deriving Repr
 --| bForall {x: String} {t:Term} {h: x ∉ t.freevars} : String → Term → Formula → Formula          -- TO DO: passar para well-formed temos de acrescentar isto
 
 
-def Term.subst (t:Term ) (substitutions:HashMap String Term) : Term :=
+inductive FormulaT : Type
+| L_FormT : LFormula → FormulaT
+| relT : String → List Term → FormulaT                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
+| eqT : List Term → List Term → FormulaT                                      -- t =σ q
+| memT : List Term → List Term → FormulaT                                     -- t ∈σ q
+| notT : FormulaT → FormulaT                                         -- If A is a formula, then so is (¬A)
+| orT : FormulaT → FormulaT → FormulaT                                -- If A and B are formulas, then so is (A∨B)
+| unbForallT : String → FormulaT → FormulaT                          -- If A is a base formula, then so is (∀x A)
+| bForallT : String → Term → FormulaT → FormulaT                     -- If A is a formula, then so is (∀x∈t A)
+deriving Repr
+
+open LTerm
+
+def Term.subst (t:Term) (substitutions:HashMap String Term) : Term :=
 match t with
 | var n => substitutions.findD n (var n)
 | app f a => app (f.subst substitutions) (a.subst substitutions)
-| _ => (by sorry)
+| pi => pi
+| sigma => sigma
+| sing => sing
+| bUnion => bUnion
+| iUnion => iUnion
+| lcons lterm => (by sorry)
+
+/-
+match lterm with
+                        | LTerm.Lvar s => lcons (LTerm.Lvar s)
+                        | LTerm.Lconst s => lcons (LTerm.Lconst s)
+                        | LTerm.Lfunc s terms => lcons (LTerm.Lfunc s (terms.map (fun t => (LTerm.subst t) substitutions)))  -- Problema com o HashMap e a cena do LTerm e Term
+-/
+--| _ => (by sorry)
+
+/-
+def term_substitution (x : String) (replacement : Term) : Term → Term
+| lcons t => match replacement with
+              | lcons r => lcons (LTerm.Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+              | _ => lcons t
+| var y => if x = y
+          then replacement
+          else (var y)
+| app t₁ t₂ => app (term_substitution x replacement t₁) (term_substitution x replacement t₂)  -- In an application, we do the substitution in each term
+| t => t
+-/
+
+def List.subst (ts : List Term) (substitutions : HashMap String Term) : List Term :=
+  ts.map (fun t => Term.subst t substitutions)
+
 
 def Formula.subst (f:Formula) (substitutions:HashMap String Term) : Formula :=
 match f with
@@ -385,6 +434,20 @@ match f with
                     | .none => bForall s (t.subst substitutions) (f'.subst substitutions)
                     | .some _ => bForall s (t.subst substitutions) f'
 
+def FormulaT.subst (f:FormulaT) (substitutions:HashMap String Term) : FormulaT :=
+match f with
+| L_FormT lf => (by sorry)
+| relT s ts => relT s (ts.map (fun t => Term.subst t substitutions))    -- para lista de termos é so this
+| eqT t1 t2 => eqT (t1.subst substitutions) (t2.subst substitutions)
+| memT t1 t2 => memT (t1.subst substitutions) (t2.subst substitutions)
+| notT f' => notT (f'.subst substitutions)
+| orT f1 f2 => orT (f1.subst substitutions) (f2.subst substitutions)
+| unbForallT s f' => match substitutions.find? s with
+                    | .none => unbForallT s (f'.subst substitutions)
+                    | .some _ => unbForallT s f'
+| bForallT s t f' => match substitutions.find? s with
+                    | .none => bForallT s (t.subst substitutions) (f'.subst substitutions)
+                    | .some _ => bForallT s (t.subst substitutions) f'
 
 
 -- Convertemos a lista de variáveis numa nested sequence de quantificadores `forall`
@@ -521,6 +584,10 @@ def unbExistsTuple (x : List String) (A : Formula) : Formula :=
 def bExistsTuple (x : List String) (t : Term) (A : Formula) : Formula :=
   ¬₁ (b∀₁ x t (¬₁A))
 
+@[simp]
+def bExistsTuple2 (x : List String) (t : List Term) (A : Formula) : Formula :=
+  ¬₁ (bForallTuple2 x t (¬₁A))
+
 notation "∃₁₁" => unbExists
 notation "b∃₁₁" => bExists
 notation "∃₁" => unbExistsTuple
@@ -591,8 +658,8 @@ def ex3_freevars_formula := (b∀₁₁ "z" (var "t") (rel "Q" [var "z"]))
 -- Checks whether a given formula is atomic:
 inductive isAtomic : Formula → Prop
 | at_rel : isAtomic (rel x l_term)
-| at_eq : isAtomic (eq t₁ t₂)
-| at_mem : isAtomic (mem t₁ t₂)
+| at_eq (t₁ t₂ : Term) : isAtomic (eq t₁ t₂)
+| at_mem (t₁ t₂ : Term) : isAtomic (mem t₁ t₂)
 
 -- Checks whether a given formula is base:
 inductive isBase : Formula → Prop
@@ -600,6 +667,11 @@ inductive isBase : Formula → Prop
 | b_not (h: isBase A) : isBase (not A)                                          -- If A is base, then so is ¬₁A
 | b_or (h1: isBase A) (h2 : isBase B) : isBase (or A B)                         -- If A and B are base, then so is A∨₁B
 | b_bForall (x : String) (t : Term) (h : isBase A) : isBase (bForall x t A)     -- If A is base, then so is ∀x∈t A
+
+open isAtomic
+
+example (p q : Term) : isAtomic (p ∈₁ q) := by
+  exact at_mem p q
 
 open isBase
 
@@ -621,10 +693,11 @@ example (A B : Formula) (hA_at : isAtomic A) (hB_b : isBase B) : (isBase (A∨�
 -- Lemma Conj_base states that if A and B are base formulas, then so is their conjunction A ∧ B
 lemma Conj_base (A B : Formula) (hA : isBase A) (hB : isBase B) : (isBase (A∧₁B)) := by
   unfold F_and
-  have h_nA := b_not hA
-  have h_nB := b_not hB
-  have h_or_nAnB := b_or h_nA h_nB
-  exact b_not h_or_nAnB
+  exact b_not (b_or (b_not hA) (b_not hB))
+  --have h_nA := b_not hA
+  --have h_nB := b_not hB
+  --have h_or_nAnB := b_or h_nA h_nB
+  --exact b_not h_or_nAnB
 
 -- Lemma Imp_base states that if A and B are base formulas, then so is their implication A → B
 lemma Imp_base (A B : Formula) (hA : isBase A) (hB : isBase B) : (isBase (A→₁B)) := by
