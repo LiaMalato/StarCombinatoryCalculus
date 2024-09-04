@@ -10,6 +10,8 @@ import LeanProjeto2.StarLanguage.ResultsAndOtherDefinitions
 import MathLib.Tactic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic
+import Mathlib.Data.List.Sigma
+import Mathlib.Data.List.Basic
 
 
 open FOLang
@@ -115,7 +117,8 @@ def Formula.dia : Formula → List String → List String → Formula → Prop
 
 example (A:Formula) : A.dia u e f1 → u == ["x"] := by sorry
 
-
+example (A:Formula) (h: isBase A) : A.components5 = (∅,∅,A) := by
+  sorry
 
 -- -------
 -- Example to use components:
@@ -191,7 +194,16 @@ def Recreate7 : (List String × List String × Formula) → Formula
   -- Apply existential quantifiers from `b` in reverse order with negations
   List.foldr (fun x f => (Formula.unbForall x f)) with_existentials a
 
+@[simp]
+def Recreate8 : (List String × List String × Formula) → Formula
+| (a, b, rest) => ∀₁ a (∃₁ b rest)
 
+@[simp]
+def RecreateEmpty : (List String × List String × Formula) → Formula
+| ([], [], rest) => rest
+| (a, [], rest) => ∀₁ a rest
+| ([], b, rest) => ∃₁ b rest
+| (a, b, rest) => ∀₁ a (∃₁ b rest)
 
 -- --------------------------------------
 -- DEFINITION 2.1 (p.38):
@@ -245,46 +257,241 @@ inductive SH_int : Formula → Formula → Prop
             --({x,a,b} ⊆ A.allvars) →
             --(h : x ∉ t.freevars)
 
+
 -- TO DO (eu): a tirar este Teste e fazer um melhor
 def Teste (a b : String) (f : Term) (A_SH : Formula): Formula := substitution_formula b (f·(Term.var a)) A_SH
 
 example (A:Formula) (H : isBase A) : isBase (b∃₁₁ x t A) := by
   exact bExists_base x t H
 
+-- PRECISAMOS DE COMPONENTS?? NAO PODE SER SO UM TUPLO QUALQUER QUE DEPOIS USAMOS AQUI??? HELP
+-- COMPONENTS SO USAR PARA COMPONENTS DE INTERPRETACOES
 
 inductive SH_int2 : Formula → Formula → Prop
-| base : (h : isFullyBase A) → (SH_int2 A (Recreate ({},{},A)))
+| base : (h : isBase A) → (SH_int2 A A)
 | disj : SH_int2 A AuSH →
          SH_int2 B BuSH →
-         AuSH.components2 = (a,b,A_SH) →                                     -- A^SH = ∀a ∃b A_SH(a,b)
-         BuSH.components2 = (c,d,B_SH) →                                     -- B^SH = ∀c ∃d B_SH(c,d)
+         AuSH.components5 = (a,b,A_SH) →                                     -- A^SH = ∀a ∃b A_SH(a,b)
+         BuSH.components5 = (c,d,B_SH) →                                     -- B^SH = ∀c ∃d B_SH(c,d)
          --({a,b} ⊆ A.allvars) →                                            -- TO DO: precisamos?
          --({c,d} ⊆ B.allvars) →                                            -- TO DO: dizer lista não tem conjuntos repetidos
-         (hA : isFullyBase A_SH) →
-         (hB : isFullyBase B_SH) →
-         (SH_int2 (A∨₁B) (Recreate2 (a∪c,b∪d,(A_SH ∨₁ B_SH))))                -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+         --(hA : isBase A_SH) →
+         --(hB : isBase B_SH) →
+         (SH_int2 (A∨₁B) (RecreateEmpty (a∪c,b∪d,(A_SH ∨₁ B_SH))))                -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
 | neg {f a': List String}:
         -- ({a,b} ⊆ A.allvars) →
         SH_int2 A AuSH →
-        (a,b,A_SH) = AuSH.components2 →                                    -- A^SH = ∀a ∃b A_SH(a,b)
-        (hA : isFullyBase A_SH) →
-        (SH_int2 (¬₁A) (Recreate2 (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))))
+        (a,b,A_SH) = AuSH.components5 →                                    -- A^SH = ∀a ∃b A_SH(a,b)
+        --(hA : isBase A_SH) →
+        (SH_int2 (¬₁A) (RecreateEmpty (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))))
 | unbForall : SH_int2 A AuSH →
-              AuSH.components2 = (a,b,A_SH) →                                -- A^SH = ∀a ∃b A_SH(a,b)
+              AuSH.components5 = (a,b,A_SH) →                                -- A^SH = ∀a ∃b A_SH(a,b)
               --({x,a,b} ⊆ A.allvars) →
               --(SH_int A (V₁ a (E₁ b A_SH))) →                             -- A^SH = ∀a ∃b A_SH(a,b)
-              (hA : isFullyBase A_SH) →
-              (SH_int2 (∀₁₁ x A) (Recreate2 (a∪{x},b,A_SH)))                  -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+              --(hA : isBase A_SH) →
+              (SH_int2 (∀₁₁ x A) (RecreateEmpty (a∪{x},b,A_SH)))                  -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
 | bForall : SH_int2 A AuSH →
-            AuSH.components2 = (a,b,A_SH) →                                  -- A^SH = ∀a ∃b A_SH(a,b)
-            (hA : isFullyBase A_SH) →
-            (SH_int2 (b∀₁ x t A) (Recreate2 (a,b,(b∀₁ x t A_SH))))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
+            AuSH.components5 = (a,b,A_SH) →                                  -- A^SH = ∀a ∃b A_SH(a,b)
+            --(hA : isBase A_SH) →
+            (SH_int2 (b∀₁ x t A) (RecreateEmpty (a,b,(b∀₁ x t A_SH))))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
             --({x,a,b} ⊆ A.allvars) →
             --(h : x ∉ t.freevars)
 
+def Formula.components6 : Formula → (List String × List String × Formula)
+| unbForall x A =>
+    let (a, b, rest) := A.components5
+    ({x} ∪ a, b, rest)
+| not (unbForall x A) =>
+    let (a, b, rest) := A.components5
+    (b, {x} ∪ a, not rest)
+| not (not A) =>
+    -- This handles the double negation case
+    A.components5
+| not A =>
+    let (a, b, rest) := A.components5
+    (b, a, not rest)
+| or A1 A2 =>
+    let (a1, b1, r1) := A1.components5
+    let (a2, b2, r2) := A2.components5
+    (a1 ∪ a2, b1 ∪ b2, or r1 r2)
+| bForall x t A =>
+    let (a, b, rest) := A.components5
+    (a, {x} ∪ b, bForall x t rest)
+| A => ([], [], A)
+
+@[simp]
+def DoubleNeg (A:Formula) := ((¬₁(¬₁ A)) = A)
+
+
+
+example (h1: SH_int2 A AuSH) (h2 : AuSH.components5 = (a,b,A_SH))
+        (h3: SH_int2 (∀₁₁ x A) interp) : interp.components5 = ([x]∪a,b,A_SH) := by
+  let H := @SH_int2.unbForall A AuSH a b A_SH x h1 h2
+  sorry
+
+inductive SH_int_comp : Formula → (List String × List String × Formula) → Prop
+| base : (h : isBase A) → (SH_int_comp A ([],[],A))
+| disj : SH_int_comp A (a,b,A_SH) →
+         SH_int_comp B (c,d,B_SH) →
+         (SH_int_comp (A∨₁B) (a∪c,b∪d,(A_SH ∨₁ B_SH)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+| neg {f a': List String}:
+        SH_int_comp A (a,b,A_SH) →
+        (SH_int_comp (¬₁A) (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))))))))
+| unbForall : SH_int_comp A (a,b,A_SH) →
+              (SH_int_comp (∀₁₁ x A) (a∪[x],b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+| bForall : SH_int_comp A (a,b,A_SH) →
+            (SH_int_comp (b∀₁ x t A) (a,b,(b∀₁ x t A_SH)))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
+
+
+inductive SH_int_type : Type
+| mk : List String → List String → Formula → SH_int_type
+
+def SH_int_Comp : SH_int_type → (List String × List String × Formula)
+| SH_int_type.mk a b A_SH => (a, b, A_SH)
+
+def extract_tuple {A : Formula} {a b a' f : List String} {A_SH : Formula}
+  (hA : SH_int_comp A (a, b, A_SH)) (hB : SH_int_comp B (c, d, B_SH)) : (List String × List String × Formula) :=
+  match A with
+  | (.or A B)           => (a∪c, b∪d, A)
+  | (.not A)            => (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt))))))))
+  | (.unbForall x A)    => (a∪[x],b,A_SH)
+  | (.bForall x t A)    => (a,b,(b∀₁₁ x t A_SH))
+  | A                   => ([],[],A)
+
+def extract_tuple_base {A: Formula} (hA : isBase A)
+  (hAint : SH_int_comp A ([], [], A)) : (List String × List String × Formula) :=
+  ([], [], A)
+
+/-
+def extract_tuple_base {A A_SH: Formula} (hA : isBase A)
+  (hAint : SH_int_comp A ([], [], A)) : (List String × List String × Formula) :=
+  ([], [], A)
+-/
+
+#check List.nil_union
+
+@[simp]
+lemma List.union_nil (l : List String) : l ∪ [] = l := by sorry
+
+
+example (h: SH_int_comp A (a,b,A_SH)) :
+        SH_int_comp (∀₁₁ x A) (a∪[x],b,A_SH) :=
+by
+  exact @SH_int_comp.unbForall A a b A_SH x h
+
+example (A B : Formula) (hA: SH_int_comp A (a,b,A_SH)) (hB : isBase B) :
+        SH_int_comp (A ∨₁ (b∀₁ [x] t B)) (a,b,(A_SH ∨₁ (b∀₁ [x] t B))) :=
+by
+  have H1 := SH_int_comp.base hB
+  have H2 := @SH_int_comp.bForall B [] [] B [x] t H1
+  have H3 := @SH_int_comp.disj A a b A_SH (b∀₁ [x] t B) [] [] (b∀₁ [x] t B) hA H2
+  have Ha := a.union_nil
+  have Hb := b.union_nil
+  rw [Ha,Hb] at H3
+  exact H3
+
+
+-- ------------------------------------------------
+-- COMPUTAR SH INTERPRETATION COM OUTPUT DE FORMULA
+-- ------------------------------------------------
+
+def SH_int_base_rec (A:Formula) (H: isBase A): Formula := (RecreateEmpty ([], [], A))
+def SH_int_base_comp (A:Formula) (H: isBase A): (List String × List String × Formula) := ([], [], A)
+
+def SH_int_or_rec (A B : Formula)
+  (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components5)
+  (hIntB: SH_int2 B BuSH) (hBcomp: (c,d,B_SH) = BuSH.components5): Formula :=
+  Recreate8 (a∪c, b∪d, (A_SH ∨₁ B_SH))
+
+def SH_int_or_comp (A B : Formula)
+  (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components5)
+  (hIntB: SH_int2 B BuSH) (hBcomp: (c,d,B_SH) = BuSH.components5): (List String × List String × Formula) :=
+  (a∪c, b∪d, (A_SH ∨₁ B_SH))
+
+def SH_int_unbForall_rec (A : Formula) (x : List String)
+  (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components5): Formula :=
+  Recreate8 (a∪x, b, A_SH)
+
+def SH_int_unbForall_comp (A : Formula) (x : List String)
+  (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components5): (List String × List String × Formula) :=
+  (a∪x, b, A_SH)
+
+def SH_int_bForall_rec (A : Formula) (x : List String) (t : List Term)
+  (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components5): Formula :=
+  Recreate8 (a, b, bForallTuple2 x t A_SH)
+
+def SH_int_bForall_comp (A : Formula) (x : List String) (t : List Term)
+  (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components5): (List String × List String × Formula) :=
+  (a, b, bForallTuple2 x t A_SH)
+
+def SH_int_not_rec (A : Formula) {f a' : List String}
+  (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components5): Formula :=
+  Recreate8 (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))
+
+open isAtomic
+open isBase
+def formulinha : Formula := (var "x") =₁ (var "y")
+lemma lemazinho (x y : String) : isBase ((var x) =₁ (var y)) := by exact b_atom (isAtomic.at_eq (var x) (var y))
+
+def Testinho := SH_int_base_rec ((var "x") =₁ (var "y")) (lemazinho "x" "y")
+lemma lemazinho_testinho :
+  ((SH_int_base_rec ((var "x") =₁ (var "y")) (lemazinho "x" "y")) = ((var "x") =₁ (var "y"))) := by
+  sorry
+
+#eval Testinho
+#check DoubleNeg Testinho
+
+
+-- Example: A ∨ (∀x∈t B)
+def baseBase (A:Formula) (hA : isBase A) (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.components5 = ({},{},A_SH))
+  := A_SH = A
+
+lemma baseEquality (A B:Formula) (hA : isBase A) (hEq : B = A) : isBase B := by sorry
+
+example (A B : Formula) (hB : isBase B) (x:String) (t:Term)
+  (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.components5 = (a,b,A_SH)) (hAcomp2: (a,b,A_SH) = AuSH.components5)
+  (hIntB: SH_int2 B BuSH) (hBcomp: BuSH.components5 = ({},{},B_SH)) (hBcomp2: ({},{},B_SH) = BuSH.components5)
+  (hIntEx : SH_int2 ( A ∨₁ (bForallTuple2 [x] [t] B) ) interp):
+  interp = Recreate8 (a,b, (A_SH ∨₁ (bForallTuple2 [x] [t] B))) :=
+by sorry
+  /-
+  --let H1 := SH_int_base_rec B hB
+  have H1simp : (SH_int_base_rec B hB) = (bForallTuple2 [x] [t] B) := by sorry
+  have H1comp : ({},{}, bForallTuple2 [x] [t] B) = (bForallTuple2 [x] [t] B).components5 := by sorry
+  have H1comp2 : (bForallTuple2 [x] [t] B).components5 = ({},{}, bForallTuple2 [x] [t] B) := by sorry
+  have Hcenas : B_SH = B := by sorry --exact (baseBase B hB hIntB hBcomp)
+  have HEq := (baseEquality B B_SH hB Hcenas)
+  have hSH := SH_int_bForall_comp B [x] [t] hIntB hBcomp2          -- Recreate8 ({}, {}, bForallTuple2 x t B)
+  have H := (@SH_int2.bForall B BuSH {} {} B_SH [x] t hIntB hBcomp HEq)
+  have Htwo : SH_int2 (bForallTuple2 [x] [t] B) (bForallTuple2 [x] [t] B)
+  have H2 : (Recreate2 (∅, ∅, bForallTuple2 [x] [t] B)).components5 = ({},{},bForallTuple2 [x] [t] B)
+  have HH {intAvB} : SH_int2 (bForallTuple2 [x] [t] B) intAvB
+  have Hcomp : SH_int2 (bForallTuple2 [x] [t] B) (Recreate2 (∅, ∅, b∀₁ [x] t B_SH))
+  sorry
+  --have Hcomp : (Recreate2 (∅, ∅, b∀₁ [x] t B_SH)).components5 = (∅, ∅, b∀₁ [x] t B_SH) := by sorry
+  --THIS have H3 := (@SH_int2.disj A AuSH (bForallTuple2 [x] [t] B) (Recreate2 (∅, ∅, b∀₁ [x] t B_SH)) a b A_SH {} {} (bForallTuple2 [x] [t] B) hIntA Hcomp)
+  -- have hSHtudo := SH_int_or_comp A (bForallTuple2 [x] [t] B) hIntA hAcomp
+  --have H2_simp : (SH_int_or_rec A B hIntA hAcomp hIntB hBcomp )
+  -/
+
+/-
+def SH_int_or_comp (A B : Formula)
+  (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components5)
+  (hIntB: SH_int2 B BuSH) (hBcomp: (c,d,B_SH) = BuSH.components5): (List String × List String × Formula) :=
+  (a∪c, b∪d, (A_SH ∨₁ B_SH))
+
+  | bForall : SH_int2 A AuSH →
+            AuSH.components5 = (a,b,A_SH) →                                  -- A^SH = ∀a ∃b A_SH(a,b)
+            (hA : isBase A_SH) →
+            (SH_int2 (b∀₁ x t A) (Recreate2 (a,b,(b∀₁ x t A_SH))))
+-/
+
+
+-- example (A:Formula) (hInt : SH_int2 A AuSH) → (hComp : (a,b,A_SH) = AuSH.components2) :
+
 example (A B:Formula) (H : SH_int2 (A→₁B) IMPuSH) {f a' :List String}:
-  (isFullyBase A_SH) → (SH_int2 A AuSH) → ((a,b,A_SH) = AuSH.components2) →
-  (isFullyBase B_SH) → (SH_int2 B BuSH) → ((c,d,B_SH) = AuSH.components2) →
+  (isBase A_SH) → (SH_int2 A AuSH) → ((a,b,A_SH) = AuSH.components2) →
+  (isBase B_SH) → (SH_int2 B BuSH) → ((c,d,B_SH) = AuSH.components2) →
   ((IMPuSH.components2 = (f∪c,a'∪d,(A_SH →₁ B_SH)))) := by sorry
 
 /-
@@ -328,6 +535,8 @@ def FormulaF : Formula := aaa =₁ bbb
 #eval (∀₁ ["x"] (∃₁ ["y"] (var "x" =₁ var "y")))              -- Formula ∀ "x" ∃ "y" (x=y)
 #eval (∀₁ ["x"] (∃₁ ["y"] (var "x" =₁ var "y"))).components2  -- no
 #eval (∀₁ ["x"] (∃₁ ["y"] (var "x" =₁ var "y"))).components5  -- yes
+#eval (∀₁ ["x"] (var "x" =₁ var "y")).components5  -- yes
+#eval (∃₁ ["y"] (var "x" =₁ var "y")).components5  -- yes
 
 def ThisTeste := (∀₁ ["x"] (∃₁ ["y"] (var "x" =₁ var "y"))).components2
 #eval Recreate2 ((∀₁ ["x"] (∃₁ ["y"] (var "x" =₁ var "y"))).components2)

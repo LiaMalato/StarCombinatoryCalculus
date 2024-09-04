@@ -6,6 +6,7 @@
 import LeanProjeto2.FOLanguage
 import LeanProjeto2.StarLanguage.FiniteTypes
 import LeanProjeto2.StarLanguage.Syntax
+import LeanProjeto2.SHFunctInterp
 import Init.Data.List.Basic
 import Init.Data.List.Lemmas
 import Mathlib.Data.Finset.Basic
@@ -74,16 +75,40 @@ open Formula
 open isAtomic
 open isBase
 
-lemma AxiomE1_univ_of_base : (isBase (axiomE1 x)) := by
+-- On AxiomE1:
+lemma AxiomE1_univ_of_base (x:String) : (isBase (axiomE1 x)) := by
   unfold axiomE1
   exact b_atom (isAtomic.at_eq (var x) (var x))
 
+#check Axioms.AxiomE1_univ_of_base "x"
+
+example : (axiomE1 "x").components2 = ([], [], (axiomE1 "x")) := by
+  exact rfl
+
+/-
+#check SH_int2
+def HHH {x₁ x₂ : String} {int_axC1 : Formula} : Prop := SH_int2 (axiomC1 x₁ x₂) int_axC1
+--#check axiomE1
+def HHHH := (axiomE1 "x").components2
+#eval (axiomE1 "x").components2
+
+def HHH : Prop := SH_int2 (axiomC1 x₁ x₂) int_axC1
+example
+  (hInt : SH_int2 (axiomC1 x₁ x₂) int_axC1)
+  (hComp : (a,b,mat_axC1) = int_axC1.components2) :
+  (a = ∅) ∧ (b = ∅) := by sorry
+-/
+
+
+-- On AxiomE2:
 lemma AxiomE2_univ_of_base : (isBase (axiomE2 x₁ x₂ A hA)) := by
   unfold axiomE2
   have H1 := Subst_isBase A hA [x₁] [x₂].tt
   have H2 := b_atom (isAtomic.at_eq (var x₁) (var x₂))
   have H3 := Conj_base ((var x₁)=₁(var x₂)) A H2 hA
   exact Imp_base ((var x₁=₁var x₂)∧₁A) (A.subst (HashMap.ofList ([x₁].zip [x₂].tt))) H3 H1
+
+example : (axiomE2 x₁ x₂ A hA).components2 = ([], [], (axiomE2 x₁ x₂ A hA)) := by sorry
 
 -- COMMENT: AxiomUn_univ_of_base não dá porque axiomUn não é base :)
 
@@ -117,7 +142,7 @@ lemma AxiomS2_univ_of_base : (isBase (axiomS2 x₁ x₂ x₃)) := by
   have H4 := b_or H2 H3
   exact Iff_base (var x₁∈₁(∪₁·var x₂)·var x₃) ((var x₁∈₁var x₂).or (var x₁∈₁var x₃)) H1 H4
 
-lemma AxiomS3_univ_of_base : (isBase (axiomS3 b a f x)) := by
+lemma AxiomS3_univ_of_base {f:String} : (isBase (axiomS3 b a f x)) := by
   unfold axiomS3
   have H1 := b_atom (isAtomic.at_mem (var b) ((ind_⋃₁·(var a))·(var f)))
   have H2 := b_atom (isAtomic.at_mem (var b) ((var f)·(var x)))
@@ -161,7 +186,12 @@ def AxiomS4 (x₁ x₂ : String) : Formula :=
 
 
 
-
+#eval (axiomE1 "x").components2
+-- Quero mostrar que pôr foralls antes dos axiomas, que não muda nada
+-- que SH_int2 de axiomE1 que é a mesma coisa que SH_int2 de AxiomE1
+--#eval
+#eval (AxiomE1 "x").components2
+--#eval SH_int2 (AxiomE1 "x")
 
 
 
@@ -249,7 +279,7 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 | AxP₂:                       Γ ⊢ AxiomP2 x₁ x₂ x₃
 | AxS₁:                       Γ ⊢ AxiomS1 x₁ x₂
 | AxS₂:                       Γ ⊢ AxiomS2 x₁ x₂ x₃
-| AxS₃:                       Γ ⊢ AxiomS3 a f b x
+| AxS₃ {f:String}:            Γ ⊢ AxiomS3 a f b x
 | AxS₄:                       Γ ⊢ AxiomS4 x₁ x₂
 
 -- ax, exMid, subs, exp, contrad, assoc, cut, forallInt, AxE₁, AxE₂, AxU, AxC₁, AxC₂, AxP₁, AxP₂, AxS₁, AxS₂, AxS₃, AxS₄
@@ -314,10 +344,10 @@ theorem term_reflexivity {t:Term}: ∅ ⊢ (t =₁ t) :=
   | Term.app t1 t2 => by simp [term_reflexivity t1, term_reflexivity t2]
 -/
 
-example (A : Formula) : (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
-theorem Soundness (A : Formula) : (insert (bAC x y f B) ∅ ⊢ A) → (∃(t: List Term), (Provable (∀₁ a A))) := by sorry    -- TBD: falta subst aqui
-theorem Characterization (A : Formula) : (insert (bAC x y f B) ∅ ⊢ A) → (Provable (A ∨₁ A)) := by sorry          -- TBD: falta A^SH aqui
-lemma Lem32 (A : Formula) (hA : isBase A) : (insert (bAC x y f B) ∅ ⊢ ((b∀₁ x t (∃₁ y A)) →₁ (∃₁ b (b∀₁ x t (bExistsTuple2 y (b.tt) A))))) := by sorry
+example (A : Formula) {f : List String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
+theorem Soundness (A : Formula) {f : List String} : (insert (bAC x y f B) ∅ ⊢ A) → (∃(t: List Term), (Provable (∀₁ a A))) := by sorry    -- TBD: falta subst aqui
+theorem Characterization (A : Formula) {f : List String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable (A ∨₁ A)) := by sorry          -- TBD: falta A^SH aqui
+lemma Lem32 (A : Formula) (hA : isBase A) {f : List String}: (insert (bAC x y f B) ∅ ⊢ ((b∀₁ x t (∃₁ y A)) →₁ (∃₁ b (b∀₁ x t (bExistsTuple2 y (b.tt) A))))) := by sorry
 
 
 

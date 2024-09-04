@@ -89,25 +89,71 @@ lemma interp_b_ac
   (hA3 : isBase A_SH) :
   (SH_int2 (bAC x y f B) bACint) → bACint.components2 = (g∪Φ, x'∪f', ((bForallTuple2 x x'.tt (bExistsTuple2 y ((g.tt)⊙(x.tt)) A)) →₁ (bExistsTuple2 f f'.tt (bForallTuple2 a ((Φ.tt)⊙(f.tt)) (bExistsTuple2 b ((f.tt)⊙(a.tt)) A))))) := by sorry
 
+-- Lemma que diz que o Recreate da interpretação de uma fórmula base é a fórmula base
+lemma baseInt_same_as_formInt_b (A:Formula) (hA : isBase A): (SH_int_base_rec A hA) = A := by
+  unfold SH_int_base_rec
+  simp
 
+#check ((var "x")=₁(var "x"))
+#check baseInt_same_as_formInt_b ((var "x")=₁(var "x"))
+
+
+lemma baseInt_same_as_formInt_b2        -- LOL isto já é a definição de RecreateEmpty
+  (A:Formula) (hA : isBase A)
+  (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.components5 = ([],[],A)): RecreateEmpty ([],[],A) = A :=
+  by
+    simp
+    --let H : Formula := RecreateEmpty ([],[],A)
+    --simp [H]
+
+-- Lemmas que dizem que Rec e Inv são inversos
+lemma Rec_Inv_Comp (A:Formula) : RecreateEmpty (A.components5) = A := by sorry
+lemma Comp_Inv_Rec (A:Formula) : (RecreateEmpty (a,b,A)).components5 = (a,b,A) := by sorry
+
+-- Lemma que diz que se uma formula é base que a sua interp é igual a si mesma
+lemma baseInt_same_as_formInt
+  (A:Formula) (hA : isBase A)
+  (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.components5 = ([],[],A)): AuSH = A :=
+  by
+    --let H := RecreateEmpty (AuSH.components5)
+    have HH := Rec_Inv_Comp AuSH
+    have HHH := baseInt_same_as_formInt_b2 A hA hIntA hAcomp
+    rw [← HHH]
+    rw [← HH]
+    rw [hAcomp]
+
+
+
+open Axioms
+#check axiomE1 "x"
+#check Axioms.AxiomE1_univ_of_base "x"
+
+-- A interpretação do axioma AxE1 é itself:
+#check baseInt_same_as_formInt_b (axiomE1 "x") (AxiomE1_univ_of_base "x")
+
+--lemma baseAxE1: baseInt_same_as_formInt_b (axiomE1 "x") (AxiomE1_univ_of_base "x") := by sorry
+--lemma baseAxE1: SH_int_base_rec ((var "x")=₁(var "x")) (b_atom (isAtomic.at_eq (var "x") (var "x")))  := by sorry
+
+--(SH_int_base_rec ((var x)=₁(var x)) H) = ((var x)=₁(var x))
+-- by AxiomE1_univ_of_base
 
 theorem SoundnessTheorem
   (A B : Formula)
-  (t : List Term)
+  --(t : List Term)
   (x y f : List String)
 
   (hA1 : SH_int2 A AuSH)
   (hA2 : AuSH.components2 = (a,b,A_SH))
-  (hA3 : isBase A_SH)
+  --(hA3 : isBase A_SH)
   (hG : Γ₁ = insert (bAC x y f B) Γ)
   (pa : Γ₁ ⊢ A) :
   --(Provable (bAC x y f A)) →
-  (Γ₁ ⊢ (∀₁ a (A_SH.subst (HashMap.ofList (b.zip (t⊙(a.tt))))))) := by sorry
-    /-
+  ∃(t:List Term), (Γ ⊢ (∀₁ a (A_SH.subst (HashMap.ofList (b.zip (t⊙(a.tt))))))) := by --sorry
     cases pa
     . -- Ax
+      rename_i AinΓ
       have h1 : A = bAC x y f B := by sorry
-      apply ProvableFrom.ax
+      --apply ProvableFrom.ax
       sorry
     . -- exMid
       sorry
@@ -124,8 +170,20 @@ theorem SoundnessTheorem
     . -- forallInt
       sorry
     . -- Os axiomas que são universal closures of base formulas
+      rename_i z
+      let H := isBase (AxiomE1 z)
       sorry
-    -/
+    . sorry
+    . sorry
+    . sorry
+    . sorry
+    . sorry
+    . sorry
+    . sorry
+    . sorry
+    . sorry
+    . rename_i x₁ x₂
+      sorry
 
 /-
 Limpar o que está multiply defined
