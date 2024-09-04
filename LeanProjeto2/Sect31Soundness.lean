@@ -137,13 +137,17 @@ open Axioms
 --(SH_int_base_rec ((var x)=₁(var x)) H) = ((var x)=₁(var x))
 -- by AxiomE1_univ_of_base
 
+
+lemma Formula.subst_empty (A: Formula) : A.subst HashMap.empty = A := by sorry
+
+
 theorem SoundnessTheorem
   (A B : Formula)
   --(t : List Term)
   (x y f : List String)
 
-  (hA1 : SH_int2 A AuSH)
-  (hA2 : AuSH.components2 = (a,b,A_SH))
+  (hA1 : SH_int_comp A (a,b,A_SH))
+  --(hA2 : AuSH.components5 = (a,b,A_SH))
   --(hA3 : isBase A_SH)
   (hG : Γ₁ = insert (bAC x y f B) Γ)
   (pa : Γ₁ ⊢ A) :
@@ -170,8 +174,18 @@ theorem SoundnessTheorem
     . -- forallInt
       sorry
     . -- Os axiomas que são universal closures of base formulas
+      -- repeat {} OU acrescentar lema
       rename_i z
       let H := isBase (AxiomE1 z)
+      use []
+      simp [HashMap.ofList]
+      rw [Formula.subst_empty]
+      -- acrescentar interp do axioma
+      -- apply lemma para quantificadores ficarem vazios
+
+
+
+
       sorry
     . sorry
     . sorry

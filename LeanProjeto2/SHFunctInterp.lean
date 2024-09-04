@@ -368,10 +368,15 @@ def extract_tuple_base {A A_SH: Formula} (hA : isBase A)
   ([], [], A)
 -/
 
-#check List.nil_union
+--#check List.union_nil
+
+lemma List.cons_eq (head:A) (tl1 tl2: List A) : tl1 = tl2 → h :: tl1 = h :: tl2 := by sorry
 
 @[simp]
-lemma List.union_nil (l : List String) : l ∪ [] = l := by sorry
+lemma List.union_nilTPC (l : List String) (heq : eraseDup l = l) : l ∪ [] = l := by sorry
+
+@[simp]
+lemma List.union_nil (l : List String): l ∪ [] = l := by sorry
 
 
 example (h: SH_int_comp A (a,b,A_SH)) :

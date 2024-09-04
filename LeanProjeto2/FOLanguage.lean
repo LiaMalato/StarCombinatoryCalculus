@@ -267,6 +267,9 @@ inductive LFormula : Type
 | forall_L : String → LFormula → LFormula        -- Universal quantification
 deriving BEq, Repr
 
+
+
+
 -- Convertemos a lista de variáveis numa nested sequence de quantificadores `forall_L`
 def forallTuple_L (vars : List String) (A : LFormula) : LFormula :=
   vars.foldr (fun v acc =>
@@ -463,7 +466,14 @@ def Lsubstitution_formula (x : String) (replacement : LTerm) : LFormula → LFor
 | (∀₀₀ y A) => if x = y then ∀₀₀ y A
               else ∀₀₀ y (Lsubstitution_formula x replacement A)
 
+
 -- Mudança: acrescentar simultaneous substitution?
+def LFormula.subst (f:LFormula) (subs:HashMap String LTerm) : LFormula := match f with
+  | .atomic_L s ts => LFormula.atomic_L s (ts.map (fun x => LTerm.subst x subs))
+  | .not_L f => .not_L (LFormula.subst f subs)
+  | .or_L f1 f2 => .or_L (LFormula.subst f1 subs) (LFormula.subst f2 subs)
+  | .forall_L s f => .forall_L s (LFormula.subst f (subs.erase s))
+
 
 -- DEFINITION: Lsubstitution for tuples in formulas
 -- substituição em cada termo do tuplo e depois tomar a substituição na formula onde aparecem os termos

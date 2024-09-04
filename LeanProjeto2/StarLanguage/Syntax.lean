@@ -384,17 +384,30 @@ deriving Repr
 
 open LTerm
 
-def Term.subst (t:Term) (substitutions:HashMap String Term) : Term :=
-match t with
-| var n => substitutions.findD n (var n)
-| app f a => app (f.subst substitutions) (a.subst substitutions)
-| pi => pi
-| sigma => sigma
-| sing => sing
-| bUnion => bUnion
-| iUnion => iUnion
-| lcons lterm => (by sorry)
+def term_to_lterm : Term → Option LTerm
+| .lcons lt => .some lt
+| _ => .none
 
+
+
+mutual
+  def List.subst (ts : List Term) (substitutions : HashMap String Term) : List Term :=
+  ts.map (fun t => Term.subst t substitutions)
+
+  def remove_non_l_terms (substitutions:HashMap String Term) : HashMap String LTerm :=
+  substitutions.filterMap (fun _ v => term_to_lterm v)
+
+  def Term.subst (t:Term) (substitutions:HashMap String Term) : Term :=
+  match t with
+  | var n => substitutions.findD n (var n)
+  | app f a => app (f.subst substitutions) (a.subst substitutions)
+  | pi => pi
+  | sigma => sigma
+  | sing => sing
+  | bUnion => bUnion
+  | iUnion => iUnion
+  | lcons lterm => .lcons (LTerm.subst lterm (remove_non_l_terms substitutions))
+end
 /-
 match lterm with
                         | LTerm.Lvar s => lcons (LTerm.Lvar s)
@@ -415,13 +428,14 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
 | t => t
 -/
 
-def List.subst (ts : List Term) (substitutions : HashMap String Term) : List Term :=
-  ts.map (fun t => Term.subst t substitutions)
+
+
+
 
 
 def Formula.subst (f:Formula) (substitutions:HashMap String Term) : Formula :=
 match f with
-| L_Form lf => (by sorry)
+| L_Form lf => .L_Form (LFormula.subst lf (remove_non_l_terms substitutions))
 | rel s ts => rel s (ts.map (fun t => Term.subst t substitutions))    -- para lista de termos é so this
 | eq t1 t2 => eq (t1.subst substitutions) (t2.subst substitutions)
 | mem t1 t2 => mem (t1.subst substitutions) (t2.subst substitutions)
