@@ -6,7 +6,6 @@
 import LeanProjeto2.FOLanguage
 import LeanProjeto2.StarLanguage.FiniteTypes
 import LeanProjeto2.StarLanguage.Syntax
-import LeanProjeto2.SHFunctInterp
 import Init.Data.List.Basic
 import Init.Data.List.Lemmas
 import Mathlib.Data.Finset.Basic
@@ -14,7 +13,6 @@ import Mathlib.Data.Multiset.Basic
 import Batteries
 import MathLib.Tactic
 
-open FOLang
 open LFormula
 open Term
 open Formula
@@ -82,8 +80,7 @@ lemma AxiomE1_univ_of_base (x:String) : (isBase (axiomE1 x)) := by
 
 #check Axioms.AxiomE1_univ_of_base "x"
 
-example : (axiomE1 "x").components2 = ([], [], (axiomE1 "x")) := by
-  exact rfl
+
 
 /-
 #check SH_int2
@@ -108,7 +105,6 @@ lemma AxiomE2_univ_of_base : (isBase (axiomE2 x₁ x₂ A hA)) := by
   have H3 := Conj_base ((var x₁)=₁(var x₂)) A H2 hA
   exact Imp_base ((var x₁=₁var x₂)∧₁A) (A.subst (HashMap.ofList ([x₁].zip [x₂].tt))) H3 H1
 
-example : (axiomE2 x₁ x₂ A hA).components2 = ([], [], (axiomE2 x₁ x₂ A hA)) := by sorry
 
 -- COMMENT: AxiomUn_univ_of_base não dá porque axiomUn não é base :)
 
@@ -183,17 +179,6 @@ def AxiomS3 (b a f x : String) : Formula :=
   ∀₁₁ a (∀₁₁ f (∀₁₁ b (axiomS3 b a f x)))
 def AxiomS4 (x₁ x₂ : String) : Formula :=
   ∀₁₁ x₁ (axiomS4 x₁ x₂)
-
-
-
-#eval (axiomE1 "x").components2
--- Quero mostrar que pôr foralls antes dos axiomas, que não muda nada
--- que SH_int2 de axiomE1 que é a mesma coisa que SH_int2 de AxiomE1
---#eval
-#eval (AxiomE1 "x").components2
---#eval SH_int2 (AxiomE1 "x")
-
-
 
 
 

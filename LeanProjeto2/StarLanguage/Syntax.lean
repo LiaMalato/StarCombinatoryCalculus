@@ -12,8 +12,8 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic
 import Batteries
 
-open FOLang
 open LFormula
+open LTerm
 open Batteries
 -- ----------------------------
 -- TERMS and CONSTANTS (p.9-12)
@@ -250,7 +250,7 @@ inductive isSubtermTuple : TermTuple → TermTuple → Prop
 
 -- DEFINITION: all the (free) variables of terms in StarLang
 def freevars : Term → Finset String                           -- TODO: mudar este nome para term_vars?
-| lcons t => t.Lfreevars                                      --       since para terms: vars and free_vars it's the same
+| lcons t => Lfreevars t                                      --       since para terms: vars and free_vars it's the same
 | pi
 | sigma
 | sing
@@ -320,7 +320,7 @@ open Term_TypeChecking
 -- Definition: term substitution, we replace x by replacement in some term t (lcons, var, app, rest)
 def term_substitution (x : String) (replacement : Term) : Term → Term
 | lcons t => match replacement with
-              | lcons r => lcons (LTerm.Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+              | lcons r => lcons (Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
               | _ => lcons t
 | var y => if x = y
           then replacement
@@ -528,7 +528,7 @@ inductive Formula_is_wellformed : List String → Formula → Prop
 
 -- DEFINITION: the free variables of a formula in StarLang
 def Formula.freevars : Formula → Finset String
-| .L_Form (A : LFormula) => LFormula.Lfreevars_formula A
+| .L_Form (A : LFormula) => Lfreevars_formula A
 | .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset
 | .eq t₁ t₂
 | .mem t₁ t₂ => t₁.freevars ∪ t₂.freevars
@@ -540,7 +540,7 @@ def Formula.freevars : Formula → Finset String
 
 -- DEFINITION: all the variables of a formula in StarLang
 def Formula.allvars : Formula → Finset String
-| .L_Form A => LFormula.Lallvars_formula A                                    -- The variables of a Formula are the ones of the formula when seen as an LFormula
+| .L_Form A => Lallvars_formula A                                    -- The variables of a Formula are the ones of the formula when seen as an LFormula
 | .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset    -- All the variables from the list of terms used in the predicate
 | .eq t₁ t₂
 | .mem t₁ t₂ => t₁.freevars ∪ t₂.freevars                                     -- For both terms, we collect the variables from both and consider the union of those sets
@@ -804,7 +804,7 @@ inductive Formula_TypeChecking : Formula → Prop
 
 def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 | (L_Form A) => match replacement with
-              | .lcons r => L_Form (LFormula.Lsubstitution_formula x r A)
+              | .lcons r => L_Form (Lsubstitution_formula x r A)
               | _ => (L_Form A)
 | (rel P terms) => rel P (terms.map (term_substitution x replacement))
 | (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)

@@ -6,7 +6,6 @@
 import LeanProjeto2.FOLanguage
 import MathLib.Tactic                   -- Pergunta: é preciso repetir isto?
 
-open FOLang
 open LFormula
 
 -- ----------------------

@@ -1,15 +1,12 @@
-import LeanProjeto2.FOL
-import LeanProjeto2.StarLang
-import LeanProjeto2.ShoenfieldsFunctInterp
+import LeanProjeto2.FOLanguage
+--import LeanProjeto2.StarLanguage
+import LeanProjeto2.SHFunctInterp
 import LeanProjeto2.Sect31Soundness
 import MathLib.Tactic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic
 
-open FOL
 open LFormula
-open StarLang
-
 
 -- ---------------------------------------------------------------------------------------------------------------
 --                     SECTION 3.2: Further results
@@ -24,35 +21,38 @@ open StarLang
 -- Characterization theorem
 -- ---------------------------------------------------------------------
 
+/-
 -- Problema: why is (H2 : isTrue.bAC) not working while H is? Plus we have {x y f : String} in the assumption...
 theorem CharacterizationTheorem
   (A : Formula) {x y f : String}
-  (hA1 : SH_int A AuSH) (hA2 : AuSH.components = (a,b,A_SH)) (hA3 : StarLang.isBase A_SH)
+  (hA1 : SH_int A AuSH) (hA2 : AuSH.components = (a,b,A_SH)) (hA3 : isBase A_SH)
   (H : isTrue ((V₁ x (E₁ y A)) →₁ (E₁ f (V₁ x (bE₁ y ((Term.var f)·(Term.var x)) A))))) :
   --(H2 : isTrue.bAC ):
   (isTrue (A ↔₁ AuSH)) := by sorry
-
+-/
 -- ---------------------------------------------------------------------
 -- LEMMA 3.2 (p.58):
 -- Principle 1
 -- ---------------------------------------------------------------------
 
+/-
 -- TODO / Problema: falta o bAC as assumption
 lemma LemmaPrinciple1
   (A : Formula) (hA : isBase A) (x y b : String) (t : Term) :
   (isTrue ((bV₁ x t (E₁ y A)) →₁ (E₁ b (bV₁ x t (bE₁ y (Term.var b) A))))) := by sorry
-
+-/
 
 -- ---------------------------------------------------------------------
 -- LEMMA 3.3 (p.58):
 -- Principle 2
 -- ---------------------------------------------------------------------
 
+/-
 -- TODO: falta o bAC as assumption
 lemma LemmaPrinciple2
   (A : Formula) (hA : isBase A) (x y g : String) (t : Term) :
   (isTrue ((V₁ x (E₁ y A)) →₁ (E₁ g (V₁ x (substitution_formula y ((Term.var g)·(Term.var x)) A))))) := by sorry
-
+-/
 
 -- ---------------------------------------------------------------------------------------------------------------
 --          SUBSECTION 3.2.2: Characteristic principles
@@ -90,14 +90,15 @@ theorem MainTheorem
   (isTrue (E₁ x A)) → (∃t, isTrue (bE₁ x t A)) := by sorry
 -/
 
+/-
 -- Problemas:
 --    1. Falta o (ht : isClosedTerm t)
 --    2. Falta que (E₁ x A) é derivable in PL+bAC mas que (bE₁ x t A) é só em PL
 theorem MainTheorem   -- erros vieram daqui
   (A : Formula) (x : String) (t : Term) (ht : t.isClosedTerm):
-  (isTrue (E₁ x A)) → (∃t, isTrue (bE₁ x t A)) := by sorry
-  --ISTO(isTrue (L := Logic.PL_bAC) (E₁ x A)) → (∃t, isTrue (L := Logic.PL) (bE₁ x t A)) := by sorry
-
+  (isTrue (L := Logic.PL_bAC) (E₁ x A)) → (∃t, isTrue (L := Logic.PL) (bE₁ x t A)) := by sorry
+  (isTrue (L := Logic.PL_bAC) (E₁ x A)) → (∃t, isTrue (L := Logic.PL) (bE₁ x t A)) := by sorry
+-/
 /-
 theorem MainTheorem2
   (A : Formula) (x : String) (t : Term) :

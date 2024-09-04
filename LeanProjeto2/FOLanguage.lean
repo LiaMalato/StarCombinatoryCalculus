@@ -15,8 +15,6 @@ open Batteries
 -- ---------------------------------------------------------------------
 
 
-namespace FOLang
-
 -- --------------------------------
 -- --------------------------------
 --              TERMS
@@ -143,7 +141,6 @@ instance : DecidableEq LTerm := decEqTerm
 instance : DecidableEq (List LTerm) := decEqListTerm
 
 
-namespace LTerm
 
 def LTerm.subst (t : LTerm) (substitutions : HashMap String LTerm) : LTerm :=
 match t with
@@ -190,7 +187,7 @@ def exTuple := [Lvar_x, Lconst_a]
 def Lfreevars : LTerm → Finset String
 | .Lvar s => {s}                                                                        -- Variáveis são livres
 | .Lconst _ => {}                                                                       -- Constantes não têm variáveis livres (Não interessa o nome da cst, daí _)
-| .Lfunc _ ls => Finset.fold (fun x y => x ∪ y) {} LTerm.Lfreevars (ls.toFinset)        -- Para símbolos funcionais (nome não interessa): ls é a lista dos argumentos (lista de LTerms), vamos recursivamente à procura das free variables
+| .Lfunc _ ls => Finset.fold (fun x y => x ∪ y) {} Lfreevars (ls.toFinset)        -- Para símbolos funcionais (nome não interessa): ls é a lista dos argumentos (lista de LTerms), vamos recursivamente à procura das free variables
 decreasing_by sorry             -- TODO (net-ech)
 
 -- DEFINITION: (free) variables in tuples of terms              (new)
@@ -249,8 +246,6 @@ def isClosedTupleTerm_L_check (t : LTermTuple) : Bool := (LfreevarsTuple t) = {}
 -- Outro exemplo
 def ex_Lterm_tuple := [Lconst_k, Lfunc_g [Lconst_a]]
 #eval isClosedTupleTerm_L_check ex_Lterm_tuple
-
-end LTerm
 
 
 -- --------------------------------
@@ -343,7 +338,6 @@ inductive LFormula_is_wellformed : List String → LFormula → Prop
 
 -- -------------------------------------------------
 
-namespace LFormula
 
 -- ----------------------------
 -- NOTAÇÕES PARA ¬, ∨, ∀
@@ -392,7 +386,7 @@ notation "∃₀" => existsTuple_L
 -- DEFINITION: free variables of formulas in L (a set that stores free variables)
 def Lfreevars_formula : LFormula → Finset String
 | (LFormula.atomic_L _ ts) =>                                                                  -- Gives the union of the free variables of each term in the term list ts.
-  let term_Lfreevars : List (Finset String) := List.map LTerm.Lfreevars ts;
+  let term_Lfreevars : List (Finset String) := List.map Lfreevars ts;
   let all_Lfreevars : Finset String := term_Lfreevars.foldl (λ acc fvs => acc ∪ fvs) {};
   all_Lfreevars
 | (¬₀ A) => Lfreevars_formula A                                                                -- The free variables of ¬A are the same as those of A.
@@ -419,7 +413,7 @@ def example_formula := ∀₀ ["x", "y"] (atomic_L "P" [Lvar_x, Lvar_z])
 -- DEFINITION: all the variables of a formula in L
 def Lallvars_formula : LFormula → Finset String
 | (LFormula.atomic_L _ ts) =>
-  let term_Lallvars : List (Finset String) := List.map LTerm.Lfreevars ts;
+  let term_Lallvars : List (Finset String) := List.map Lfreevars ts;
   let all_Lallvars : Finset String := term_Lallvars.foldl (λ acc fvs => acc ∪ fvs) {};
   all_Lallvars
 | (¬₀ A) => Lallvars_formula A
@@ -447,7 +441,7 @@ def ex_LfreevarsTuple_formula := (atomic_L "P" [Lvar_x, Lvar_y]) ∨₀ (∀₀ 
 -- SENTENCES (CLOSED FORMULAS)
 -- ----------------------------
 
-def isClosed_L (A : LFormula) : Prop := A.Lfreevars_formula = {}
+def isClosed_L (A : LFormula) : Prop := Lfreevars_formula A = {}
 def isClosed_L_check (A : LFormula) : Bool := (Lfreevars_formula A) = {}       -- Prints true or false dependendo se temos var livres ou não
 
 #eval isClosed_L_check ex_Lfreevars_atFormula       -- Output: true
@@ -632,7 +626,3 @@ axiom L_or_commut (A B : LFormula) : (A∨₀B) = (B∨₀A)
 -- Double neg
 @[simp]
 axiom L_double_neg (A : LFormula) : (¬₀(¬₀A)) = A
-
-
-
-end LFormula

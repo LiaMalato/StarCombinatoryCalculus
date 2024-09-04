@@ -6,11 +6,9 @@
 import LeanProjeto2.FOLanguage
 import LeanProjeto2.StarLanguage.FiniteTypes
 import LeanProjeto2.StarLanguage.Syntax
-import LeanProjeto2.StarLanguage.Axioms
+import LeanProjeto2.StarLanguage.Axioms2
 import MathLib.Tactic
 
-open FOLang
-open LFormula
 
 #check 5
 #check 5+3

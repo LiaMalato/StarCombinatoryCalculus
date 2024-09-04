@@ -5,7 +5,7 @@
 import LeanProjeto2.FOLanguage
 import LeanProjeto2.StarLanguage.FiniteTypes
 import LeanProjeto2.StarLanguage.Syntax
-import LeanProjeto2.StarLanguage.Axioms
+import LeanProjeto2.StarLanguage.Axioms2
 import LeanProjeto2.StarLanguage.ResultsAndOtherDefinitions
 import MathLib.Tactic
 import Mathlib.Data.Finset.Basic
@@ -14,7 +14,6 @@ import Mathlib.Data.List.Sigma
 import Mathlib.Data.List.Basic
 
 
-open FOLang
 open LFormula
 open Term
 open Formula
@@ -563,3 +562,20 @@ def ThisTeste := (∀₁ ["x"] (∃₁ ["y"] (var "x" =₁ var "y"))).components
 
 axiom Bla (A:Formula) : (¬₁(¬₁ A))=A
 -/
+
+
+-- mover
+open Axioms
+
+example : Formula.components2 (axiomE1 "x") = ([], [], (axiomE1 "x")) := by
+  exact rfl
+
+example : (axiomE2 x₁ x₂ A hA).components2 = ([], [], (axiomE2 x₁ x₂ A hA)) := by sorry
+
+
+#eval (axiomE1 "x").components2
+-- Quero mostrar que pôr foralls antes dos axiomas, que não muda nada
+-- que SH_int2 de axiomE1 que é a mesma coisa que SH_int2 de AxiomE1
+--#eval
+#eval (AxiomE1 "x").components2
+--#eval SH_int2 (AxiomE1 "x")
