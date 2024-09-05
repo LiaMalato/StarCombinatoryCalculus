@@ -274,6 +274,53 @@ by
   let Form_SH := (A_SH ∨₁ (bExistsTuple2 c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip (g.tt⊙c.tt)))))))
   exact @SH_int_comp.bForall ((∀₁₁ x A).or B.not) ([x]++ a++g) (b ++ c') Form_SH [y] t intOr        -- ∀x,a,g ∃b,c' [∀y∈t (A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc)))]
 
+-- Notação para HashMap.ofList (x.zip t)
+def with_t (x : List String) (t : List Term) := HashMap.ofList (x.zip t)
+
+notation x "⟹" t => with_t x t
+
+
+-- ---------------------------------------------------------------------
+-- PROPOSITION 2.1 (p.46)
+-- Interpretation of formulas with defined symbols.
+-- ---------------------------------------------------------------------
+
+-- Interpretation of A → B.
+
+#check F_iff
+
+lemma SH_and
+  (A B : Formula)
+  (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
+  (intB : SH_int_comp B (c,d,B_SH))
+  (f a' : List String): SH_int_comp (A→₁B) (f++c, a'++d, ((bForallTuple2 a a'.tt (A_SH.subst (HashMap.ofList (b.zip (f.tt⊙a.tt)))))→₁B_SH)) :=
+by
+  unfold F_implies
+  have intNotA := @SH_int_comp.neg A a b A_SH f a' intA
+  have intForm := SH_int_comp.disj intNotA intB
+  rw [bExistsTuple2] at intForm
+  rw [DoubleNeg] at intForm
+  exact intForm
+
+lemma SH_and2
+  (A B : Formula)
+  (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
+  (intB : SH_int_comp B (c,d,B_SH))
+  (f a' : List String): SH_int_comp (A→₁B) (f++c, a'++d, ((bForallTuple2 a a'.tt (A_SH.subst (b ⟹ (f.tt⊙a.tt)))))→₁B_SH) :=
+by
+  unfold F_implies
+  have intNotA := @SH_int_comp.neg A a b A_SH f a' intA
+  have intForm := SH_int_comp.disj intNotA intB
+  rw [bExistsTuple2] at intForm
+  rw [DoubleNeg] at intForm
+  exact intForm
+
+
+
+
+
+
+
 -- ---------------------------------------------------------------------
 -- REMARK 2.4 (p.43)
 -- Interpretations with empty tuples
@@ -286,18 +333,25 @@ example (A B C : Formula)
         (intC: SH_int_comp C ([],b,C_SH)):
 -/
 
+#check app_empty_list_fst
+
 example (B : Formula)
         (intB: SH_int_comp B (a,[],B_SH)):
         SH_int_comp (¬₁ B) ([],a',(bExistsTuple2 a (a'.tt) ((¬₁B_SH)))) :=
 by
   have hA := @SH_int_comp.neg B a [] B_SH [] a' intB
-  --rw [app_empty_list_fst [].tt a.tt] at hA
+  --have H := app_empty_list_fst List.nil (a.tt)
+  --rw [app_empty_list_fst ([].tt) (a.tt)] at hA
   sorry
 
 
 example (C : Formula)
         (intC: SH_int_comp C ([],b,C_SH)):
-        SH_int_comp (¬₁ C) (b,[],(¬₁C_SH)) := by sorry
+        SH_int_comp (¬₁ C) (b,[],(¬₁C_SH)) :=
+by
+  have hA := @SH_int_comp.neg C [] b C_SH b [] intC
+  sorry
+  --rw [app_empty_list_fst (b.tt) []] at hA
 
 
 
