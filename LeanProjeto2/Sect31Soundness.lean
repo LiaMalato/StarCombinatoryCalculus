@@ -81,11 +81,10 @@ theorem SoundnessTheorem
 example {x y f : List String} (A : Formula): (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
 
 lemma interp_b_ac
-  (A B:Formula) (x y f g Φ x' f' :List String) (hBase : isBase A)
-  (hA1 : SH_int2 A AuSH)
-  (hA2 : AuSH.components2 = (a,b,A_SH))
+  (A B:Formula) (x y f g Φ x' f' : List String) (hBase : isBase A)
+  (hA1 : SH_int_comp A (a,b,A_SH))
   (hA3 : isBase A_SH) :
-  (SH_int2 (bAC x y f B) bACint) → bACint.components2 = (g∪Φ, x'∪f', ((bForallTuple2 x x'.tt (bExistsTuple2 y ((g.tt)⊙(x.tt)) A)) →₁ (bExistsTuple2 f f'.tt (bForallTuple2 a ((Φ.tt)⊙(f.tt)) (bExistsTuple2 b ((f.tt)⊙(a.tt)) A))))) := by sorry
+  SH_int_comp (bAC x y f B) (g∪Φ, x'∪f', ((bForallTuple2 x x'.tt (bExistsTuple2 y ((g.tt)⊙(x.tt)) A)) →₁ (bExistsTuple2 f f'.tt (bForallTuple2 a ((Φ.tt)⊙(f.tt)) (bExistsTuple2 b ((f.tt)⊙(a.tt)) A))))) := by sorry
 
 -- Lemma que diz que o Recreate da interpretação de uma fórmula base é a fórmula base
 lemma baseInt_same_as_formInt_b (A:Formula) (hA : isBase A): (SH_int_base_rec A hA) = A := by
@@ -96,38 +95,42 @@ lemma baseInt_same_as_formInt_b (A:Formula) (hA : isBase A): (SH_int_base_rec A 
 #check baseInt_same_as_formInt_b ((var "x")=₁(var "x"))
 
 
-lemma baseInt_same_as_formInt_b2        -- LOL isto já é a definição de RecreateEmpty
+-- -----------------------------
+-- -----------------------------  TBD: alterar SH_int2 para SH_int_comp e mudar a prova
+-- -----------------------------
+lemma baseInt_same_as_formInt_b2        -- LOL isto já é a definição de Recreate
   (A:Formula) (hA : isBase A)
-  (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.components5 = ([],[],A)): RecreateEmpty ([],[],A) = A :=
+  (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.components = ([],[],A)): Recreate ([],[],A) = A :=
   by
     simp
-    --let H : Formula := RecreateEmpty ([],[],A)
+    --let H : Formula := Recreate ([],[],A)
     --simp [H]
 
 -- Lemmas que dizem que Rec e Inv são inversos
-lemma Rec_Inv_Comp (A:Formula) : RecreateEmpty (A.components5) = A := by sorry
-lemma Comp_Inv_Rec (A:Formula) : (RecreateEmpty (a,b,A)).components5 = (a,b,A) := by sorry
+lemma Rec_Inv_Comp (A:Formula) : Recreate (A.components) = A := by sorry
+lemma Comp_Inv_Rec (A:Formula) : (Recreate (a,b,A)).components = (a,b,A) := by sorry
 
 -- Lemma que diz que se uma formula é base que a sua interp é igual a si mesma
 lemma baseInt_same_as_formInt
   (A:Formula) (hA : isBase A)
-  (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.components5 = ([],[],A)): AuSH = A :=
+  (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.components = ([],[],A)): AuSH = A :=
   by
-    --let H := RecreateEmpty (AuSH.components5)
+    --let H := Recreate (AuSH.components)
     have HH := Rec_Inv_Comp AuSH
     have HHH := baseInt_same_as_formInt_b2 A hA hIntA hAcomp
     rw [← HHH]
     rw [← HH]
     rw [hAcomp]
-
-
+-- -----------------------------
+-- -----------------------------
+-- -----------------------------
 
 open Axioms
-#check axiomE1 "x"
+#check axiomE1_matrix "x"
 #check Axioms.AxiomE1_univ_of_base "x"
 
 -- A interpretação do axioma AxE1 é itself:
-#check baseInt_same_as_formInt_b (axiomE1 "x") (AxiomE1_univ_of_base "x")
+#check baseInt_same_as_formInt_b (axiomE1_matrix "x") (AxiomE1_univ_of_base "x")
 
 --lemma baseAxE1: baseInt_same_as_formInt_b (axiomE1 "x") (AxiomE1_univ_of_base "x") := by sorry
 --lemma baseAxE1: SH_int_base_rec ((var "x")=₁(var "x")) (b_atom (isAtomic.at_eq (var "x") (var "x")))  := by sorry
@@ -145,7 +148,7 @@ theorem SoundnessTheorem
   (x y f : List String)
 
   (hA1 : SH_int_comp A (a,b,A_SH))
-  --(hA2 : AuSH.components5 = (a,b,A_SH))
+  --(hA2 : AuSH.components = (a,b,A_SH))
   --(hA3 : isBase A_SH)
   (hG : Γ₁ = insert (bAC x y f B) Γ)
   (pa : Γ₁ ⊢ A) :

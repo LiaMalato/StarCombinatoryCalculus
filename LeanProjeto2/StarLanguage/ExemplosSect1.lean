@@ -1,6 +1,7 @@
-import LeanProjeto2.StarLang
+import LeanProjeto2.StarLanguage.FiniteTypes
+import LeanProjeto2.StarLanguage.Syntax
 
-open StarLang
+--open StarLanguage
 open FType
 open Term
 
@@ -9,13 +10,13 @@ open Term
 -- --------------------
 
 -- EXAMPLE 1.2 (p.5)
-def s1ex2_1 : FType := G⋆
-def s1ex2_2 : FType := G ⟶ G
-def s1ex2_3 : FType := G ⟶ (G ⟶ G)
-def s1ex2_3' : FType := (G ⟶ G) ⟶ G
-def s1ex2_4 : FType := (G ⟶ G) ⟶ (G ⟶ (G ⟶ G))
-def s1ex2_5 (σ τ : FType) : FType := σ ⟶ ((σ⋆ ⟶ τ) ⟶ τ)
-def s1ex2_5' (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
+def ss1ex2_1 : FType := G⋆
+def ss1ex2_2 : FType := G ⟶ G
+def ss1ex2_3 : FType := G ⟶ (G ⟶ G)
+def ss1ex2_3' : FType := (G ⟶ G) ⟶ G
+def ss1ex2_4 : FType := (G ⟶ G) ⟶ (G ⟶ (G ⟶ G))
+def ss1ex2_5 (σ τ : FType) : FType := σ ⟶ ((σ⋆ ⟶ τ) ⟶ τ)
+def ss1ex2_5' (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
 example (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
 
 #check s1ex2_3' -- ???????????

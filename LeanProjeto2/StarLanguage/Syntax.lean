@@ -738,6 +738,7 @@ lemma bExists_base {A : Formula} (x : String) (t : Term) (hA : isBase A) : (isBa
   have h_unbForall_nA := b_bForall x t h_nA
   exact b_not h_unbForall_nA
 
+
 -- ------------------
 -- EXAMPLE 1.6 (p.14)
 -- ------------------
