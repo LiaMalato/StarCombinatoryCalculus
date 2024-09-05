@@ -52,20 +52,20 @@ deriving BEq, Repr
 
 -- This function takes a list of Term and makes a term tuple out of it
 @[simp, reducible]
-def makeTuple (ts : List Term) : TermTuple := ts
+def makeTuple (ts : List Term) : List Term := ts
 
 #eval makeTuple [var "x"]
 -- TBD: tirar
 
 -- We define a function in order to access any element in the tuple
-def getElement (n : Nat) (t : TermTuple) : Option Term :=           -- Option para ter some/none para o caso do tuple ter 2 elementos e pedirmos o terceiro
+def getElement (n : Nat) (t : List Term) : Option Term :=           -- Option para ter some/none para o caso do tuple ter 2 elementos e pedirmos o terceiro
   List.get? t n
 
 -- -------
 -- EXAMPLE: a tuple of terms + access to its elements (new)
 -- -------
 --namespace examples
-def exTermTuple : TermTuple := makeTuple ([var_x, var_y])  -- a tuple of terms (a list with the terms x and a)
+def exTermTuple : List Term := makeTuple ([var_x, var_y])  -- a tuple of terms (a list with the terms x and a)
 
 #eval getElement 0 exTermTuple          -- Output: var_x (the first element of exTermTuple)
 #eval getElement 1 exTermTuple          -- Output: var_y (the second element of exTermTuple)
@@ -80,12 +80,13 @@ def exTermTuple : TermTuple := makeTuple ([var_x, var_y])  -- a tuple of terms (
 -- [app (app (app t1 q1) q2) q3, app (app (app t2 q1) q2) q3]
 
 @[simp]
-def TermTupleApp : TermTuple → TermTuple → TermTuple
+def TermTupleApp : List Term → List Term → List Term
 | [], _ => [] -- If the first tuple is empty, return an empty list
 | _ , [] => [] -- If the second tuple is empty, return an empty list
 | (t :: ts), qs =>
   let appNested := qs.reverse.foldr (fun q acc => app acc q) t
   (appNested :: (TermTupleApp ts qs))
+
 
 @[simp]
 def TermTupleApp_list : List Term → List Term → List Term
@@ -95,12 +96,27 @@ def TermTupleApp_list : List Term → List Term → List Term
   let appNested := qs.reverse.foldr (fun q acc => app acc q) t
   (appNested :: (TermTupleApp_list ts qs))
 
+lemma app_empty_list_fst (t : List Term) : (TermTupleApp_list [] t) = [] :=
+by
+  rw [TermTupleApp_list]
+
+lemma app_empty_list_sec (t : List Term) : (TermTupleApp_list t []) = [] :=       -- TBD: Not working
+by
+  sorry
+  --rw [TermTupleApp_list]
+
+lemma app_empty_lists : (TermTupleApp_list [] []) = [] :=
+by
+  rw [TermTupleApp_list]
+
 --def Finset String
 #check [Term.var "f"]                   -- Term -> List Term
 #eval makeTuple [Term.var "f"]          -- List Term -> TermTuple
 
 @[simp]
-notation t₁ "⊙" t₂ => TermTupleApp t₁ t₂
+notation t₁ "⊙" t₂ => TermTupleApp_list t₁ t₂
+
+#eval TermTupleApp_list ([] : List Term) ([] : List Term)
 
 -- -------------------------------
 -- TRANSFORMAR LISTAS EM TERMTUPLE (para que a TermTupleApp funcione)
@@ -115,8 +131,9 @@ def ListStringToTermVars (lst : List String) : List Term :=
 -- List String -> List Term (mas de Term.var) -> TermTuple (mas de Term.var)
 -- ListStringToTermVarsTuple
 @[simp]
-def List.tt (lst : List String) : TermTuple :=
-  makeTuple (ListStringToTermVars lst)
+def List.tt (lst : List String) : List Term :=
+  lst.map Term.var
+  --makeTuple (ListStringToTermVars lst)
 
 def tudo (lst : List String) : TermTuple :=
   makeTuple (lst.map Term.var)
@@ -134,6 +151,7 @@ notation "ls_lt" => ListStringToTermVars
 #check ["f"].tt
 
 #eval (["f"].tt)⊙(["f"].tt)
+
 
 -- Finset String -> List String
 noncomputable def FinsetStringToTermVars (fs : Finset String) : List String :=
@@ -163,13 +181,13 @@ def finsetToList (fs : Finset String) : List String :=
 -- Examples:
 -- ---------
 
-def result : TermTuple := TermTupleApp [var "t1", var "t2"] [var "q1", var "q2", var "q3"]
+def result : List Term := TermTupleApp [var "t1", var "t2"] [var "q1", var "q2", var "q3"]
 #eval result
 
-def result2 : TermTuple := TermTupleApp [var "t1", var "t2", var "t3"] [var "q1", var "q2", var "q3"]
+def result2 : List Term := TermTupleApp [var "t1", var "t2", var "t3"] [var "q1", var "q2", var "q3"]
 #eval result2
 
-def result3 : TermTuple := TermTupleApp [var "t1", var "t2"] [var "q1", var "q2", var "q3", var "q4"]
+def result3 : List Term := TermTupleApp [var "t1", var "t2"] [var "q1", var "q2", var "q3", var "q4"]
 #eval result3
 
 
@@ -237,9 +255,9 @@ example : isSubterm (Term.var "y") (Term.app (Term.var "x") (Term.var "y")) :=
 -/
 
 -- DEFINITION: subterm of a tuple of terms
-inductive isSubtermTuple : TermTuple → TermTuple → Prop
+inductive isSubtermTuple : List Term → List Term → Prop
 | empty_subtuple : isSubtermTuple [] []                                      -- Empty tuple is a subtuple of itself
-| rec_subtuple {t₁ t₂ : Term} {ts₁ ts₂ : TermTuple} :                       -- Recursive definition for non-empty tuples
+| rec_subtuple {t₁ t₂ : Term} {ts₁ ts₂ : List Term} :                       -- Recursive definition for non-empty tuples
     isSubterm t₁ t₂ →
     isSubtermTuple ts₁ ts₂ →
     isSubtermTuple (t₁ :: ts₁) (t₂ :: ts₂)
@@ -261,7 +279,7 @@ def freevars : Term → Finset String                           -- TODO: mudar e
 
 -- DEFINITION: (free) variables in tuples of terms
 --             (freevars returns the set of (free) variables)
-def freevarsTuple (tuple : TermTuple) : Finset String :=
+def freevarsTuple (tuple : List Term) : Finset String :=
   (tuple.map freevars).foldl (fun acc fv => acc ∪ fv) ∅
 
 -- ---------------------------------------
@@ -269,7 +287,7 @@ def freevarsTuple (tuple : TermTuple) : Finset String :=
 -- ---------------------------------------
 
 def isClosedTerm (t : Term) : Prop := freevars t = {}
-def isClosedTupleTerm (t : TermTuple) : Prop := freevarsTuple t = {}
+def isClosedTupleTerm (t : List Term) : Prop := freevarsTuple t = {}
 
 -- ------------------------------------------------------------
 -- NOTATION FOR THE COMBINATORS AND THE STAR CONSTANTS IN L^ω_* (and the application of terms)
@@ -303,9 +321,9 @@ inductive Term_TypeChecking : Term → FType → Prop
 -- DEFINITION: Term_TypeChecking a tuple of terms
 -- Para que um tuple of terms seja typechecked checkamos se o primeiro termo tem o primeiro tipo da lista de tipos
 -- e depois o resto dos termos no tuple também têm os tipos correspondentes no resto da lista de tipos.
-inductive TermTuple_TypeChecking : TermTuple → List FType → Prop
+inductive TermTuple_TypeChecking : List Term → List FType → Prop
 --| tcEmptyTuple : TermTuple_TypeChecking [] []
-| tcRecTuple {t : Term} {σ : FType} {ts : TermTuple} {σs : List FType} :
+| tcRecTuple {t : Term} {σ : FType} {ts : List Term} {σs : List FType} :
     Term_TypeChecking t σ →
     TermTuple_TypeChecking ts σs →
     TermTuple_TypeChecking (t :: ts) (σ :: σs)
@@ -329,7 +347,7 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
 | t => t                                                                              -- The combinators Π, Σ and the star constants 𝔰, ∪, ind_⋃ are constants and hence are not affected by substitution
 
 -- Definição de substituição de tuple terms: Substituimos _ por _ em _ (new)
-def term_substitutionTuple (x : String) (replacement : Term) : TermTuple → TermTuple
+def term_substitutionTuple (x : String) (replacement : Term) : List Term → List Term
 | [] => []
 | (t :: ts) => (term_substitution x replacement t) :: term_substitutionTuple x replacement ts
 

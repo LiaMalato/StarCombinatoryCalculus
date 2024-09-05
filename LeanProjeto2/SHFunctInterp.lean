@@ -51,10 +51,10 @@ The function 'Recreate' transforms a tuple such as (a,b,A_SH) into the formula �
 def Formula.components : Formula → (List String × List String × Formula)
 | unbForall x A =>
     let (a, b, rest) := A.components
-    ([x] ∪ a, b, rest)
+    ([x]++a, b, rest)
 | not (unbForall x A) =>
     let (a, b, rest) := A.components
-    (b, [x] ∪ a, not rest)
+    (b, [x]++a, not rest)
 | not (not A) =>
     -- This handles the double negation case
     A.components
@@ -64,7 +64,7 @@ def Formula.components : Formula → (List String × List String × Formula)
 | or A1 A2 =>
     let (a1, b1, r1) := A1.components
     let (a2, b2, r2) := A2.components
-    (a1 ∪ a2, b1 ∪ b2, or r1 r2)
+    (a1 ++ a2, b1 ++ b2, or r1 r2)
 | bForall x t A =>
     let (a, b, rest) := A.components
     (a, b, bForall x t rest)
@@ -120,14 +120,14 @@ inductive SH_int2 : Formula → Formula → Prop
          SH_int2 B BuSH →
          AuSH.components = (a,b,A_SH) →                                     -- A^SH = ∀a ∃b A_SH(a,b)
          BuSH.components = (c,d,B_SH) →                                     -- B^SH = ∀c ∃d B_SH(c,d)
-         (SH_int2 (A∨₁B) (Recreate (a∪c,b∪d,(A_SH ∨₁ B_SH))))           -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+         (SH_int2 (A∨₁B) (Recreate (a++c,b++d,(A_SH ∨₁ B_SH))))           -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
 | neg {f a': List String}:
         SH_int2 A AuSH →
         (a,b,A_SH) = AuSH.components →                                      -- A^SH = ∀a ∃b A_SH(a,b)
-        (SH_int2 (¬₁A) (Recreate (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))))
+        (SH_int2 (¬₁A) (Recreate (f,a',(bExistsTuple2 a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))))
 | unbForall : SH_int2 A AuSH →
               AuSH.components = (a,b,A_SH) →                                -- A^SH = ∀a ∃b A_SH(a,b)
-              (SH_int2 (∀₁₁ x A) (Recreate (a∪{x},b,A_SH)))             -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+              (SH_int2 (∀₁₁ x A) (Recreate (a++[x],b,A_SH)))             -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
 | bForall : SH_int2 A AuSH →
             AuSH.components = (a,b,A_SH) →                                  -- A^SH = ∀a ∃b A_SH(a,b)
             (SH_int2 (b∀₁ x t A) (Recreate (a,b,(b∀₁ x t A_SH))))       -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
@@ -142,7 +142,7 @@ inductive SH_int2 : Formula → Formula → Prop
 
 
 example (h1: SH_int2 A AuSH) (h2 : AuSH.components = (a,b,A_SH))
-        (h3: SH_int2 (∀₁₁ x A) interp) : interp.components = ([x]∪a,b,A_SH) := by
+        (h3: SH_int2 (∀₁₁ x A) interp) : interp.components = ([x]++a,b,A_SH) := by
   let H := @SH_int2.unbForall A AuSH a b A_SH x h1 h2
   sorry
 
@@ -150,14 +150,17 @@ inductive SH_int_comp : Formula → (List String × List String × Formula) → 
 | base : (h : isBase A) → (SH_int_comp A ([],[],A))
 | disj : SH_int_comp A (a,b,A_SH) →
          SH_int_comp B (c,d,B_SH) →
-         (SH_int_comp (A∨₁B) (a∪c,b∪d,(A_SH ∨₁ B_SH)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+         (SH_int_comp (A∨₁B) (a++c,b++d,(A_SH ∨₁ B_SH)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
 | neg {f a': List String}:
         SH_int_comp A (a,b,A_SH) →
-        (SH_int_comp (¬₁A) (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))))))))
+        (SH_int_comp (¬₁A) (f,a',(bExistsTuple2 a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))))))))
 | unbForall : SH_int_comp A (a,b,A_SH) →
-              (SH_int_comp (∀₁₁ x A) (a∪[x],b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+              (SH_int_comp (∀₁₁ x A) ([x]++a,b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
 | bForall : SH_int_comp A (a,b,A_SH) →
             (SH_int_comp (b∀₁ x t A) (a,b,(b∀₁ x t A_SH)))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
+
+def coisa (x y : String) := (var x =₁ var y)
+#check ¬₁ (coisa "x" "y")
 
 --({a,b} ⊆ A.allvars) →
 --({c,d} ⊆ B.allvars) →
@@ -194,9 +197,9 @@ def SH_int_Comp : SH_int_type → (List String × List String × Formula)
 def extract_tuple {A : Formula} {a b a' f : List String} {A_SH : Formula}
   (hA : SH_int_comp A (a, b, A_SH)) (hB : SH_int_comp B (c, d, B_SH)) : (List String × List String × Formula) :=
   match A with
-  | (.or A B)           => (a∪c, b∪d, A)
-  | (.not A)            => (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt))))))))
-  | (.unbForall x A)    => (a∪[x],b,A_SH)
+  | (.or A B)           => (a++c, b++d, A)
+  | (.not A)            => (f,a',(bExistsTuple2 a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt))))))))
+  | (.unbForall x A)    => (a++[x],b,A_SH)
   | (.bForall x t A)    => (a,b,(b∀₁₁ x t A_SH))
   | A                   => ([],[],A)
 
@@ -227,7 +230,7 @@ lemma List.union_nil (l : List String): l ∪ [] = l := by sorry
 
 -- Example teste: (∀₁₁ x A)^SH = ∀ a,x ∃ b A_SH
 example (h: SH_int_comp A (a,b,A_SH)) :
-        SH_int_comp (∀₁₁ x A) (a∪[x],b,A_SH) :=
+        SH_int_comp (∀₁₁ x A) ([x]++a,b,A_SH) :=
 by
   exact @SH_int_comp.unbForall A a b A_SH x h
 
@@ -235,38 +238,66 @@ by
 example (A B : Formula) (hA: SH_int_comp A (a,b,A_SH)) (hB : isBase B) :
         SH_int_comp (A ∨₁ (b∀₁ [x] t B)) (a,b,(A_SH ∨₁ (b∀₁ [x] t B))) :=
 by
-  have H1 := SH_int_comp.base hB
-  have H2 := @SH_int_comp.bForall B [] [] B [x] t H1
-  have H3 := @SH_int_comp.disj A a b A_SH (b∀₁ [x] t B) [] [] (b∀₁ [x] t B) hA H2
-  have Ha := a.union_nil
-  have Hb := b.union_nil
-  rw [Ha,Hb] at H3
-  exact H3
+  have intB := SH_int_comp.base hB                                                             -- B
+  have intForall := @SH_int_comp.bForall B [] [] B [x] t intB                                  -- ∀x∈t B(x)
+  have intOr := @SH_int_comp.disj A a b A_SH (b∀₁ [x] t B) [] [] (b∀₁ [x] t B) hA intForall    -- A_SH ∨ ∀x∈t B(x)
+  have Ha := a.append_nil
+  have Hb := b.append_nil
+  rw [Ha,Hb] at intOr
+  exact intOr
 
 -- ---------------------------------------------------------------------
 -- EXAMPLE 2.2 (p.38)
--- Interpretation of ∀y∈t ¬(∃x A(x) ∧ B(y)).
+-- Interpretation of ∀y∈t ¬(∃x ¬A(x) ∧ B(y)).
 -- ---------------------------------------------------------------------
 
 #check ex_2_1_PrimSymb
 
-lemma ex_2_1_PrimSymbb (A B : Formula) (x y : String) (t : Term) : (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁A))∧₁B))) = (b∀₁₁ y t ((∀₁₁ x A)∨₁(¬₁B))) :=
+lemma ex_2_2_PrimSymbb (A B : Formula) (x y : String) (t : Term) : (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁A))∧₁B))) = (b∀₁₁ y t ((∀₁₁ x A)∨₁(¬₁B))) :=
 by
   rw [DeMorgan_and (∃₁₁ x (¬₁A)) B]
   unfold unbExists
   rw [DoubleNeg, DoubleNeg]
 
--- EXAMPLE 2.1: (∀y∈t ¬(∃x ¬A(x) ∧ B(y)))^SH = ∀a ∃b (A_SH ∨₁ (b∀₁ [x] t B))
+-- EXAMPLE 2.2: (∀y∈t ¬(∃x ¬A(x) ∧ B(y)))^SH = ∀a ∃b (A_SH ∨₁ (b∀₁ [x] t B))
 example (A B : Formula)
-        (hA: SH_int_comp A (a,b,A_SH))
-        (hB: SH_int_comp B (c,d,B_SH)) :
-        SH_int_comp (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁ A))∧₁B))) ([x]∪a∪g,b∪c',(b∀₁₁ y t (A_SH ∨₁ (bExistsTuple2 c (c'.tt) (B_SH.subst (HashMap.ofList (d.zip ((g.tt)⊙(c.tt))))))))) :=
+        (intA: SH_int_comp A (a,b,A_SH))
+        (intB: SH_int_comp B (c,d,B_SH)) :
+        SH_int_comp (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁ A))∧₁B))) ([x]++a++g,b++c',(b∀₁₁ y t (A_SH ∨₁ (bExistsTuple2 c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip ((g.tt)⊙(c.tt)))))))))) :=
 by
-  have H := ex_2_1_PrimSymbb A B y x t
-  --rw [←H]
-  have H1 := @SH_int_comp.unbForall A a b A_SH x hA
+  --have hPrim := ex_2_2_PrimSymbb A B x y t
+  rw [ex_2_2_PrimSymbb A B x y t]                                       -- ∀y∈t ¬ (∀x A(x) ∨ ¬B(y))
+  have intForallA := @SH_int_comp.unbForall A a b A_SH x intA             -- ∀x,a ∃b A_SH(x,a,b)
+  have intNotB := @SH_int_comp.neg B c d B_SH g c' intB                   -- ∀g ∃c' [∃ c c' ¬B_SH(c,gc)]
+  have intOr := SH_int_comp.disj intForallA intNotB                     -- ∀x,a,g ∃b,c' [A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc))]
+  --let Form := ((∀₁₁ x A).or B.not) -- b∀₁₁ y t
+  let Form_SH := (A_SH ∨₁ (bExistsTuple2 c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip (g.tt⊙c.tt)))))))
+  exact @SH_int_comp.bForall ((∀₁₁ x A).or B.not) ([x]++ a++g) (b ++ c') Form_SH [y] t intOr        -- ∀x,a,g ∃b,c' [∀y∈t (A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc)))]
+
+-- ---------------------------------------------------------------------
+-- REMARK 2.4 (p.43)
+-- Interpretations with empty tuples
+-- ---------------------------------------------------------------------
+
+/-
+example (A B C : Formula)
+        (intA: SH_int_comp A (a,b,A_SH))
+        (intB: SH_int_comp B (a,[],B_SH))
+        (intC: SH_int_comp C ([],b,C_SH)):
+-/
+
+example (B : Formula)
+        (intB: SH_int_comp B (a,[],B_SH)):
+        SH_int_comp (¬₁ B) ([],a',(bExistsTuple2 a (a'.tt) ((¬₁B_SH)))) :=
+by
+  have hA := @SH_int_comp.neg B a [] B_SH [] a' intB
+  --rw [app_empty_list_fst [].tt a.tt] at hA
   sorry
 
+
+example (C : Formula)
+        (intC: SH_int_comp C ([],b,C_SH)):
+        SH_int_comp (¬₁ C) (b,[],(¬₁C_SH)) := by sorry
 
 
 
@@ -292,20 +323,20 @@ def SH_int_base_comp (A:Formula) (H: isBase A): (List String × List String × F
 def SH_int_or_rec (A B : Formula)
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components)
   (hIntB: SH_int2 B BuSH) (hBcomp: (c,d,B_SH) = BuSH.components): Formula :=
-  Recreate (a∪c, b∪d, (A_SH ∨₁ B_SH))
+  Recreate (a++c, b++d, (A_SH ∨₁ B_SH))
 
 def SH_int_or_comp (A B : Formula)
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components)
   (hIntB: SH_int2 B BuSH) (hBcomp: (c,d,B_SH) = BuSH.components): (List String × List String × Formula) :=
-  (a∪c, b∪d, (A_SH ∨₁ B_SH))
+  (a++c, b++d, (A_SH ∨₁ B_SH))
 
 def SH_int_unbForall_rec (A : Formula) (x : List String)
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components): Formula :=
-  Recreate (a∪x, b, A_SH)
+  Recreate (a++x, b, A_SH)
 
 def SH_int_unbForall_comp (A : Formula) (x : List String)
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components): (List String × List String × Formula) :=
-  (a∪x, b, A_SH)
+  (a++x, b, A_SH)
 
 def SH_int_bForall_rec (A : Formula) (x : List String) (t : List Term)
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components): Formula :=
@@ -317,7 +348,7 @@ def SH_int_bForall_comp (A : Formula) (x : List String) (t : List Term)
 
 def SH_int_not_rec (A : Formula) {f a' : List String}
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components): Formula :=
-  Recreate (f,a',(bForallTuple2 a (ls_lt a') (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))
+  Recreate (f,a',(bForallTuple2 a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))
 
 -- ---------------------------------------------------------
 
@@ -352,7 +383,7 @@ lemma baseEquality (A B:Formula) (hA : isBase A) (hEq : B = A) : isBase B := by
 example (A B:Formula) (H : SH_int2 (A→₁B) IMPuSH) {f a' :List String}:
   (isBase A_SH) → (SH_int2 A AuSH) → ((a,b,A_SH) = AuSH.components) →
   (isBase B_SH) → (SH_int2 B BuSH) → ((c,d,B_SH) = AuSH.components) →
-  ((IMPuSH.components = (f∪c,a'∪d,(A_SH →₁ B_SH)))) := by sorry
+  ((IMPuSH.components = (f++c,a'++d,(A_SH →₁ B_SH)))) := by sorry
 
 /-
 
