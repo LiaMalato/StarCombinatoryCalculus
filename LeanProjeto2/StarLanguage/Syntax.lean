@@ -389,23 +389,11 @@ deriving Repr
 --| bForall {x: String} {t:Term} {h: x ∉ t.freevars} : String → Term → Formula → Formula          -- TO DO: passar para well-formed temos de acrescentar isto
 
 
-inductive FormulaT : Type
-| L_FormT : LFormula → FormulaT
-| relT : String → List Term → FormulaT                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
-| eqT : List Term → List Term → FormulaT                                      -- t =σ q
-| memT : List Term → List Term → FormulaT                                     -- t ∈σ q
-| notT : FormulaT → FormulaT                                         -- If A is a formula, then so is (¬A)
-| orT : FormulaT → FormulaT → FormulaT                                -- If A and B are formulas, then so is (A∨B)
-| unbForallT : String → FormulaT → FormulaT                          -- If A is a base formula, then so is (∀x A)
-| bForallT : String → Term → FormulaT → FormulaT                     -- If A is a formula, then so is (∀x∈t A)
-deriving Repr
-
 open LTerm
 
 def term_to_lterm : Term → Option LTerm
 | .lcons lt => .some lt
 | _ => .none
-
 
 
 mutual
@@ -466,20 +454,6 @@ match f with
                     | .none => bForall s (t.subst substitutions) (f'.subst substitutions)
                     | .some _ => bForall s (t.subst substitutions) f'
 
-def FormulaT.subst (f:FormulaT) (substitutions:HashMap String Term) : FormulaT :=
-match f with
-| L_FormT lf => (by sorry)
-| relT s ts => relT s (ts.map (fun t => Term.subst t substitutions))    -- para lista de termos é so this
-| eqT t1 t2 => eqT (t1.subst substitutions) (t2.subst substitutions)
-| memT t1 t2 => memT (t1.subst substitutions) (t2.subst substitutions)
-| notT f' => notT (f'.subst substitutions)
-| orT f1 f2 => orT (f1.subst substitutions) (f2.subst substitutions)
-| unbForallT s f' => match substitutions.find? s with
-                    | .none => unbForallT s (f'.subst substitutions)
-                    | .some _ => unbForallT s f'
-| bForallT s t f' => match substitutions.find? s with
-                    | .none => bForallT s (t.subst substitutions) (f'.subst substitutions)
-                    | .some _ => bForallT s (t.subst substitutions) f'
 
 
 -- Convertemos a lista de variáveis numa nested sequence de quantificadores `forall`
@@ -488,13 +462,7 @@ def unbForallTuple (vars : List String) (A : Formula) : Formula :=
     Formula.unbForall v acc
   ) A
 
--- TODO: check this: do we need TermTuple?
-def bForallTuple (vars : List String) (t : Term) (A : Formula) : Formula :=
-  vars.foldr (fun v acc =>
-    Formula.bForall v t acc
-  ) A
-
-def bForallTuple2 (vars : List String) (terms : List Term) (A : Formula) : Formula :=
+def bForallTuple (vars : List String) (terms : List Term) (A : Formula) : Formula :=
   -- Function to apply bForall using the variable and corresponding term
   let applyBForall := List.zip vars terms
   -- Fold over the list of (variable, term) pairs, applying bForall in the given order
@@ -592,19 +560,19 @@ notation A "∨₁" B => or A B
 notation "∀₁₁" => unbForall
 notation "b∀₁₁" => bForall
 notation "∀₁" => unbForallTuple
-notation "b∀₁" => bForallTuple
+notation "b∀₁" => bForallTuple  -- olha
 
 -- DEFINITION 1.8 (p.14): The bounded existential quantifier ∃x∈t (defined symbol)
 
 -- The unbounded existential quantifier (for one variable): ∃x A := ¬ (∀x (¬ A))
 @[simp]
 def unbExists (x : String) (A : Formula) : Formula :=
-  ¬₁(unbForall x (¬₁ A))
+  ¬₁(∀₁₁ x (¬₁ A))
 
 -- The bounded existential quantifier (for one variable) ∃x∈t A := ¬ (∀x∈t (¬ A))
 @[simp]
 def bExists (x : String) (t : Term) (A : Formula) : Formula :=
-  ¬₁(bForall x t (¬₁ A))
+  ¬₁(b∀₁₁ x t (¬₁ A))
 
 -- The unbounded existential quantifier (for a tuple of variables):  ∃x A := ¬ (∀x (¬ A))
 @[simp]
@@ -612,18 +580,18 @@ def unbExistsTuple (x : List String) (A : Formula) : Formula :=
   ¬₁ (∀₁ x (¬₁A))
 
 -- The bounded existential quantifier (for a tuple of variables):  ∃x∈t A := ¬ (∀x∈t (¬ A))
-@[simp]
-def bExistsTuple (x : List String) (t : Term) (A : Formula) : Formula :=
-  ¬₁ (b∀₁ x t (¬₁A))
+--@[simp]
+--def bExistsTuple (x : List String) (t : Term) (A : Formula) : Formula :=
+--  ¬₁ (b∀₁ x t (¬₁A))  -- olha
 
 @[simp]
-def bExistsTuple2 (x : List String) (t : List Term) (A : Formula) : Formula :=
-  ¬₁ (bForallTuple2 x t (¬₁A))
+def bExistsTuple (x : List String) (t : List Term) (A : Formula) : Formula :=
+  ¬₁ (b∀₁ x t (¬₁A))
 
 notation "∃₁₁" => unbExists
 notation "b∃₁₁" => bExists
 notation "∃₁" => unbExistsTuple
-notation "b∃₁" => bExistsTuple
+notation "b∃₁" => bExistsTuple    -- olha
 
 -- -------------------------
 -- NOTATION: DEFINED SYMBOLS (p.8 and p.14):

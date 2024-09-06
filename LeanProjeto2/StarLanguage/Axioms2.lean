@@ -28,27 +28,27 @@ open Batteries
 
 namespace Axioms
 
-def axiomE1_matrix (x : String) : Formula :=
+def AxiomE1_matrix (x : String) : Formula :=
   (var x)=₁(var x)
-def axiomE2_matrix (x₁ x₂ : String) (A : Formula) (hA : isBase A) : Formula :=
+def AxiomE2_matrix (x₁ x₂ : String) (A : Formula) (hA : isBase A) : Formula :=
   (((var x₁)=₁(var x₂)) ∧₁ A) →₁ (A.subst (HashMap.ofList ([x₁].zip ([x₂].tt))))
-def axiomUn_matrix (x : String) (t : String) (A : Formula) : Formula :=
+def AxiomUn_matrix (x : String) (t : String) (A : Formula) : Formula :=
   (b∀₁₁ x (var t) A) ↔₁ (∀₁₁ x (((var x) ∈₁ (var t)) →₁ A))
-def axiomC1_matrix (x₁ x₂ : String) : Formula :=
+def AxiomC1_matrix (x₁ x₂ : String) : Formula :=
   ((Π₁·(var x₁))·(var x₂)) =₁ (var x₁)
-def axiomC2_matrix (x₁ x₂ x₃ : String) : Formula :=
+def AxiomC2_matrix (x₁ x₂ x₃ : String) : Formula :=
   (((Σ₁·(var x₁))·(var x₂))·(var x₃)) =₁ (((var x₁)·(var x₃))·((var x₂)·(var x₃)))
-def axiomP1_matrix (x₁ x₂ : String) : Formula :=
+def AxiomP1_matrix (x₁ x₂ : String) : Formula :=
   ((ind_⋃₁·(𝔰₁·(var x₁)))·(var x₂)) =₁ ((var x₂)·(var x₁))
-def axiomP2_matrix (x₁ x₂ x₃ : String) : Formula :=
+def AxiomP2_matrix (x₁ x₂ x₃ : String) : Formula :=
   ((ind_⋃₁·((∪₁·(var x₁))·(var x₂)))·(var x₃)) =₁ ((∪₁·((ind_⋃₁·(var x₁))·(var x₃)))·((ind_⋃₁·(var x₂))·(var x₃)))
-def axiomS1_matrix (x₁ x₂ : String) : Formula :=
+def AxiomS1_matrix (x₁ x₂ : String) : Formula :=
   ((var x₁) ∈₁ (𝔰₁·(var x₂))) ↔₁ ((var x₁) =₁ (var x₂))
-def axiomS2_matrix (x₁ x₂ x₃ : String) : Formula :=
+def AxiomS2_matrix (x₁ x₂ x₃ : String) : Formula :=
   ((var x₁) ∈₁ ((∪₁·(var x₂))·(var x₃)) ) ↔₁ (((var x₁) ∈₁ (var x₂)) ∨₁ ((var x₁) ∈₁ (var x₃)))
-def axiomS3_matrix (b a f x : String) : Formula :=
+def AxiomS3_matrix (b a f x : String) : Formula :=
   ((var b) ∈₁ ((ind_⋃₁·(var a))·(var f))) ↔₁ (b∃₁₁ x (var a) ((var b) ∈₁ ((var f)·(var x))))
-def axiomS4_matrix (x₁ x₂ : String) : Formula :=
+def AxiomS4_matrix (x₁ x₂ : String) : Formula :=
   b∃₁₁ x₂ (var x₁) ((var x₂) ∈₁ (var x₁))
 
 
@@ -74,8 +74,8 @@ open isAtomic
 open isBase
 
 -- On AxiomE1:
-lemma AxiomE1_univ_of_base (x:String) : (isBase (axiomE1_matrix x)) := by
-  unfold axiomE1_matrix
+lemma AxiomE1_univ_of_base (x:String) : (isBase (AxiomE1_matrix x)) := by
+  unfold AxiomE1_matrix
   exact b_atom (isAtomic.at_eq (var x) (var x))
 
 #check Axioms.AxiomE1_univ_of_base "x"
@@ -96,8 +96,8 @@ example
 
 
 -- On AxiomE2:
-lemma AxiomE2_univ_of_base : (isBase (axiomE2_matrix x₁ x₂ A hA)) := by
-  unfold axiomE2_matrix
+lemma AxiomE2_univ_of_base : (isBase (AxiomE2_matrix x₁ x₂ A hA)) := by
+  unfold AxiomE2_matrix
   have H1 := Subst_isBase A hA [x₁] [x₂].tt
   have H2 := b_atom (isAtomic.at_eq (var x₁) (var x₂))
   have H3 := Conj_base ((var x₁)=₁(var x₂)) A H2 hA
@@ -106,72 +106,76 @@ lemma AxiomE2_univ_of_base : (isBase (axiomE2_matrix x₁ x₂ A hA)) := by
 
 -- COMMENT: AxiomUn_univ_of_base não dá porque axiomUn não é base :)
 
-lemma AxiomC1_univ_of_base : (isBase (axiomC1_matrix x₁ x₂)) := by
-  unfold axiomC1_matrix
+lemma AxiomC1_univ_of_base : (isBase (AxiomC1_matrix x₁ x₂)) := by
+  unfold AxiomC1_matrix
   exact b_atom (isAtomic.at_eq ((Π₁·var x₁)·var x₂) (var x₁))
 
-lemma AxiomC2_univ_of_base : (isBase (axiomC2_matrix x₁ x₂ x₃)) := by
-  unfold axiomC2_matrix
+lemma AxiomC2_univ_of_base : (isBase (AxiomC2_matrix x₁ x₂ x₃)) := by
+  unfold AxiomC2_matrix
   exact b_atom (isAtomic.at_eq (((Σ₁·(var x₁))·(var x₂))·(var x₃)) (((var x₁)·(var x₃))·((var x₂)·(var x₃))))
 
-lemma AxiomP1_univ_of_base : (isBase (axiomP1_matrix x₁ x₂)) := by
-  unfold axiomP1_matrix
+lemma AxiomP1_univ_of_base : (isBase (AxiomP1_matrix x₁ x₂)) := by
+  unfold AxiomP1_matrix
   exact b_atom (isAtomic.at_eq ((ind_⋃₁·(𝔰₁·(var x₁)))·(var x₂)) ((var x₂)·(var x₁)))
 
-lemma AxiomP2_univ_of_base : (isBase (axiomP2_matrix x₁ x₂ x₃)) := by
-  unfold axiomP2_matrix
+lemma AxiomP2_univ_of_base : (isBase (AxiomP2_matrix x₁ x₂ x₃)) := by
+  unfold AxiomP2_matrix
   exact b_atom (isAtomic.at_eq ((ind_⋃₁·((∪₁·(var x₁))·(var x₂)))·(var x₃)) ((∪₁·((ind_⋃₁·(var x₁))·(var x₃)))·((ind_⋃₁·(var x₂))·(var x₃))))
 
-lemma AxiomS1_univ_of_base : (isBase (axiomS1_matrix x₁ x₂)) := by
-  unfold axiomS1_matrix
+lemma AxiomS1_univ_of_base : (isBase (AxiomS1_matrix x₁ x₂)) := by
+  unfold AxiomS1_matrix
   have H1 := b_atom (isAtomic.at_mem (var x₁) (𝔰₁·(var x₂)))
   have H2 := b_atom (isAtomic.at_eq (var x₁) (var x₂))
   exact Iff_base (var x₁∈₁𝔰₁·var x₂) (var x₁=₁var x₂) H1 H2
 
-lemma AxiomS2_univ_of_base : (isBase (axiomS2_matrix x₁ x₂ x₃)) := by
-  unfold axiomS2_matrix
+lemma AxiomS2_univ_of_base : (isBase (AxiomS2_matrix x₁ x₂ x₃)) := by
+  unfold AxiomS2_matrix
   have H1 := b_atom (isAtomic.at_mem (var x₁) ((∪₁·(var x₂))·(var x₃)))
   have H2 := b_atom (isAtomic.at_mem (var x₁) (var x₂))
   have H3 := b_atom (isAtomic.at_mem (var x₁) (var x₃))
   have H4 := b_or H2 H3
   exact Iff_base (var x₁∈₁(∪₁·var x₂)·var x₃) ((var x₁∈₁var x₂).or (var x₁∈₁var x₃)) H1 H4
 
-lemma AxiomS3_univ_of_base {f:String} : (isBase (axiomS3_matrix b a f x)) := by
-  unfold axiomS3_matrix
+lemma AxiomS3_univ_of_base {b a f x : String} : (isBase (AxiomS3_matrix b a f x)) := by
+  unfold AxiomS3_matrix
   have H1 := b_atom (isAtomic.at_mem (var b) ((ind_⋃₁·(var a))·(var f)))
   have H2 := b_atom (isAtomic.at_mem (var b) ((var f)·(var x)))
   have H3 := bExists_base x (var a) H2
   exact Iff_base (var b∈₁(ind_⋃₁·var a)·var f) (b∃₁₁ x (var a) (var b∈₁var f·var x)) H1 H3
 
-lemma AxiomS4_univ_of_base : (isBase (axiomS4_matrix x₁ x₂)) := by
-  unfold axiomS4_matrix
+lemma AxiomS4_univ_of_base : (isBase (AxiomS4_matrix x₁ x₂)) := by
+  unfold AxiomS4_matrix
   have H := b_atom (isAtomic.at_mem (var x₂) (var x₁))
   exact bExists_base x₂ (var x₁) H
 
 -- ---------------------------------------------------------------
 
 def AxiomE1 (x : String) : Formula :=
-  ∀₁₁ x (axiomE1_matrix x)
+  ∀₁₁ x (AxiomE1_matrix x)
 def AxiomE2 (x₁ x₂ : String) (A : Formula) (hA : isBase A) : Formula :=
-  ∀₁₁ x₁ (∀₁₁ x₂ (axiomE2_matrix x₁ x₂ A hA))
+  ∀₁₁ x₁ (∀₁₁ x₂ (AxiomE2_matrix x₁ x₂ A hA))
+-- ---
 def AxiomUn (x : String) (t : String) (A : Formula) : Formula :=
-  ∀₁₁ t (axiomUn_matrix x t A)
+  ∀₁₁ t (AxiomUn_matrix x t A)
+-- ----
 def AxiomC1 (x₁ x₂ : String) : Formula :=
-  ∀₁₁ x₁ (∀₁₁ x₂ (axiomC1_matrix x₁ x₂))
+  ∀₁₁ x₁ (∀₁₁ x₂ (AxiomC1_matrix x₁ x₂))
 def AxiomC2 (x₁ x₂ x₃ : String) : Formula :=
-  ∀₁₁ x₁ (∀₁₁ x₂ (∀₁₁ x₃ (axiomC2_matrix x₁ x₂ x₃)))
+  ∀₁₁ x₁ (∀₁₁ x₂ (∀₁₁ x₃ (AxiomC2_matrix x₁ x₂ x₃)))
+-- ----
 def AxiomP1 (x₁ x₂ : String) : Formula :=
-  ∀₁₁ x₁ (∀₁₁ x₂ (axiomP1_matrix x₁ x₂))
+  ∀₁₁ x₁ (∀₁₁ x₂ (AxiomP1_matrix x₁ x₂))
 def AxiomP2 (x₁ x₂ x₃ : String) : Formula :=
-  ∀₁₁ x₁ (∀₁₁ x₂ (∀₁₁ x₃ (axiomP2_matrix x₁ x₂ x₃)))
+  ∀₁₁ x₁ (∀₁₁ x₂ (∀₁₁ x₃ (AxiomP2_matrix x₁ x₂ x₃)))
+-- ----
 def AxiomS1 (x₁ x₂ : String) : Formula :=
-  ∀₁₁ x₁ (∀₁₁ x₂ (axiomS1_matrix x₁ x₂))
+  ∀₁₁ x₁ (∀₁₁ x₂ (AxiomS1_matrix x₁ x₂))
 def AxiomS2 (x₁ x₂ x₃ : String) : Formula :=
-  ∀₁₁ x₁ (∀₁₁ x₂ (∀₁₁ x₃ (axiomS2_matrix x₁ x₂ x₃)))
+  ∀₁₁ x₁ (∀₁₁ x₂ (∀₁₁ x₃ (AxiomS2_matrix x₁ x₂ x₃)))
 def AxiomS3 (b a f x : String) : Formula :=
-  ∀₁₁ a (∀₁₁ f (∀₁₁ b (axiomS3_matrix b a f x)))
+  ∀₁₁ a (∀₁₁ f (∀₁₁ b (AxiomS3_matrix b a f x)))
 def AxiomS4 (x₁ x₂ : String) : Formula :=
-  ∀₁₁ x₁ (axiomS4_matrix x₁ x₂)
+  ∀₁₁ x₁ (AxiomS4_matrix x₁ x₂)
 
 -- ---------------------------------------------------------------
 
@@ -263,7 +267,8 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 
 end
 
-def bAC (x y f : List String) (A : Formula) : Formula := (∀₁ x (∃₁ y A)) →₁ (∃₁ f (∀₁ x (bExistsTuple2 y ((f.tt)⊙(x.tt)) A)))     -- bAC^ω_*
+def bAC (x y f : String) (A : Formula) : Formula := (∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((var f)·(var x)) A)))     -- bAC^ω_*
+def bAC_star_om (x y f a b : String) (A : Formula) : Formula := (∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A)))     -- bAC^ω_*
 
 
 infix:27 (priority := high) " ⊢ " => ProvableFrom     -- já não é a mesma notação que em ProvableFrom!
@@ -307,10 +312,10 @@ theorem term_reflexivity {t:Term}: ∅ ⊢ (t =₁ t) :=
   | Term.app t1 t2 => by simp [term_reflexivity t1, term_reflexivity t2]
 -/
 
-example (A : Formula) {f : List String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
-theorem Soundness (A : Formula) {f : List String} : (insert (bAC x y f B) ∅ ⊢ A) → (∃(t: List Term), (Provable (∀₁ a A))) := by sorry    -- TBD: falta subst aqui
-theorem Characterization (A : Formula) {f : List String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable (A ∨₁ A)) := by sorry          -- TBD: falta A^SH aqui
-lemma Lem32 (A : Formula) (hA : isBase A) {f : List String}: (insert (bAC x y f B) ∅ ⊢ ((b∀₁ x t (∃₁ y A)) →₁ (∃₁ b (b∀₁ x t (bExistsTuple2 y (b.tt) A))))) := by sorry
+example (A : Formula) {f : String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
+theorem Soundness (A : Formula) {f : String} : (insert (bAC x y f B) ∅ ⊢ A) → (∃(t: List Term), (Provable (∀₁ a A))) := by sorry    -- TBD: falta subst aqui
+theorem Characterization (A : Formula) {f : String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable (A ∨₁ A)) := by sorry          -- TBD: falta A^SH aqui
+lemma Lem32 (A : Formula) (hA : isBase A) {f : String}: (insert (bAC x y f B) ∅ ⊢ ((b∀₁₁ x t (∃₁₁ y A)) →₁ (∃₁₁ b (b∀₁₁ x t (b∃₁₁ y (var b) A))))) := by sorry
 
 
 
@@ -336,20 +341,6 @@ by
   simp
   --exact DoubleNeg A.not   OR     apply (DoubleNeg A.not)
 
-example (A B : Formula) : (¬₁(¬₁A)) = A :=
+example (A : Formula) : (¬₁(¬₁A)) = A :=
 by
   exact DoubleNeg A
-  --have H := DoubleNeg A
-  --have H2 := DoubleNeg (¬₁A)
-  --have H3 := DoubleNeg (A∨₁B)
-  --have H4 := DeMorgan_and A B
-
-
--- EXAMPLE 2.1: ∀y∈t ¬((∃x A(x)) ∧ B(y)) = ∀y∈t (∀x A(x) ∨ ¬B(y))
-lemma ex_2_1_PrimSymb (A B : Formula) (x y : String) (t : Term) : (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁A))∧₁B))) = (b∀₁₁ y t ((∀₁₁ x A)∨₁(¬₁B))) :=
-by
-  rw [DeMorgan_and (∃₁₁ x (¬₁A)) B]
-  unfold unbExists
-  rw [DoubleNeg, DoubleNeg]
-
---have h1 := DeMorgan_and (∃₁₁ x A) B

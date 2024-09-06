@@ -124,7 +124,7 @@ inductive SH_int2 : Formula → Formula → Prop
 | neg {f a': List String}:
         SH_int2 A AuSH →
         (a,b,A_SH) = AuSH.components →                                      -- A^SH = ∀a ∃b A_SH(a,b)
-        (SH_int2 (¬₁A) (Recreate (f,a',(bExistsTuple2 a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))))
+        (SH_int2 (¬₁A) (Recreate (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))))
 | unbForall : SH_int2 A AuSH →
               AuSH.components = (a,b,A_SH) →                                -- A^SH = ∀a ∃b A_SH(a,b)
               (SH_int2 (∀₁₁ x A) (Recreate (a++[x],b,A_SH)))             -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
@@ -153,7 +153,7 @@ inductive SH_int_comp : Formula → (List String × List String × Formula) → 
          (SH_int_comp (A∨₁B) (a++c,b++d,(A_SH ∨₁ B_SH)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
 | neg {f a': List String}:
         SH_int_comp A (a,b,A_SH) →
-        (SH_int_comp (¬₁A) (f,a',(bExistsTuple2 a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))))))))
+        (SH_int_comp (¬₁A) (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))))))))
 | unbForall : SH_int_comp A (a,b,A_SH) →
               (SH_int_comp (∀₁₁ x A) ([x]++a,b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
 | bForall : SH_int_comp A (a,b,A_SH) →
@@ -198,7 +198,7 @@ def extract_tuple {A : Formula} {a b a' f : List String} {A_SH : Formula}
   (hA : SH_int_comp A (a, b, A_SH)) (hB : SH_int_comp B (c, d, B_SH)) : (List String × List String × Formula) :=
   match A with
   | (.or A B)           => (a++c, b++d, A)
-  | (.not A)            => (f,a',(bExistsTuple2 a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt))))))))
+  | (.not A)            => (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt))))))))
   | (.unbForall x A)    => (a++[x],b,A_SH)
   | (.bForall x t A)    => (a,b,(b∀₁₁ x t A_SH))
   | A                   => ([],[],A)
@@ -251,8 +251,6 @@ by
 -- Interpretation of ∀y∈t ¬(∃x ¬A(x) ∧ B(y)).
 -- ---------------------------------------------------------------------
 
-#check ex_2_1_PrimSymb
-
 lemma ex_2_2_PrimSymbb (A B : Formula) (x y : String) (t : Term) : (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁A))∧₁B))) = (b∀₁₁ y t ((∀₁₁ x A)∨₁(¬₁B))) :=
 by
   rw [DeMorgan_and (∃₁₁ x (¬₁A)) B]
@@ -263,7 +261,7 @@ by
 example (A B : Formula)
         (intA: SH_int_comp A (a,b,A_SH))
         (intB: SH_int_comp B (c,d,B_SH)) :
-        SH_int_comp (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁ A))∧₁B))) ([x]++a++g,b++c',(b∀₁₁ y t (A_SH ∨₁ (bExistsTuple2 c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip ((g.tt)⊙(c.tt)))))))))) :=
+        SH_int_comp (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁ A))∧₁B))) ([x]++a++g,b++c',(b∀₁₁ y t (A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip ((g.tt)⊙(c.tt)))))))))) :=
 by
   --have hPrim := ex_2_2_PrimSymbb A B x y t
   rw [ex_2_2_PrimSymbb A B x y t]                                       -- ∀y∈t ¬ (∀x A(x) ∨ ¬B(y))
@@ -271,8 +269,8 @@ by
   have intNotB := @SH_int_comp.neg B c d B_SH g c' intB                   -- ∀g ∃c' [∃ c c' ¬B_SH(c,gc)]
   have intOr := SH_int_comp.disj intForallA intNotB                     -- ∀x,a,g ∃b,c' [A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc))]
   --let Form := ((∀₁₁ x A).or B.not) -- b∀₁₁ y t
-  let Form_SH := (A_SH ∨₁ (bExistsTuple2 c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip (g.tt⊙c.tt)))))))
-  exact @SH_int_comp.bForall ((∀₁₁ x A).or B.not) ([x]++ a++g) (b ++ c') Form_SH [y] t intOr        -- ∀x,a,g ∃b,c' [∀y∈t (A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc)))]
+  let Form_SH := (A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip (g.tt⊙c.tt)))))))
+  exact @SH_int_comp.bForall ((∀₁₁ x A).or B.not) ([x]++ a++g) (b ++ c') Form_SH [y] [t] intOr        -- ∀x,a,g ∃b,c' [∀y∈t (A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc)))]
 
 -- Notação para HashMap.ofList (x.zip t)
 def with_t (x : List String) (t : List Term) := HashMap.ofList (x.zip t)
@@ -289,35 +287,44 @@ notation x "⟹" t => with_t x t
 
 #check F_iff
 
+lemma SH_imp
+  (A B : Formula)
+  (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
+  (intB : SH_int_comp B (c,d,B_SH))
+  (f a' : List String): SH_int_comp (A→₁B) (f++c, a'++d, ((b∀₁ a a'.tt (A_SH.subst (HashMap.ofList (b.zip (f.tt⊙a.tt)))))→₁B_SH)) :=
+by
+  unfold F_implies
+  have intNotA := @SH_int_comp.neg A a b A_SH f a' intA
+  have intForm := SH_int_comp.disj intNotA intB
+  rw [bExistsTuple] at intForm
+  rw [DoubleNeg] at intForm
+  exact intForm
+
+lemma SH_imp2
+  (A B : Formula)
+  (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
+  (intB : SH_int_comp B (c,d,B_SH))
+  (f a' : List String): SH_int_comp (A→₁B) (f++c, a'++d, ((b∀₁ a a'.tt (A_SH.subst (b ⟹ (f.tt⊙a.tt)))))→₁B_SH) :=
+by
+  unfold F_implies
+  have intNotA := @SH_int_comp.neg A a b A_SH f a' intA
+  have intForm := SH_int_comp.disj intNotA intB
+  rw [bExistsTuple] at intForm
+  rw [DoubleNeg] at intForm
+  exact intForm
+
 lemma SH_and
   (A B : Formula)
-  (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
-  (intB : SH_int_comp B (c,d,B_SH))
-  (f a' : List String): SH_int_comp (A→₁B) (f++c, a'++d, ((bForallTuple2 a a'.tt (A_SH.subst (HashMap.ofList (b.zip (f.tt⊙a.tt)))))→₁B_SH)) :=
-by
-  unfold F_implies
-  have intNotA := @SH_int_comp.neg A a b A_SH f a' intA
-  have intForm := SH_int_comp.disj intNotA intB
-  rw [bExistsTuple2] at intForm
-  rw [DoubleNeg] at intForm
-  exact intForm
+  (intA : SH_int_comp A (a,b,A_SH)) (f f' g g' a' Φ Ψ : List String)
+  (intB : SH_int_comp B (c,d,B_SH)):
+  SH_int_comp (A∧₁B) (Φ++Ψ, f'++g', (A)) :=
+by sorry
 
-lemma SH_and2
-  (A B : Formula)
-  (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
-  (intB : SH_int_comp B (c,d,B_SH))
-  (f a' : List String): SH_int_comp (A→₁B) (f++c, a'++d, ((bForallTuple2 a a'.tt (A_SH.subst (b ⟹ (f.tt⊙a.tt)))))→₁B_SH) :=
-by
-  unfold F_implies
-  have intNotA := @SH_int_comp.neg A a b A_SH f a' intA
-  have intForm := SH_int_comp.disj intNotA intB
-  rw [bExistsTuple2] at intForm
-  rw [DoubleNeg] at intForm
-  exact intForm
+/-
+(b∀₁ a a'.tt (A_SH.subst (HashMap.ofList (b.zip (f.tt⊙a.tt)))))→₁B_SH
 
-
-
-
+b∃₁ f f' (b∃₁ g g' ((b∀₁ a BLA A.SUBST) ∧₁ (b∀₁ c BLA B.SUBST)))
+-/
 
 
 
@@ -337,7 +344,7 @@ example (A B C : Formula)
 
 example (B : Formula)
         (intB: SH_int_comp B (a,[],B_SH)):
-        SH_int_comp (¬₁ B) ([],a',(bExistsTuple2 a (a'.tt) ((¬₁B_SH)))) :=
+        SH_int_comp (¬₁ B) ([],a',(b∃₁ a (a'.tt) ((¬₁B_SH)))) :=
 by
   have hA := @SH_int_comp.neg B a [] B_SH [] a' intB
   --have H := app_empty_list_fst List.nil (a.tt)
@@ -394,15 +401,15 @@ def SH_int_unbForall_comp (A : Formula) (x : List String)
 
 def SH_int_bForall_rec (A : Formula) (x : List String) (t : List Term)
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components): Formula :=
-  Recreate (a, b, bForallTuple2 x t A_SH)
+  Recreate (a, b, b∀₁ x t A_SH)
 
 def SH_int_bForall_comp (A : Formula) (x : List String) (t : List Term)
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components): (List String × List String × Formula) :=
-  (a, b, bForallTuple2 x t A_SH)
+  (a, b, b∀₁ x t A_SH)
 
 def SH_int_not_rec (A : Formula) {f a' : List String}
   (hIntA: SH_int2 A AuSH) (hAcomp: (a,b,A_SH) = AuSH.components): Formula :=
-  Recreate (f,a',(bForallTuple2 a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))
+  Recreate (f,a',(b∀₁ a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList  (b.zip ((f.tt)⊙(a.tt))))))))
 
 -- ---------------------------------------------------------
 
@@ -501,13 +508,13 @@ def FormulaF : Formula := aaa =₁ bbb
 -- mover
 open Axioms
 
-example : Formula.components (axiomE1_matrix "x") = ([], [], (axiomE1_matrix "x")) := by
+example : Formula.components (AxiomE1_matrix "x") = ([], [], (AxiomE1_matrix "x")) := by
   exact rfl
 
-example : (axiomE2_matrix x₁ x₂ A hA).components = ([], [], (axiomE2_matrix x₁ x₂ A hA)) := by sorry
+example : (AxiomE2_matrix x₁ x₂ A hA).components = ([], [], (AxiomE2_matrix x₁ x₂ A hA)) := by sorry
 
 
-#eval (axiomE1_matrix "x").components
+#eval (AxiomE1_matrix "x").components
 -- Quero mostrar que pôr foralls antes dos axiomas, que não muda nada
 -- que SH_int2 de axiomE1 que é a mesma coisa que SH_int2 de AxiomE1
 --#eval
