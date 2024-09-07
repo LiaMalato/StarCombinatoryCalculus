@@ -140,7 +140,7 @@ open Axioms
 --(SH_int_base_rec ((var x)=₁(var x)) H) = ((var x)=₁(var x))
 -- by AxiomE1_univ_of_base
 
-
+@[simp]
 lemma Formula.subst_empty (A: Formula) : A.subst HashMap.empty = A := by sorry
 
 -- Se temos duas interpretações diferentes da mesma formula, então os components são iguais
@@ -148,7 +148,17 @@ lemma SH_int_same
   {a b c d : List String} {A A_SH A_SH': Formula}
   (intA : SH_int_comp A (a,b,A_SH))
   (intB : SH_int_comp A (c,d,A_SH')) :
-  (a=c ∧ b=d ∧ A_SH=A_SH') := by sorry
+  a = c ∧ b = d ∧ A_SH = A_SH' :=
+    by sorry
+
+-- -------------------------------------------------------
+-- -------------------------------------------------------
+-- INTERPRETAÇÕES DOS AXIOMAS (dos que são universal closures de base formulas)
+-- -------------------------------------------------------
+-- -------------------------------------------------------
+
+
+-- EQUALITY AXIOMS
 
 lemma AxiomE1_int
   (x : String) :
@@ -160,19 +170,135 @@ by
   rw [[x].append_nil] at intForm
   exact intForm
 
+lemma AxiomE2_int
+  (A : Formula) (hAbase : isBase A)
+  (x₁ x₂ : String) :
+  SH_int_comp (AxiomE2 x₁ x₂ A hAbase) ([x₁]++[x₂],[],(AxiomE2_matrix x₁ x₂ A hAbase)) :=
+by
+  have hBase := @AxiomE2_univ_of_base x₁ x₂ A hAbase
+  have intBase := @SH_int_comp.base (AxiomE2_matrix x₁ x₂ A hAbase) hBase
+  have intForall1 := @SH_int_comp.unbForall (AxiomE2_matrix x₁ x₂ A hAbase) [] [] (AxiomE2_matrix x₁ x₂ A hAbase) x₂ intBase
+  rw [[x₂].append_nil] at intForall1
+  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₂ (AxiomE2_matrix x₁ x₂ A hAbase)) [x₂] [] (AxiomE2_matrix x₁ x₂ A hAbase) x₁ intForall1
+  exact intForall2
+
+-- COMBINATORY AXIOMS
+
+lemma AxiomC1_int
+  (x₁ x₂ : String) :
+  SH_int_comp (AxiomC1 x₁ x₂) ([x₁]++[x₂],[],(AxiomC1_matrix x₁ x₂)) :=
+by
+  have hBase := @AxiomC1_univ_of_base x₁ x₂
+  have intBase := SH_int_comp.base hBase
+  have intForall1 := @SH_int_comp.unbForall (AxiomC1_matrix x₁ x₂) [] [] (AxiomC1_matrix x₁ x₂) x₂ intBase
+  rw [[x₂].append_nil] at intForall1
+  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₂ (AxiomC1_matrix x₁ x₂)) [x₂] [] (AxiomC1_matrix x₁ x₂) x₁ intForall1
+  exact intForall2
+
+lemma AxiomC2_int
+  (x₁ x₂ x₃ : String) :
+  SH_int_comp (AxiomC2 x₁ x₂ x₃) ([x₁]++[x₂]++[x₃],[],(AxiomC2_matrix x₁ x₂ x₃)) :=
+by
+  have hBase := @AxiomC2_univ_of_base x₁ x₂ x₃
+  have intBase := SH_int_comp.base hBase
+  have intForall1 := @SH_int_comp.unbForall (AxiomC2_matrix x₁ x₂ x₃) [] [] (AxiomC2_matrix x₁ x₂ x₃) x₃ intBase
+  rw [[x₃].append_nil] at intForall1
+  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₃ (AxiomC2_matrix x₁ x₂ x₃)) [x₃] [] (AxiomC2_matrix x₁ x₂ x₃) x₂ intForall1
+  have intForall3 := @SH_int_comp.unbForall (∀₁₁ x₂ (∀₁₁ x₃ (AxiomC2_matrix x₁ x₂ x₃))) [x₂ , x₃] [] (AxiomC2_matrix x₁ x₂ x₃) x₁ intForall2
+  exact intForall3
+
+-- PRIMARY AXIOMS
+
+lemma AxiomP1_int
+  (x₁ x₂ : String) :
+  SH_int_comp (AxiomP1 x₁ x₂) ([x₁]++[x₂],[],(AxiomP1_matrix x₁ x₂)) :=
+by
+  have hBase := @AxiomP1_univ_of_base x₁ x₂
+  have intBase := SH_int_comp.base hBase
+  have intForall1 := @SH_int_comp.unbForall (AxiomP1_matrix x₁ x₂) [] [] (AxiomP1_matrix x₁ x₂) x₂ intBase
+  rw [[x₂].append_nil] at intForall1
+  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₂ (AxiomP1_matrix x₁ x₂)) [x₂] [] (AxiomP1_matrix x₁ x₂) x₁ intForall1
+  exact intForall2
+
+lemma AxiomS2_int
+  (x₁ x₂ x₃ : String) :
+  SH_int_comp (AxiomS2 x₁ x₂ x₃) ([x₁]++[x₂]++[x₃],[],(AxiomS2_matrix x₁ x₂ x₃)) :=
+by
+  have hBase := @AxiomS2_univ_of_base x₁ x₂ x₃
+  have intBase := SH_int_comp.base hBase
+  have intForall1 := @SH_int_comp.unbForall (AxiomS2_matrix x₁ x₂ x₃) [] [] (AxiomS2_matrix x₁ x₂ x₃) x₃ intBase
+  rw [[x₃].append_nil] at intForall1
+  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₃ (AxiomS2_matrix x₁ x₂ x₃)) [x₃] [] (AxiomS2_matrix x₁ x₂ x₃) x₂ intForall1
+  have intForall3 := @SH_int_comp.unbForall (∀₁₁ x₂ (∀₁₁ x₃ (AxiomS2_matrix x₁ x₂ x₃))) [x₂ , x₃] [] (AxiomS2_matrix x₁ x₂ x₃) x₁ intForall2
+  exact intForall3
+
+-- SECONDARY AXIOMS
+
+lemma AxiomS1_int
+  (x₁ x₂ : String) :
+  SH_int_comp (AxiomS1 x₁ x₂) ([x₁]++[x₂],[],(AxiomS1_matrix x₁ x₂)) :=
+by
+  have hBase := @AxiomS1_univ_of_base x₁ x₂
+  have intBase := SH_int_comp.base hBase
+  have intForall1 := @SH_int_comp.unbForall (AxiomS1_matrix x₁ x₂) [] [] (AxiomS1_matrix x₁ x₂) x₂ intBase
+  rw [[x₂].append_nil] at intForall1
+  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₂ (AxiomS1_matrix x₁ x₂)) [x₂] [] (AxiomS1_matrix x₁ x₂) x₁ intForall1
+  exact intForall2
+
+lemma AxiomP2_int
+  (x₁ x₂ x₃ : String) :
+  SH_int_comp (AxiomP2 x₁ x₂ x₃) ([x₁]++[x₂]++[x₃],[],(AxiomP2_matrix x₁ x₂ x₃)) :=
+by
+  have hBase := @AxiomP2_univ_of_base x₁ x₂ x₃
+  have intBase := SH_int_comp.base hBase
+  have intForall1 := @SH_int_comp.unbForall (AxiomP2_matrix x₁ x₂ x₃) [] [] (AxiomP2_matrix x₁ x₂ x₃) x₃ intBase
+  rw [[x₃].append_nil] at intForall1
+  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₃ (AxiomP2_matrix x₁ x₂ x₃)) [x₃] [] (AxiomP2_matrix x₁ x₂ x₃) x₂ intForall1
+  have intForall3 := @SH_int_comp.unbForall (∀₁₁ x₂ (∀₁₁ x₃ (AxiomP2_matrix x₁ x₂ x₃))) [x₂ , x₃] [] (AxiomP2_matrix x₁ x₂ x₃) x₁ intForall2
+  exact intForall3
+
+lemma AxiomS3_int
+  (b a f x : String) :
+  SH_int_comp (AxiomS3 b a f x) ([a]++[f]++[b],[],(AxiomS3_matrix b a f x)) :=
+by
+  have hBase := @AxiomS3_univ_of_base b a f x
+  have intBase := SH_int_comp.base hBase
+  have intForall1 := @SH_int_comp.unbForall (AxiomS3_matrix b a f x) [] [] (AxiomS3_matrix b a f x) b intBase
+  rw [[b].append_nil] at intForall1
+  have intForall2 := @SH_int_comp.unbForall (∀₁₁ b (AxiomS3_matrix b a f x)) [b] [] (AxiomS3_matrix b a f x) f intForall1
+  have intForall3 := @SH_int_comp.unbForall (∀₁₁ f (∀₁₁ b (AxiomS3_matrix b a f x))) [f , b] [] (AxiomS3_matrix b a f x) a intForall2
+  exact intForall3
+
+lemma AxiomS4_int
+  (x₁ x₂ : String) :
+  SH_int_comp (AxiomS4 x₁ x₂) ([x₁],[],(AxiomS4_matrix x₁ x₂)) :=
+by
+  have hBase := @AxiomS4_univ_of_base x₁ x₂
+  have intBase := SH_int_comp.base hBase
+  have intForm := @SH_int_comp.unbForall (AxiomS4_matrix x₁ x₂) [] [] (AxiomS4_matrix x₁ x₂) x₁ intBase
+  rw [[x₁].append_nil] at intForm
+  exact intForm
+
+
+
+
+-- ----------------------------------------------------
+-- ----------------------------------------------------
+
 
 theorem SoundnessTheorem
   (A B : Formula)
   --(t : List Term)
   (x y f : String)
-
-  (hA1 : SH_int_comp A (a,b,A_SH))
+  (pa : Γ₁ ⊢ A)
+  (hG : Γ₁ = insert (bAC_star_om x y f c d B) Γ)
   --(hA2 : AuSH.components = (a,b,A_SH))
   --(hA3 : isBase A_SH)
-  (hG : Γ₁ = insert (bAC_star_om x y f c d B) Γ)
-  (pa : Γ₁ ⊢ A) :
+   :
   --(Provable (bAC x y f A)) →
-  ∃(t:List Term), (Γ ⊢ (∀₁ a (A_SH.subst (HashMap.ofList (b.zip (t⊙(a.tt))))))) := by --sorry
+  ∃a b A_SH,
+  SH_int_comp A (a,b,A_SH) ∧
+  ∃(t:List Term), (Γ ⊢ (∀₁ a (A_SH.subst (HashMap.ofList (b.zip (t⊙(a.tt))))))) := by
     cases pa
     . -- Ax
       rename_i AinΓ
@@ -193,34 +319,86 @@ theorem SoundnessTheorem
       sorry
     . -- forallInt
       sorry
-    . -- Os axiomas que são universal closures of base formulas
-      -- repeat {} OU acrescentar lema
+  -- Os axiomas que são universal closures of base formulas
+    . -- repeat {} OU acrescentar lema
       rename_i z
-      let H := isBase (AxiomE1 z)
-      use []
-      simp [HashMap.ofList]
-      rw [Formula.subst_empty]
-      have H1 := AxiomE1_int z
-      have H2 := SH_int_same hA1 H1
-      have H3 := H2.left
-      have H4 := H2.right
-      have H5 := H4.left
-      have H6 := H4.right
-      rw [H6, H3]
-      apply AxE₁
-      -- acrescentar interp do axioma
-      -- apply lemma para quantificadores ficarem vazios
-    . sorry
-    . sorry
-    . sorry
-    . sorry
-    . sorry
-    . sorry
-    . sorry
-    . sorry
+      use [z], [], (AxiomE1_matrix z)
+      have intAxE1 := AxiomE1_int z
+      constructor
+      . exact intAxE1
+      . use []
+        simp [HashMap.ofList]
+        --unfold AxiomE1_matrix unbForallTuple
+        --simp [List.foldr]
+        apply AxE₁
+    . -- Os axiomas que são universal closures of base formulas
+      rename_i x₁ x₂ A hAbase
+      use [x₁, x₂], [], (AxiomE2_matrix x₁ x₂ A hAbase)
+      have intAxE2 := AxiomE2_int A hAbase x₁ x₂
+      constructor
+      . exact intAxE2
+      . use []
+        simp [HashMap.ofList]
+        apply AxE₂
+        --unfold AxiomE2_matrix unbForallTuple
+    . sorry   -- é o AxU -> falta interp de AxU
+    . rename_i x₁ x₂
+      use [x₁, x₂], [], (AxiomC1_matrix x₁ x₂)
+      have intAxC1 := AxiomC1_int x₁ x₂
+      constructor
+      . exact intAxC1
+      . use []
+        simp [HashMap.ofList]
+        apply AxC₁
+    . rename_i x₁ x₂ x₃
+      use [x₁, x₂, x₃], [], (AxiomC2_matrix x₁ x₂ x₃)
+      have intAxC2 := AxiomC2_int x₁ x₂ x₃
+      constructor
+      . exact intAxC2
+      . use []
+        simp [HashMap.ofList]
+        apply AxC₂
+    . rename_i x₁ x₂
+      use [x₁, x₂], [], (AxiomP1_matrix x₁ x₂)
+      have intAxP1 := AxiomP1_int x₁ x₂
+      constructor
+      . exact intAxP1
+      . use []
+        simp [HashMap.ofList]
+        apply AxP₁
+    . rename_i x₁ x₂ x₃
+      use [x₁, x₂, x₃], [], (AxiomP2_matrix x₁ x₂ x₃)
+      have intAxP2 := AxiomP2_int x₁ x₂ x₃
+      constructor
+      . exact intAxP2
+      . use []
+        simp [HashMap.ofList]
+        apply AxP₂
+    . rename_i x₁ x₂
+      use [x₁, x₂], [], (AxiomS1_matrix x₁ x₂)
+      have intAxS1 := AxiomS1_int x₁ x₂
+      constructor
+      . exact intAxS1
+      . use []
+        simp [HashMap.ofList]
+        apply AxS₁
+    . rename_i x₁ x₂ x₃
+      use [x₁, x₂, x₃], [], (AxiomS2_matrix x₁ x₂ x₃)
+      have intAxS2 := AxiomS2_int x₁ x₂ x₃
+      constructor
+      . exact intAxS2
+      . use []
+        simp [HashMap.ofList]
+        apply AxS₂
     . sorry
     . rename_i x₁ x₂
-      sorry
+      use [x₁], [], (AxiomS4_matrix x₁ x₂)
+      have intAxS4 := AxiomS4_int x₁ x₂
+      constructor
+      . exact intAxS4
+      . use []
+        simp [HashMap.ofList]
+        apply AxS₄
 
 /-
 Limpar o que está multiply defined
@@ -399,122 +577,6 @@ Com subst: ⟹
 -/
 
 
--- -------------------------------------------------------
-
--- INTERPRETAÇÕES DOS AXIOMAS (dos que são universal closures de base formulas)
-
--- EQUALITY AXIOMS
-
--- TBD : a repor AxiomE1_int stuff aqui
-
-lemma AxiomE2_int
-  (A : Formula) (hAbase : isBase A)
-  (x₁ x₂ : String) :
-  SH_int_comp (AxiomE2 x₁ x₂ A hAbase) ([x₁]++[x₂],[],(AxiomE2_matrix x₁ x₂ A hAbase)) :=
-by
-  have hBase := @AxiomE2_univ_of_base x₁ x₂ A hAbase
-  have intBase := @SH_int_comp.base (AxiomE2_matrix x₁ x₂ A hAbase) hBase
-  have intForall1 := @SH_int_comp.unbForall (AxiomE2_matrix x₁ x₂ A hAbase) [] [] (AxiomE2_matrix x₁ x₂ A hAbase) x₂ intBase
-  rw [[x₂].append_nil] at intForall1
-  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₂ (AxiomE2_matrix x₁ x₂ A hAbase)) [x₂] [] (AxiomE2_matrix x₁ x₂ A hAbase) x₁ intForall1
-  exact intForall2
-
--- COMBINATORY AXIOMS
-
-lemma AxiomC1_int
-  (x₁ x₂ : String) :
-  SH_int_comp (AxiomC1 x₁ x₂) ([x₁]++[x₂],[],(AxiomC1_matrix x₁ x₂)) :=
-by
-  have hBase := @AxiomC1_univ_of_base x₁ x₂
-  have intBase := SH_int_comp.base hBase
-  have intForall1 := @SH_int_comp.unbForall (AxiomC1_matrix x₁ x₂) [] [] (AxiomC1_matrix x₁ x₂) x₂ intBase
-  rw [[x₂].append_nil] at intForall1
-  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₂ (AxiomC1_matrix x₁ x₂)) [x₂] [] (AxiomC1_matrix x₁ x₂) x₁ intForall1
-  exact intForall2
-
-lemma AxiomC2_int
-  (x₁ x₂ x₃ : String) :
-  SH_int_comp (AxiomC2 x₁ x₂ x₃) ([x₁]++[x₂]++[x₃],[],(AxiomC2_matrix x₁ x₂ x₃)) :=
-by
-  have hBase := @AxiomC2_univ_of_base x₁ x₂ x₃
-  have intBase := SH_int_comp.base hBase
-  have intForall1 := @SH_int_comp.unbForall (AxiomC2_matrix x₁ x₂ x₃) [] [] (AxiomC2_matrix x₁ x₂ x₃) x₃ intBase
-  rw [[x₃].append_nil] at intForall1
-  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₃ (AxiomC2_matrix x₁ x₂ x₃)) [x₃] [] (AxiomC2_matrix x₁ x₂ x₃) x₂ intForall1
-  have intForall3 := @SH_int_comp.unbForall (∀₁₁ x₂ (∀₁₁ x₃ (AxiomC2_matrix x₁ x₂ x₃))) [x₂ , x₃] [] (AxiomC2_matrix x₁ x₂ x₃) x₁ intForall2
-  exact intForall3
-
--- PRIMARY AXIOMS
-
-lemma AxiomP1_int
-  (x₁ x₂ : String) :
-  SH_int_comp (AxiomP1 x₁ x₂) ([x₁]++[x₂],[],(AxiomP1_matrix x₁ x₂)) :=
-by
-  have hBase := @AxiomP1_univ_of_base x₁ x₂
-  have intBase := SH_int_comp.base hBase
-  have intForall1 := @SH_int_comp.unbForall (AxiomP1_matrix x₁ x₂) [] [] (AxiomP1_matrix x₁ x₂) x₂ intBase
-  rw [[x₂].append_nil] at intForall1
-  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₂ (AxiomP1_matrix x₁ x₂)) [x₂] [] (AxiomP1_matrix x₁ x₂) x₁ intForall1
-  exact intForall2
-
-lemma AxiomS2_int
-  (x₁ x₂ x₃ : String) :
-  SH_int_comp (AxiomS2 x₁ x₂ x₃) ([x₁]++[x₂]++[x₃],[],(AxiomS2_matrix x₁ x₂ x₃)) :=
-by
-  have hBase := @AxiomS2_univ_of_base x₁ x₂ x₃
-  have intBase := SH_int_comp.base hBase
-  have intForall1 := @SH_int_comp.unbForall (AxiomS2_matrix x₁ x₂ x₃) [] [] (AxiomS2_matrix x₁ x₂ x₃) x₃ intBase
-  rw [[x₃].append_nil] at intForall1
-  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₃ (AxiomS2_matrix x₁ x₂ x₃)) [x₃] [] (AxiomS2_matrix x₁ x₂ x₃) x₂ intForall1
-  have intForall3 := @SH_int_comp.unbForall (∀₁₁ x₂ (∀₁₁ x₃ (AxiomS2_matrix x₁ x₂ x₃))) [x₂ , x₃] [] (AxiomS2_matrix x₁ x₂ x₃) x₁ intForall2
-  exact intForall3
-
--- SECONDARY AXIOMS
-
-lemma AxiomS1_int
-  (x₁ x₂ : String) :
-  SH_int_comp (AxiomS1 x₁ x₂) ([x₁]++[x₂],[],(AxiomS1_matrix x₁ x₂)) :=
-by
-  have hBase := @AxiomS1_univ_of_base x₁ x₂
-  have intBase := SH_int_comp.base hBase
-  have intForall1 := @SH_int_comp.unbForall (AxiomS1_matrix x₁ x₂) [] [] (AxiomS1_matrix x₁ x₂) x₂ intBase
-  rw [[x₂].append_nil] at intForall1
-  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₂ (AxiomS1_matrix x₁ x₂)) [x₂] [] (AxiomS1_matrix x₁ x₂) x₁ intForall1
-  exact intForall2
-
-lemma AxiomP2_int
-  (x₁ x₂ x₃ : String) :
-  SH_int_comp (AxiomP2 x₁ x₂ x₃) ([x₁]++[x₂]++[x₃],[],(AxiomP2_matrix x₁ x₂ x₃)) :=
-by
-  have hBase := @AxiomP2_univ_of_base x₁ x₂ x₃
-  have intBase := SH_int_comp.base hBase
-  have intForall1 := @SH_int_comp.unbForall (AxiomP2_matrix x₁ x₂ x₃) [] [] (AxiomP2_matrix x₁ x₂ x₃) x₃ intBase
-  rw [[x₃].append_nil] at intForall1
-  have intForall2 := @SH_int_comp.unbForall (∀₁₁ x₃ (AxiomP2_matrix x₁ x₂ x₃)) [x₃] [] (AxiomP2_matrix x₁ x₂ x₃) x₂ intForall1
-  have intForall3 := @SH_int_comp.unbForall (∀₁₁ x₂ (∀₁₁ x₃ (AxiomP2_matrix x₁ x₂ x₃))) [x₂ , x₃] [] (AxiomP2_matrix x₁ x₂ x₃) x₁ intForall2
-  exact intForall3
-
-lemma AxiomS3_int
-  (b a f x : String) :
-  SH_int_comp (AxiomS3 b a f x) ([a]++[f]++[b],[],(AxiomS3_matrix b a f x)) :=
-by
-  have hBase := @AxiomS3_univ_of_base b a f x
-  have intBase := SH_int_comp.base hBase
-  have intForall1 := @SH_int_comp.unbForall (AxiomS3_matrix b a f x) [] [] (AxiomS3_matrix b a f x) b intBase
-  rw [[b].append_nil] at intForall1
-  have intForall2 := @SH_int_comp.unbForall (∀₁₁ b (AxiomS3_matrix b a f x)) [b] [] (AxiomS3_matrix b a f x) f intForall1
-  have intForall3 := @SH_int_comp.unbForall (∀₁₁ f (∀₁₁ b (AxiomS3_matrix b a f x))) [f , b] [] (AxiomS3_matrix b a f x) a intForall2
-  exact intForall3
-
-lemma AxiomS4_int
-  (x₁ x₂ : String) :
-  SH_int_comp (AxiomS4 x₁ x₂) ([x₁],[],(AxiomS4_matrix x₁ x₂)) :=
-by
-  have hBase := @AxiomS4_univ_of_base x₁ x₂
-  have intBase := SH_int_comp.base hBase
-  have intForm := @SH_int_comp.unbForall (AxiomS4_matrix x₁ x₂) [] [] (AxiomS4_matrix x₁ x₂) x₁ intBase
-  rw [[x₁].append_nil] at intForm
-  exact intForm
 
 
 /-

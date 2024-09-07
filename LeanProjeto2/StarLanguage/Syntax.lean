@@ -100,10 +100,15 @@ lemma app_empty_list_fst (t : List Term) : (TermTupleApp_list [] t) = [] :=
 by
   rw [TermTupleApp_list]
 
-lemma app_empty_list_sec (t : List Term) : (TermTupleApp_list t []) = [] :=       -- TBD: Not working
+lemma app_empty_list_sec (t : List Term) : (TermTupleApp_list t []) = [] :=
 by
-  sorry
-  --rw [TermTupleApp_list]
+  induction t
+  case nil =>
+    rw [TermTupleApp_list]
+  case cons _ _ _ =>
+    simp
+
+
 
 lemma app_empty_lists : (TermTupleApp_list [] []) = [] :=
 by
