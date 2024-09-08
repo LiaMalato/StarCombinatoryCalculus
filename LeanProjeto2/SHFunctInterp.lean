@@ -138,7 +138,10 @@ inductive SH_int2 : Formula → Formula → Prop
 --(h : x ∉ t.freevars)
 
 
+-- Notação para HashMap.ofList (x.zip t)
+def with_t (x : List String) (t : List Term) := HashMap.ofList (x.zip t)
 
+notation x "⟹" t => with_t x t
 
 
 example (h1: SH_int2 A AuSH) (h2 : AuSH.components = (a,b,A_SH))
@@ -153,14 +156,33 @@ inductive SH_int_comp : Formula → (List String × List String × Formula) → 
          (SH_int_comp (A∨₁B) (a++c,b++d,(A_SH ∨₁ B_SH)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
 | neg {f a': List String}:
         SH_int_comp A (a,b,A_SH) →
-        (SH_int_comp (¬₁A) (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))))))))
+        (SH_int_comp (¬₁A) (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH.subst ((b ⟹ ((f.tt)⊙(a.tt)))))))))
+-- (SH_int_comp (¬₁A) (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH))     ).subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))          ))
 | unbForall : SH_int_comp A (a,b,A_SH) →
               (SH_int_comp (∀₁₁ x A) ([x]++a,b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
 | bForall : SH_int_comp A (a,b,A_SH) →
             (SH_int_comp (b∀₁ x t A) (a,b,(b∀₁ x t A_SH)))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
 
+inductive SH_int_comp2 : Formula → (List String × List String × Formula) → Prop
+| base : (h : isBase A) → (SH_int_comp2 A ([],[],A))
+| disj : SH_int_comp2 A (a,b,A_SH) →
+         SH_int_comp2 B (c,d,B_SH) →
+         (SH_int_comp2 (A∨₁B) (a++c,b++d,(A_SH ∨₁ B_SH)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+| neg {f a': List String}:
+        SH_int_comp2 A (a,b,A_SH) →
+        (SH_int_comp2 (¬₁A) (f,a',   (  (b∃₁ a (a'.tt) (¬₁(A_SH))).subst ((b ⟹ ((f.tt)⊙(a.tt))))  )     ))
+-- (SH_int_Comp (¬₁A) (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH))     ).subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))          ))
+| unbForall : SH_int_comp2 A (a,b,A_SH) →
+              (SH_int_comp2 (∀₁ x A) (x++a,b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+| bForall : SH_int_comp2 A (a,b,A_SH) →
+            (SH_int_comp2 (b∀₁ x t A) (a,b,(b∀₁ x t A_SH)))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
+
 def coisa (x y : String) := (var x =₁ var y)
 #check ¬₁ (coisa "x" "y")
+
+
+
+
 
 --({a,b} ⊆ A.allvars) →
 --({c,d} ⊆ B.allvars) →
@@ -179,11 +201,11 @@ def baseBase (A:Formula) (hA : isBase A) (hIntA: SH_int2 A AuSH) (hAcomp: AuSH.c
   := A_SH = A
 
 @[simp] -- DEFINITION: If A is base, then the lower SH-formula is equal to A
-def baseBase_comp (A:Formula) (hA : isBase A) (hIntA: SH_int_comp A ([],[],A_SH))
+def baseBase_comp (A:Formula) (hA : isBase A) (hIntA: SH_int_comp2 A ([],[],A_SH))
   := A_SH = A
 
 @[simp] -- DEFINITION: If A is base, then the interpretation of A is equal to A
-def baseBase_rec (A:Formula) (hA : isBase A) (hIntA: SH_int_comp A ([],[],A_SH))
+def baseBase_rec (A:Formula) (hA : isBase A) (hIntA: SH_int_comp2 A ([],[],A_SH))
   := (Recreate ([],[],A_SH)) = A
 
 -- ------------------------------------------------------
@@ -195,16 +217,16 @@ def SH_int_Comp : SH_int_type → (List String × List String × Formula)
 | SH_int_type.mk a b A_SH => (a, b, A_SH)
 
 def extract_tuple {A : Formula} {a b a' f : List String} {A_SH : Formula}
-  (hA : SH_int_comp A (a, b, A_SH)) (hB : SH_int_comp B (c, d, B_SH)) : (List String × List String × Formula) :=
+  (hA : SH_int_comp2 A (a, b, A_SH)) (hB : SH_int_comp2 B (c, d, B_SH)) : (List String × List String × Formula) :=
   match A with
   | (.or A B)           => (a++c, b++d, A)
-  | (.not A)            => (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH.subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt))))))))
+  | (.not A)            => (f,a',((b∃₁ a (a'.tt) (¬₁(A_SH))).subst (b ⟹ ((f.tt)⊙(a.tt)))))
   | (.unbForall x A)    => (a++[x],b,A_SH)
   | (.bForall x t A)    => (a,b,(b∀₁₁ x t A_SH))
   | A                   => ([],[],A)
 
 def extract_tuple_base {A: Formula} (hA : isBase A)
-  (hAint : SH_int_comp A ([], [], A)) : (List String × List String × Formula) :=
+  (hAint : SH_int_comp2 A ([], [], A)) : (List String × List String × Formula) :=
   ([], [], A)
 
 /-
@@ -229,18 +251,18 @@ lemma List.union_nilTPC (l : List String) (heq : eraseDup l = l) : l ∪ [] = l 
 lemma List.union_nil (l : List String): l ∪ [] = l := by sorry
 
 -- Example teste: (∀₁₁ x A)^SH = ∀ a,x ∃ b A_SH
-example (h: SH_int_comp A (a,b,A_SH)) :
-        SH_int_comp (∀₁₁ x A) ([x]++a,b,A_SH) :=
+example (h: SH_int_comp2 A (a,b,A_SH)) :
+        SH_int_comp2 (∀₁ x A) (x++a,b,A_SH) :=
 by
-  exact @SH_int_comp.unbForall A a b A_SH x h
+  exact @SH_int_comp2.unbForall A a b A_SH x h
 
 -- EXAMPLE 2.1: (A ∨ (∀x∈t B(x)))^SH = ∀a ∃b (A_SH ∨₁ (b∀₁ [x] t B))
-example (A B : Formula) (hA: SH_int_comp A (a,b,A_SH)) (hB : isBase B) :
-        SH_int_comp (A ∨₁ (b∀₁ [x] t B)) (a,b,(A_SH ∨₁ (b∀₁ [x] t B))) :=
+example (A B : Formula) (hA: SH_int_comp2 A (a,b,A_SH)) (hB : isBase B) :
+        SH_int_comp2 (A ∨₁ (b∀₁ [x] t B)) (a,b,(A_SH ∨₁ (b∀₁ [x] t B))) :=
 by
-  have intB := SH_int_comp.base hB                                                             -- B
-  have intForall := @SH_int_comp.bForall B [] [] B [x] t intB                                  -- ∀x∈t B(x)
-  have intOr := @SH_int_comp.disj A a b A_SH (b∀₁ [x] t B) [] [] (b∀₁ [x] t B) hA intForall    -- A_SH ∨ ∀x∈t B(x)
+  have intB := SH_int_comp2.base hB                                                             -- B
+  have intForall := @SH_int_comp2.bForall B [] [] B [x] t intB                                  -- ∀x∈t B(x)
+  have intOr := @SH_int_comp2.disj A a b A_SH (b∀₁ [x] t B) [] [] (b∀₁ [x] t B) hA intForall    -- A_SH ∨ ∀x∈t B(x)
   have Ha := a.append_nil
   have Hb := b.append_nil
   rw [Ha,Hb] at intOr
@@ -251,31 +273,47 @@ by
 -- Interpretation of ∀y∈t ¬(∃x ¬A(x) ∧ B(y)).
 -- ---------------------------------------------------------------------
 
-lemma ex_2_2_PrimSymbb (A B : Formula) (x y : String) (t : Term) : (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁A))∧₁B))) = (b∀₁₁ y t ((∀₁₁ x A)∨₁(¬₁B))) :=
+lemma ex_2_2_PrimSymbb (A B : Formula) (x y : List String) (t : List Term) : (b∀₁ y t (¬₁((∃₁ x (¬₁A))∧₁B))) = (b∀₁ y t ((∀₁ x A)∨₁(¬₁B))) :=
 by
-  rw [DeMorgan_and (∃₁₁ x (¬₁A)) B]
-  unfold unbExists
+  rw [DeMorgan_and (∃₁ x (¬₁A)) B]
+  unfold unbExistsTuple
   rw [DoubleNeg, DoubleNeg]
 
+-- VERSAO ERRADA
 -- EXAMPLE 2.2: (∀y∈t ¬(∃x ¬A(x) ∧ B(y)))^SH = ∀a ∃b (A_SH ∨₁ (b∀₁ [x] t B))
 example (A B : Formula)
         (intA: SH_int_comp A (a,b,A_SH))
         (intB: SH_int_comp B (c,d,B_SH)) :
-        SH_int_comp (b∀₁₁ y t (¬₁((∃₁₁ x (¬₁ A))∧₁B))) ([x]++a++g,b++c',(b∀₁₁ y t (A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip ((g.tt)⊙(c.tt)))))))))) :=
+        SH_int_comp (b∀₁ y t (¬₁((∃₁ x (¬₁ A))∧₁B))) (x++a++g,b++c',(b∀₁ y t (A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip ((g.tt)⊙(c.tt)))))))))) :=
+by
+  sorry
+  --rw [ex_2_2_PrimSymbb A B x y t]                                       -- ∀y∈t ¬ (∀x A(x) ∨ ¬B(y))
+  --have intForallA := @SH_int_comp.unbForall A a b A_SH x intA             -- ∀x,a ∃b A_SH(x,a,b)
+  --have intNotB := @SH_int_comp.neg B c d B_SH g c' intB                   -- ∀g ∃c' [∃ c c' ¬B_SH(c,gc)]
+  --have intOr := SH_int_comp.disj intForallA intNotB                     -- ∀x,a,g ∃b,c' [A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc))]
+  --let Form_SH := (A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH.subst (d ⟹ (g.tt⊙c.tt))))))
+  --exact @SH_int_comp.bForall ((∀₁₁ x A).or B.not) ([x]++ a++g) (b ++ c') Form_SH [y] [t] intOr        -- ∀x,a,g ∃b,c' [∀y∈t (A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc)))]
+
+-- VERSAO CERTA
+-- EXAMPLE 2.2: (∀y∈t ¬(∃x ¬A(x) ∧ B(y)))^SH = ∀a ∃b (A_SH ∨₁ (b∀₁ [x] t B))
+example (A B : Formula)
+        (intA: SH_int_comp2 A (a,b,A_SH))
+        (intB: SH_int_comp2 B (c,d,B_SH)) :
+        SH_int_comp2 (b∀₁ y t (¬₁((∃₁ x (¬₁ A))∧₁B))) (x++a++g,b++c',((b∀₁ y t (A_SH ∨₁ ((b∃₁ c (c'.tt) (¬₁(B_SH)))).subst (HashMap.ofList (d.zip ((g.tt)⊙(c.tt)))) )))) :=
 by
   --have hPrim := ex_2_2_PrimSymbb A B x y t
   rw [ex_2_2_PrimSymbb A B x y t]                                       -- ∀y∈t ¬ (∀x A(x) ∨ ¬B(y))
-  have intForallA := @SH_int_comp.unbForall A a b A_SH x intA             -- ∀x,a ∃b A_SH(x,a,b)
-  have intNotB := @SH_int_comp.neg B c d B_SH g c' intB                   -- ∀g ∃c' [∃ c c' ¬B_SH(c,gc)]
-  have intOr := SH_int_comp.disj intForallA intNotB                     -- ∀x,a,g ∃b,c' [A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc))]
+  have intForallA := @SH_int_comp2.unbForall A a b A_SH x intA             -- ∀x,a ∃b A_SH(x,a,b)
+  have intNotB := @SH_int_comp2.neg B c d B_SH g c' intB                   -- ∀g ∃c' [∃ c c' ¬B_SH(c,gc)]
+  have intOr := SH_int_comp2.disj intForallA intNotB                     -- ∀x,a,g ∃b,c' [A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc))]
   --let Form := ((∀₁₁ x A).or B.not) -- b∀₁₁ y t
-  let Form_SH := (A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip (g.tt⊙c.tt)))))))
-  exact @SH_int_comp.bForall ((∀₁₁ x A).or B.not) ([x]++ a++g) (b ++ c') Form_SH [y] [t] intOr        -- ∀x,a,g ∃b,c' [∀y∈t (A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc)))]
+  let Form_SH := ((A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH)))).subst (d ⟹ (g.tt⊙c.tt)))
+  exact @SH_int_comp2.bForall ((∀₁ x A).or B.not) (x++a++g) (b ++ c') (A_SH ∨₁ ((b∃₁ c (c'.tt) (¬₁(B_SH)))).subst (d ⟹ (g.tt⊙c.tt))) y t intOr
 
--- Notação para HashMap.ofList (x.zip t)
-def with_t (x : List String) (t : List Term) := HashMap.ofList (x.zip t)
 
-notation x "⟹" t => with_t x t
+
+
+
 
 
 -- ---------------------------------------------------------------------
@@ -287,20 +325,8 @@ notation x "⟹" t => with_t x t
 
 #check F_iff
 
+-- VERSAO ERRADA
 lemma SH_imp
-  (A B : Formula)
-  (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
-  (intB : SH_int_comp B (c,d,B_SH))
-  (f a' : List String): SH_int_comp (A→₁B) (f++c, a'++d, ((b∀₁ a a'.tt (A_SH.subst (HashMap.ofList (b.zip (f.tt⊙a.tt)))))→₁B_SH)) :=
-by
-  unfold F_implies
-  have intNotA := @SH_int_comp.neg A a b A_SH f a' intA
-  have intForm := SH_int_comp.disj intNotA intB
-  rw [bExistsTuple] at intForm
-  rw [DoubleNeg] at intForm
-  exact intForm
-
-lemma SH_imp2
   (A B : Formula)
   (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
   (intB : SH_int_comp B (c,d,B_SH))
@@ -313,20 +339,119 @@ by
   rw [DoubleNeg] at intForm
   exact intForm
 
-lemma SH_and
+-- VERSAO CERTA
+lemma SH_imp_corr     -- (A→B) = (¬A ∨ B)
   (A B : Formula)
-  (intA : SH_int_comp A (a,b,A_SH)) (f f' g g' a' Φ Ψ : List String)
-  (intB : SH_int_comp B (c,d,B_SH)):
-  SH_int_comp (A∧₁B) (Φ++Ψ, f'++g', (A)) :=
-by sorry
+  (intA : SH_int_comp2 A (a,b,A_SH)) (f a' : List String)
+  (intB : SH_int_comp2 B (c,d,B_SH))
+  (f a' : List String): SH_int_comp2 (A→₁B) (f++c, a'++d, ((((b∀₁ a a'.tt A_SH).subst (b ⟹ (f.tt⊙a.tt)))))→₁B_SH) :=
+by
+  unfold F_implies
+  have intNotA := @SH_int_comp2.neg A a b A_SH f a' intA
+  have intForm := SH_int_comp2.disj intNotA intB
+  rw [bExistsTuple] at intForm
+  rw [DoubleNeg] at intForm
+  exact intForm
 
-/-
-(b∀₁ a a'.tt (A_SH.subst (HashMap.ofList (b.zip (f.tt⊙a.tt)))))→₁B_SH
+-- VERSAO CERTA COM NOTATION
+lemma SH_imp_corr2     -- (A→B) = (¬A ∨ B)
+  (A : Formula) {a b : List String} {A_SH : Formula}
+  (intA : SH_int_comp2 A (a,b,A_SH))
+  (B : Formula) {c d : List String} {B_SH : Formula}
+  (intB : SH_int_comp2 B (c,d,B_SH))
+  (f a' : List String): SH_int_comp2 (A→₁B) (f++c, a'++d, ((((b∀₁ a a'.tt A_SH).subst ((b ⟹ (f.tt⊙a.tt)))))→₁B_SH)) :=
+by
+  unfold F_implies
+  have intNotA := @SH_int_comp2.neg A a b A_SH f a' intA
+  have intForm := SH_int_comp2.disj intNotA intB
+  rw [bExistsTuple] at intForm
+  rw [DoubleNeg] at intForm
+  exact intForm
 
-b∃₁ f f' (b∃₁ g g' ((b∀₁ a BLA A.SUBST) ∧₁ (b∀₁ c BLA B.SUBST)))
--/
+#check SH_imp_corr2
 
+-- -----------------------
 
+-- Interpretation of A ∧ B.
+
+-- VERSÃO CERTA
+-- Damos as infos sobre A e depois as infos sobre B
+lemma SH_and              -- (A∧₁B) = ¬((¬A) ∨ (¬B))
+  (A : Formula) (a b : List String) (A_SH : Formula)
+  (intA : SH_int_comp2 A (a,b,A_SH)) (f a' f' Φ : List String)
+  (B : Formula) (c d : List String) (B_SH : Formula)
+  (intB : SH_int_comp2 B (c,d,B_SH)) (g c' g' Ψ : List String):
+  SH_int_comp2 (A∧₁B)
+  (Φ++Ψ, f'++g',
+  (b∃₁ (f++g) (f'++g').tt ( (((b∀₁ a a'.tt A_SH)).subst (b ⟹ (f.tt⊙a.tt)) ) ∧₁ (((b∀₁ c c'.tt B_SH)).subst (d ⟹ (g.tt⊙c.tt)) ) )).subst ((a'++c') ⟹ ((Φ++Ψ).tt⊙(f++g).tt))) :=
+by
+  unfold F_and
+  rw [bExistsTuple]
+  have intNotA := @SH_int_comp2.neg A a b A_SH f a' intA
+  have intNotB := @SH_int_comp2.neg B c d B_SH g c' intB
+  have intOr := SH_int_comp2.disj intNotA intNotB
+  have intForm := @SH_int_comp2.neg ((¬₁A)∨₁(¬₁B)) (f++g) (a'++c') ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt) ∨₁ (b∃₁ c c'.tt (¬₁B_SH)).subst (d⟹g.tt⊙c.tt)) (Φ++Ψ) (f'++g') intOr
+  rw [bExistsTuple, bExistsTuple, bExistsTuple, DoubleNeg, DoubleNeg, DoubleNeg] at intForm
+  rw [DoubleNeg]
+  exact intForm
+
+#check SH_and
+
+-- --------------------------
+-- LEMA PARA TESTAR negação com tuplos de tamanhos diferentes, cenas com ∃x₁∈t₁ ∃x₂∈t₂
+lemma TesteTuplos
+  (A:Formula)
+  (a a₁ a₂ b : String)
+  (H : SH_int_comp A ([a₁, a₂],[b],A_SH)) :
+  (SH_int_comp (¬₁A) (B,[a₁',a₂'],(b∃₁ [a₁, a₂] [a₁',a₂'].tt (¬₁(A_SH.subst (HashMap.ofList ([b].zip ((B.tt)⊙([a₁,a₂].tt))))))))) :=
+by
+  exact @SH_int_comp.neg A [a₁,a₂] [b] A_SH B [a₁',a₂'] H
+
+lemma TesteTuplos2
+  (A:Formula)
+  (a a₁ a₂ b : List String)
+  (H : SH_int_comp A (a₁++a₂,b,A_SH)) :
+  (SH_int_comp (¬₁A) (B,a₁'++a₂',(b∃₁ (a₁++a₂) (a₁'++a₂').tt (¬₁(A_SH.subst (HashMap.ofList (b.zip ((B.tt)⊙((a₁++a₂).tt))))))))) :=
+by
+  exact @SH_int_comp.neg A (a₁++a₂) b A_SH B (a₁'++a₂') H
+
+-- -------------------------------------
+
+-- Interpretation of ∃x A(x).
+
+-- VERSÃO CERTA
+lemma SH_unbExists
+  (A : Formula)
+  (intA : SH_int_comp2 A (a,b,A_SH)) (a' f f' Φ : List String) (x x' : List String):
+  SH_int_comp2 (∃₁ x A) (Φ, x'++f', ((b∃₁ (x++f) (x'++f').tt ((b∀₁ a (a'.tt) A_SH).subst (b⟹f.tt⊙a.tt))).subst (a' ⟹ ((Φ.tt)⊙((x++f).tt))))) :=
+by
+  unfold unbExistsTuple
+  have intNot := @SH_int_comp2.neg A a b A_SH f a' intA
+  have intForall := @SH_int_comp2.unbForall (¬₁A) f a' ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)) x intNot
+  have intForm := @SH_int_comp2.neg (∀₁ x (¬₁A)) (x++f) a' ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)) Φ (x'++f') intForall
+  rw [bExistsTuple, bExistsTuple] at intForm
+  rw [DoubleNeg, DoubleNeg] at intForm
+  rw [bExistsTuple]
+  exact intForm
+
+-- -------------------------------------
+
+-- Interpretation of ∃x∈t A(x).
+
+-- VERSAO CERTA
+lemma SH_bExists
+  (A : Formula) (a b : List String) (A_SH : Formula)
+  (intA : SH_int_comp2 A (a,b,A_SH))  (f a' f' Φ : List String) (x : List String) (t : List Term):
+  SH_int_comp2 (b∃₁ x t A) (Φ, f', ((b∃₁ f (f'.tt) ((b∃₁ x t ((b∀₁ a (a'.tt) A_SH).subst (b ⟹ (f.tt⊙a.tt)) )))).subst (a' ⟹ (Φ.tt⊙f.tt)))) :=
+by
+  unfold bExistsTuple
+  have intNot := @SH_int_comp2.neg A a b A_SH f a' intA
+  have intbForall := @SH_int_comp2.bForall (¬₁ A) f a' ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)) x t intNot
+  have intForm := @SH_int_comp2.neg (b∀₁ x t (¬₁A)) f a' (b∀₁ x t ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))) Φ f' intbForall
+  rw [bExistsTuple, bExistsTuple] at intForm
+  rw [DoubleNeg, DoubleNeg] at intForm
+  rw [DoubleNeg]
+  exact intForm
 
 -- ---------------------------------------------------------------------
 -- REMARK 2.4 (p.43)
@@ -342,21 +467,34 @@ example (A B C : Formula)
 
 #check app_empty_list_fst
 
+-- TBD: stuck at empty
 example (B : Formula)
-        (intB: SH_int_comp B (a,[],B_SH)):
-        SH_int_comp (¬₁ B) ([],a',(b∃₁ a (a'.tt) ((¬₁B_SH)))) :=
+        (intB: SH_int_comp2 B (a,[],B_SH)):
+        SH_int_comp2 (¬₁ B) ([],a',(b∃₁ a (a'.tt) ((¬₁B_SH)))) :=
 by
-  have hA := @SH_int_comp.neg B a [] B_SH [] a' intB
+  have intNot := @SH_int_comp2.neg B a [] B_SH [] a' intB
+  simp
+  rw [bExistsTuple, with_t] at intNot
+  rw [DoubleNeg] at intNot
+  --have H := app_empty_list_fst List.nil (a.tt)
+  simp [HashMap.ofList] at intNot
+  --simp [HashMap.empty] at intNot
+
+  --simp [mkHashMap] at intNot
+  --have H := app_empty_list_fst ([].tt) (a.tt)
   --have H := app_empty_list_fst List.nil (a.tt)
   --rw [app_empty_list_fst ([].tt) (a.tt)] at hA
   sorry
 
-
+-- TBD: stuck at empty
 example (C : Formula)
-        (intC: SH_int_comp C ([],b,C_SH)):
-        SH_int_comp (¬₁ C) (b,[],(¬₁C_SH)) :=
+        (intC: SH_int_comp2 C ([],b,C_SH)):
+        SH_int_comp2 (¬₁ C) (b,[],(¬₁C_SH)) :=
 by
-  have hA := @SH_int_comp.neg C [] b C_SH b [] intC
+  have intNot := @SH_int_comp2.neg C [] b C_SH b [] intC
+  rw [bExistsTuple, with_t] at intNot
+  rw [DoubleNeg, HashMap.ofList] at intNot
+  --simp [HashMap.ofList] at intNot
   sorry
   --rw [app_empty_list_fst (b.tt) []] at hA
 

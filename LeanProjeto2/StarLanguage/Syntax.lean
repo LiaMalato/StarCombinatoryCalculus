@@ -96,10 +96,12 @@ def TermTupleApp_list : List Term → List Term → List Term
   let appNested := qs.reverse.foldr (fun q acc => app acc q) t
   (appNested :: (TermTupleApp_list ts qs))
 
+@[simp]
 lemma app_empty_list_fst (t : List Term) : (TermTupleApp_list [] t) = [] :=
 by
   rw [TermTupleApp_list]
 
+@[simp]
 lemma app_empty_list_sec (t : List Term) : (TermTupleApp_list t []) = [] :=
 by
   induction t

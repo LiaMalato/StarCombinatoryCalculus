@@ -229,3 +229,88 @@ def SH_int2 : Formula → Formula
 --def SH_int (α β : Finset String) (A : Formula) : Formula := ∀ α, ∃ β
 
 -- TO DO no: mudar def de substitution para que sejam Term.var em vez de String
+
+
+
+-- ------------------------------------------
+-- INTERPRETATION OF BOUNDED AXIOM OF CHOICE
+-- ------------------------------------------
+
+/-
+lemma bAC_int_testinho
+  (x y f a b : String) (A : Formula) (hAbase : isBase A) (y' g a' Φ f' : String):
+  SH_int_comp2 (bAC_star_om x y f a b A) ([g]++[Φ],[x']++[f'],
+    (((¬₁(b∀₁ [x] [var x'] (¬₁((b∀₁ [y] [var y'] (¬₁A)))))).subst ([y']⟹[var g·var x]))) ∨₁
+      (((¬₁(b∀₁ [f] [var f'] (¬₁(b∀₁ [a] [var a'] (¬₁(b∀₁₁ b (var f·var a) (¬₁A))))))).subst
+        ([a']⟹[var Φ·var f])))) :=
+by
+  -- LHS
+  have notA := isBase.b_not hAbase
+  have intNot1_L := SH_int_comp2.base notA
+  have intUnbF1_L := @SH_int_comp2.unbForall (¬₁A) [] [] (¬₁A) [y] intNot1_L
+  rw [[y].append_nil] at intUnbF1_L
+  have intNot2_L := @SH_int_comp2.neg (∀₁₁ y (¬₁A)) [y] [] (¬₁A) [] [y'] intUnbF1_L
+  rw [DoubleNeg] at intNot2_L
+  have H1 := Subst_with_empty (b∃₁ [y] [y'].tt A) y
+  rw [H1] at intNot2_L
+  have intUnbF2_L := @SH_int_comp2.unbForall (¬₁(∀₁₁ y (¬₁A))) [] [y'] ((b∃₁ [y] [y'].tt A).subst ([]⟹[].tt⊙[y].tt)) [x] intNot2_L
+  rw [[x].append_nil] at intUnbF2_L
+  rw [H1] at intUnbF2_L
+  have intNot3_L := @SH_int_comp2.neg (∀₁₁ x (¬₁(∀₁₁ y (¬₁A)))) [x] [y'] ((b∃₁ [y] [y'].tt A).subst ([]⟹[].tt⊙[y].tt)) [g] [x'] intUnbF2_L
+  rw [H1] at intNot3_L
+  -- RHS
+  have exA := @bExists_base A b ((var f)·(var a)) hAbase
+  have intB := SH_int_comp2.base exA
+  have intUnbF1_R := @SH_int_comp2.unbForall (b∃₁₁ b ((var f)·(var a)) A) [] [] (b∃₁₁ b ((var f)·(var a)) A) [a] intB
+  rw [[a].append_nil] at intUnbF1_R
+  have intNot1_R := @SH_int_comp2.neg (∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A)) [a] [] (b∃₁₁ b ((var f)·(var a)) A) [] [a'] intUnbF1_R
+  have H2 := Subst_with_empty (b∃₁ [a] [a'].tt (b∃₁₁ b (var f·var a) A).not) a
+  rw [H2] at intNot1_R
+  have intUnbF2_R := @SH_int_comp2.unbForall (¬₁(∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A))) [] [a'] ((b∃₁ [a] [a'].tt (¬₁(b∃₁₁ b (var f·var a) A))).subst ([]⟹[].tt⊙[a].tt)) [f] intNot1_R
+  rw [[f].append_nil] at intUnbF2_R
+  --have H3 := Subst_with_empty (b∃₁ [a] [a'].tt (b∃₁₁ b (var f·var a) A).not) a
+  rw [H2] at intUnbF2_R
+  have intNot2_R := @SH_int_comp2.neg (∀₁₁ f (¬₁(∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A)))) [f] [a'] ((b∃₁ [a] [a'].tt (¬₁(b∃₁₁ b (var f·var a) A))).subst ([]⟹[].tt⊙[a].tt)) [Φ] [f'] intUnbF2_R
+  rw [H2] at intNot2_R
+  -- All together
+  rw [bAC_star_om]
+  have intForm := SH_int_comp2.disj intNot3_L intNot2_R
+  simp
+  rw [bExists, bExistsTuple, bExistsTuple, bExistsTuple, bExistsTuple] at intForm
+  rw [DoubleNeg, DoubleNeg, DoubleNeg] at intForm
+  exact intForm
+
+lemma bAC_int2
+  (x y f a b : String) (A : Formula) (hAbase : isBase A) (y' g a' Φ f' : String):
+  SH_int_comp2 (bAC_star_om x y f a b A) ([g]++[Φ],[x']++[f'],
+    (((¬₁(b∀₁ [x] [var x'] (¬₁((b∀₁ [y] [var y'] (¬₁A))).subst ([]⟹[])))).subst ([y']⟹[var g·var x]))) ∨₁
+      (((¬₁(b∀₁ [f] [var f'] ((¬₁(b∀₁ [a] [var a'] (¬₁(b∀₁₁ b (var f·var a) (¬₁A))))).subst ([]⟹[])))).subst
+        ([a']⟹[var Φ·var f])))) :=
+by
+  -- LHS
+  have notA := isBase.b_not hAbase
+  have intNot1_L := SH_int_comp2.base notA
+  have intUnbF1_L := @SH_int_comp2.unbForall (¬₁A) [] [] (¬₁A) [y] intNot1_L
+  rw [[y].append_nil] at intUnbF1_L
+  have intNot2_L := @SH_int_comp2.neg (∀₁₁ y (¬₁A)) [y] [] (¬₁A) [] [y'] intUnbF1_L
+  rw [DoubleNeg] at intNot2_L
+  have intUnbF2_L := @SH_int_comp2.unbForall (¬₁(∀₁₁ y (¬₁A))) [] [y'] ((b∃₁ [y] [y'].tt A).subst ([]⟹[].tt⊙[y].tt)) [x] intNot2_L
+  rw [[x].append_nil] at intUnbF2_L
+  have intNot3_L := @SH_int_comp2.neg (∀₁₁ x (¬₁(∀₁₁ y (¬₁A)))) [x] [y'] ((b∃₁ [y] [y'].tt A).subst ([]⟹[].tt⊙[y].tt)) [g] [x'] intUnbF2_L
+  -- RHS
+  have exA := @bExists_base A b ((var f)·(var a)) hAbase
+  have intB := SH_int_comp2.base exA
+  have intUnbF1_R := @SH_int_comp2.unbForall (b∃₁₁ b ((var f)·(var a)) A) [] [] (b∃₁₁ b ((var f)·(var a)) A) [a] intB
+  rw [[a].append_nil] at intUnbF1_R
+  have intNot1_R := @SH_int_comp2.neg (∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A)) [a] [] (b∃₁₁ b ((var f)·(var a)) A) [] [a'] intUnbF1_R
+  have intUnbF2_R := @SH_int_comp2.unbForall (¬₁(∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A))) [] [a'] ((b∃₁ [a] [a'].tt (¬₁(b∃₁₁ b (var f·var a) A))).subst ([]⟹[].tt⊙[a].tt)) [f] intNot1_R
+  rw [[f].append_nil] at intUnbF2_R
+  have intNot2_R := @SH_int_comp2.neg (∀₁₁ f (¬₁(∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A)))) [f] [a'] ((b∃₁ [a] [a'].tt (¬₁(b∃₁₁ b (var f·var a) A))).subst ([]⟹[].tt⊙[a].tt)) [Φ] [f'] intUnbF2_R
+  -- All together
+  rw [bAC_star_om]
+  have intForm := SH_int_comp2.disj intNot3_L intNot2_R
+  simp
+  rw [bExists, bExistsTuple, bExistsTuple, bExistsTuple, bExistsTuple] at intForm
+  rw [DoubleNeg, DoubleNeg, DoubleNeg] at intForm
+  exact intForm
+-/

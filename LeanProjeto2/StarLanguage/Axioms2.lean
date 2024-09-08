@@ -46,8 +46,8 @@ def AxiomS1_matrix (x₁ x₂ : String) : Formula :=
   ((var x₁) ∈₁ (𝔰₁·(var x₂))) ↔₁ ((var x₁) =₁ (var x₂))
 def AxiomS2_matrix (x₁ x₂ x₃ : String) : Formula :=
   ((var x₁) ∈₁ ((∪₁·(var x₂))·(var x₃)) ) ↔₁ (((var x₁) ∈₁ (var x₂)) ∨₁ ((var x₁) ∈₁ (var x₃)))
-def AxiomS3_matrix (b a f x : String) : Formula :=
-  ((var b) ∈₁ ((ind_⋃₁·(var a))·(var f))) ↔₁ (b∃₁₁ x (var a) ((var b) ∈₁ ((var f)·(var x))))
+def AxiomS3_matrix (x₁ x₂ x₃ y : String) : Formula :=
+  ((var x₃) ∈₁ ((ind_⋃₁·(var x₁))·(var x₂))) ↔₁ (b∃₁₁ y (var x₁) ((var x₃) ∈₁ ((var x₂)·(var y))))
 def AxiomS4_matrix (x₁ x₂ : String) : Formula :=
   b∃₁₁ x₂ (var x₁) ((var x₂) ∈₁ (var x₁))
 
@@ -136,12 +136,12 @@ lemma AxiomS2_univ_of_base : (isBase (AxiomS2_matrix x₁ x₂ x₃)) := by
   have H4 := b_or H2 H3
   exact Iff_base (var x₁∈₁(∪₁·var x₂)·var x₃) ((var x₁∈₁var x₂).or (var x₁∈₁var x₃)) H1 H4
 
-lemma AxiomS3_univ_of_base {b a f x : String} : (isBase (AxiomS3_matrix b a f x)) := by
+lemma AxiomS3_univ_of_base {x₁ x₂ x₃ y : String} : (isBase (AxiomS3_matrix x₁ x₂ x₃ y)) := by
   unfold AxiomS3_matrix
-  have H1 := b_atom (isAtomic.at_mem (var b) ((ind_⋃₁·(var a))·(var f)))
-  have H2 := b_atom (isAtomic.at_mem (var b) ((var f)·(var x)))
-  have H3 := bExists_base x (var a) H2
-  exact Iff_base (var b∈₁(ind_⋃₁·var a)·var f) (b∃₁₁ x (var a) (var b∈₁var f·var x)) H1 H3
+  have H1 := b_atom (isAtomic.at_mem (var x₃) ((ind_⋃₁·(var x₁))·(var x₂)))
+  have H2 := b_atom (isAtomic.at_mem (var x₃) ((var x₂)·(var y)))
+  have H3 := bExists_base y (var x₁) H2
+  exact Iff_base (var x₃ ∈₁(ind_⋃₁·var x₁)·var x₂) (b∃₁₁ y (var x₁) (var x₃∈₁var x₂·var y)) H1 H3
 
 lemma AxiomS4_univ_of_base : (isBase (AxiomS4_matrix x₁ x₂)) := by
   unfold AxiomS4_matrix
@@ -172,8 +172,8 @@ def AxiomS1 (x₁ x₂ : String) : Formula :=
   ∀₁₁ x₁ (∀₁₁ x₂ (AxiomS1_matrix x₁ x₂))
 def AxiomS2 (x₁ x₂ x₃ : String) : Formula :=
   ∀₁₁ x₁ (∀₁₁ x₂ (∀₁₁ x₃ (AxiomS2_matrix x₁ x₂ x₃)))
-def AxiomS3 (b a f x : String) : Formula :=
-  ∀₁₁ a (∀₁₁ f (∀₁₁ b (AxiomS3_matrix b a f x)))
+def AxiomS3 (x₁ x₂ x₃ y : String) : Formula :=
+  ∀₁₁ x₁ (∀₁₁ x₂ (∀₁₁ x₃ (AxiomS3_matrix x₁ x₂ x₃ y)))
 def AxiomS4 (x₁ x₂ : String) : Formula :=
   ∀₁₁ x₁ (AxiomS4_matrix x₁ x₂)
 
@@ -200,8 +200,8 @@ def BAxiomS1 (x₁ x₂ : String) : Formula :=
   ∀₁ [x₁,x₂]            (((var x₁) ∈₁ (𝔰₁·(var x₂))) ↔₁ ((var x₁) =₁ (var x₂)))
 def BAxiomS2 (x₁ x₂ x₃ : String) : Formula :=
   ∀₁ [x₁, x₂, x₃]       ((var x₁) ∈₁ ((∪₁·(var x₂))·(var x₃)) ) ↔₁ (((var x₁) ∈₁ (var x₂)) ∨₁ ((var x₁) ∈₁ (var x₃)))
-def BAxiomS3 (b a f x : String) : Formula :=
-  ∀₁ [a, f, b]          (((var b) ∈₁ ((ind_⋃₁·(var a))·(var f))) ↔₁ (b∃₁₁ x (var a) ((var b) ∈₁ ((var f)·(var x)))))
+def BAxiomS3 (x₁ x₂ x₃ y : String) : Formula :=
+  ∀₁ [x₁, x₂, x₃]       (((var x₃) ∈₁ ((ind_⋃₁·(var x₁))·(var x₂))) ↔₁ (b∃₁₁ y (var x₁) ((var x₃) ∈₁ ((var x₂)·(var y)))))
 def BAxiomS4 (x₁ x₂ : String) : Formula :=
   ∀₁ [x₁]               (b∃₁₁ x₂ (var x₁) ((var x₂) ∈₁ (var x₁)))
 
@@ -248,7 +248,7 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 | AxP₂:                       Γ ⊢ AxiomP2 x₁ x₂ x₃
 | AxS₁:                       Γ ⊢ AxiomS1 x₁ x₂
 | AxS₂:                       Γ ⊢ AxiomS2 x₁ x₂ x₃
-| AxS₃ {f:String}:            Γ ⊢ AxiomS3 a f b x
+| AxS₃:                       Γ ⊢ AxiomS3 x₁ x₂ x₃ y
 | AxS₄:                       Γ ⊢ AxiomS4 x₁ x₂
 
 /-
@@ -267,8 +267,10 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 
 end
 
-def bAC (x y f : String) (A : Formula) : Formula := (∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((var f)·(var x)) A)))     -- bAC^ω_*
-def bAC_star_om (x y f a b : String) (A : Formula) : Formula := (∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A)))     -- bAC^ω_*
+def bAC (x y f : String) (A : Formula) : Formula :=
+  ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((var f)·(var x)) A))))     -- bAC^ω_*
+def bAC_star_om (x y f a b : String) (A : Formula) : Formula :=
+  ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A))))     -- bAC^ω_*
 
 
 infix:27 (priority := high) " ⊢ " => ProvableFrom     -- já não é a mesma notação que em ProvableFrom!
