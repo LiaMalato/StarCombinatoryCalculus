@@ -141,8 +141,7 @@ open Axioms
 --(SH_int_base_rec ((var x)=₁(var x)) H) = ((var x)=₁(var x))
 -- by AxiomE1_univ_of_base
 
-@[simp]
-lemma Formula.subst_empty (A: Formula) : A.subst HashMap.empty = A := by sorry
+
 
 -- Se temos duas interpretações diferentes da mesma formula, então os components são iguais
 lemma SH_int_same
@@ -172,17 +171,7 @@ def bAC_star_om (x y f a b : String) (A : Formula) : Formula :=
 -/
 
 
-lemma Subst_empty_empty (A : Formula) : (A.subst ([]⟹[])) = A :=
-by
-  rw [with_t]
-  rw [HashMap.ofList]
-  simp [List.foldl]
 
---lemma Cenas : ([] ⟹ ([].tt)) = ([] : List String) := by sorry
--- []⟹[].tt
-lemma Subst_with_empty (A:Formula) (x:String) : A.subst ([]⟹[].tt⊙([x].tt)) = A :=
-by
-  simp [Subst_empty_empty]
 
 lemma bAC_int
   (x y f a b : String) (A : Formula) (hAbase : isBase A) (y' g a' Φ f' : String):
@@ -349,10 +338,239 @@ by
   exact intForm
 
 
+-- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+
+
+-- lemma que podemos mudar os nomes das variáveis dos quantificadores
+def SH_int_comp_renaming
+  (A : Formula) {A_SH : Formula} (a b c d : List String) :=
+  (SH_int_comp2 A (a,b,A_SH)) → (SH_int_comp2 A (c,d,A_SH))
+  -- SH_int_comp A (a,b,A_SH) =
+
+def SH_int_comp_renaming2
+  (A : Formula) {intA : SH_int_comp2 A (a,b,A_SH)} (c d : List String) :=
+  SH_int_comp2 A (a,b,A_SH) = (SH_int_comp2 A (c,d,A_SH))
+
+lemma SH_int_comp_renaming_lemma
+  (a b c d : List String) (A A_SH: Formula) (intA : SH_int_comp2 A (a,b,A_SH)) :
+  (SH_int_comp2 A (c,d,A_SH)) := by sorry
+
+open Axioms
+
+
+-- -------------------------------------------------------
+-- INTERPRETAÇÕES DOS AXIOMAS DO CALCULO DE SHOENFIELD
+-- -------------------------------------------------------
+
+-- INTERPRETAÇÕES DO SHOENFIELD CALCULUS:
+
+-- 1. Excluded Middle (axiom): A∨(¬A)
+
+def FormExMid (A: Formula) := (¬₁A)∨₁A
+def FormExMid_matrix (A A_SH : Formula) (a b f a' : List String) := (((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))∨₁A_SH)
+
+lemma intExMid
+  (A A_SH: Formula) (intA2: SH_int_comp2 A (a,b,A_SH))
+  (α β f a' : List String):
+  SH_int_comp2 (FormExMid A) (f++α,a'++β,(FormExMid_matrix A A_SH a b f a')) :=
+by
+  have intA1 := SH_int_comp_renaming_lemma a b α β A A_SH intA2
+  have intA2not := @SH_int_comp2.neg A a b A_SH f a' intA2
+  exact SH_int_comp2.disj intA2not intA1
+
+lemma intExMid2
+  (A A_SH: Formula) (intA2: SH_int_comp2 A (a,b,A_SH))
+  (α β f a' : List String):
+  SH_int_comp2 (FormExMid A) (f++α,a'++β,(((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)) ∨₁ A_SH)) :=
+by
+  have intA1 := SH_int_comp_renaming_lemma a b α β A A_SH intA2
+  have intA2not := @SH_int_comp2.neg A a b A_SH f a' intA2
+  --rw [FormExMid]
+  --have H := SH_int_comp2.disj intA1 intA2not
+  --exact H
+  exact SH_int_comp2.disj intA2not intA1
+
+-- intExMid A A_SH intA α β f a'
+
+-- 2. Substitution (axiom)
+
+-- 3. Expansion (inference rule)
+
+-- 4. Contraction (inference rule)
+
+example
+  (A : Formula) (intA: SH_int_comp2 A (a,b,A_SH))
+  (α β : List String):
+  SH_int_comp2 (A∨₁A) (a++α,b++β,(A_SH ∨₁ A_SH)) :=
+by
+  have intA' := SH_int_comp_renaming_lemma a b α β A A_SH intA
+  exact SH_int_comp2.disj intA intA'
+
+-- 5. Associativity (inference rule)
+
+example
+  (A B C: Formula)
+  (intA: SH_int_comp2 A (a,b,A_SH)) (intB: SH_int_comp2 B (c,d,B_SH)) (intC: SH_int_comp2 C (u,v,C_SH)):
+  SH_int_comp2 (A∨₁(B∨₁C)) (a++c++u,b++d++v,(A_SH ∨₁ (B_SH ∨₁ C_SH))) :=
+by
+  have intOr1 := SH_int_comp2.disj intB intC
+  have intOr2 := SH_int_comp2.disj intA intOr1
+  rw [List.append_assoc a c u, List.append_assoc b d v]
+  exact intOr2
+
+example
+  (A B C: Formula)
+  (intA: SH_int_comp2 A (a,b,A_SH)) (intB: SH_int_comp2 B (c,d,B_SH)) (intC: SH_int_comp2 C (u,v,C_SH)):
+  SH_int_comp2 ((A∨₁B)∨₁C) (a++c++u,b++d++v,((A_SH ∨₁ B_SH) ∨₁ C_SH)) :=
+by
+  have intOr1 := SH_int_comp2.disj intA intB
+  have intOr2 := SH_int_comp2.disj intOr1 intC
+  exact intOr2
+
+
+-- 6. Cut (inference rule)
+
+-- 7. Forall introduction (inference rule)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------
+
+/-
+lemma SH_int_comp_renaming_lemma
+  (a b c d : List String) (A A_SH: Formula) (intA : SH_int_comp2 A (a,b,A_SH)) :
+  (SH_int_comp2 A (c,d,A_SH)) := by sorry
+
+def FormExMid (A: Formula) := A∨₁(¬₁A)
+def FormExMid_matrix (A A_SH : Formula) (a b f a' : List String) := (A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)))
+
+lemma intExMid
+  (A A_SH: Formula) (intA2: SH_int_comp2 A (a,b,A_SH))
+  (α β f a' : List String):
+  SH_int_comp2 (FormExMid A) (α++f,β++a',(FormExMid_matrix A A_SH a b f a')) :=
+by
+  have intA1 := SH_int_comp_renaming_lemma a b α β A A_SH intA2
+  have intA2not := @SH_int_comp2.neg A a b A_SH f a' intA2
+  exact SH_int_comp2.disj intA1 intA2not
+-/
+
+/-
+theorem SoundnessTheorem_exMid
+  (A A_SH: Formula)
+  --(t : List Term)
+  (x y g : String)
+  --(a a₁ a₂ b b₁ b₂ f a' α β : List String)
+  --(c d : List String)
+  (pa : Γ₁ ⊢ (FormExMid A))
+  (hG : Γ₁ = insert (bAC_star_om x y g c d B) Γ)
+  (intA : SH_int_comp2 A (a, b, A_SH))
+  (intA' : SH_int_comp2 A (α, β, A_SH))         -- TENTAR JA COM ISTO I GUESS
+  (intA2 : (SH_int_comp2 (FormExMid A) (α++f,β++a',(A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))))
+  --(hA2 : AuSH.components = (a,b,A_SH))
+  --(hA3 : isBase A_SH)
+  :
+  --(Provable (bAC x y f A)) →
+  ∃(t:List Term), (Γ ⊢ (∀₁ α++f ((((A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))).subst ))) := by sorry
+-/
+
+def interp_incomp (A : Formula) {a b : List String} {A_SH : Formula}:= (SH_int_comp A (a,b,A_SH))
+
+theorem SoundnessTheorem2
+  (A B : Formula)
+  --(t : List Term)
+  (x y g : String)
+  (a a₁ a₂ b b₁ b₂ f a' : List String)
+  --(c d : List String)
+  (pa : Γ₁ ⊢ A)
+  (hG : Γ₁ = insert (bAC_star_om x y g c d B) Γ)
+  (intA : SH_int_comp2 A (a₁,b₁,A_SH))
+  --(hA2 : AuSH.components = (a,b,A_SH))
+  --(hA3 : isBase A_SH)
+  :
+  --(Provable (bAC x y f A)) →
+  ∃a b A_SH,
+  SH_int_comp2 A (a,b,A_SH) ∧
+  ∃(t:List Term), (Γ ⊢ (∀₁ a (A_SH.subst (HashMap.ofList (b.zip (t⊙(a.tt))))))) :=
+by
+  cases pa
+  . sorry
+  . rename_i A
+    --have a, (a₂++a'), (A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)))
+    --  ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))
+    -- intExMid A A_SH intA a₁ b₁ f a'
+    --use a₁++f, b₁++a', (intExMid A A_SH intA a₁ b₁ f a')
+    sorry
+    --have ren (α β : List String) := SH_int_comp_renaming_lemma a₁ b₁ α β A A_SH intA
+    --use [z], [], (AxiomE1_matrix z)
+    /-
+    SH_int_comp2 (A∨₁(¬₁A)) (α++f,β++a',(A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))
+    SH_int_comp2 (A∨₁(¬₁A)) (a₁++f,b₁++a',(A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))
+
+    lemma intExMid
+    (A A_SH: Formula) (intA2: SH_int_comp2 A (a,b,A_SH))
+    (α β f a' : List String):
+    SH_int_comp2 (A∨₁(¬₁A)) (α++f,β++a',(A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)))) :=
+    -/
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . -- repeat {} OU acrescentar lema
+    rename_i z
+    --rcases H with ⟨ _ , _ , (AxiomE1_matrix), H2 ⟩
+    sorry
+    --(AxiomE1_matrix z)
+    --use [z], [], (AxiomE1_matrix z)
+    --have intAxE1 := AxiomE1_int z
+    --constructor
+    --. exact intAxE1
+    --. use []
+    --  simp [HashMap.ofList]
+      --unfold AxiomE1_matrix unbForallTuple
+      --simp [List.foldr]
+    --  apply AxE₁
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+  . sorry
+
+
+
+
+
+
 
 
 theorem SoundnessTheorem
@@ -376,6 +594,22 @@ theorem SoundnessTheorem
       sorry
     . -- exMid
       sorry
+      /-
+      SH_int_comp2 (A∨₁(¬₁A)) (α++f,β++a',(A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))
+      -/
+      /-
+      rename_i A
+      have intExMid
+      --have H := SH_int_comp_renaming_lemma a b α β A A_SH intA
+      let α := List String
+      let β := List String
+      let g := List String
+      let a' := List String
+      let z := String
+      sorry
+      --use [z], [], (AxiomE1_matrix z)
+      --use [α++f], (β++a'), (A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)))
+      -/
     . -- subs
       sorry
     . -- exp
@@ -387,6 +621,8 @@ theorem SoundnessTheorem
     . -- cut
       sorry
     . -- forallInt
+      rename_i B h
+      rename_i D z A
       sorry
   -- Os axiomas que são universal closures of base formulas
     . -- repeat {} OU acrescentar lema
@@ -513,77 +749,6 @@ melhorar ProvableFrom
 -- ---------------------------------------------------------------------
 
 
-
-
-
-
-
-
-
--- ---------------------------------------------------------------------
--- ---------------------------------------------------------------------
--- ---------------------------------------------------------------------
--- ---------------------------------------------------------------------
-
--- lemma que podemos mudar os nomes das variáveis dos quantificadores
-def SH_int_comp_renaming
-  (A : Formula) {A_SH : Formula} (a b c d : List String) :=
-  (SH_int_comp2 A (a,b,A_SH)) → (SH_int_comp2 A (c,d,A_SH))
-  -- SH_int_comp A (a,b,A_SH) =
-
-def SH_int_comp_renaming2
-  (A : Formula) {intA : SH_int_comp2 A (a,b,A_SH)} (c d : List String) :=
-  SH_int_comp2 A (a,b,A_SH) = (SH_int_comp2 A (c,d,A_SH))
-
-lemma SH_int_comp_renaming_lemma
-  (a b c d : List String) (A A_SH: Formula) (intA : SH_int_comp2 A (a,b,A_SH)) :
-  (SH_int_comp2 A (c,d,A_SH)) := by sorry
-
-open Axioms
-
--- INTERPRETAÇÕES DO SHOENFIELD CALCULUS:
-
--- 1. Excluded Middle (axiom)
-
--- 2. Substitution (axiom)
-
--- 3. Expansion (inference rule)
-
--- 4. Contraction (inference rule)
-
-example
-  (A : Formula) (intA: SH_int_comp2 A (a,b,A_SH))
-  (α β : List String):
-  SH_int_comp2 (A∨₁A) (a++α,b++β,(A_SH ∨₁ A_SH)) :=
-by
-  have intA' := SH_int_comp_renaming_lemma a b α β A A_SH intA
-  exact SH_int_comp2.disj intA intA'
-
--- 5. Associativity (inference rule)
-
-example
-  (A B C: Formula)
-  (intA: SH_int_comp2 A (a,b,A_SH)) (intB: SH_int_comp2 B (c,d,B_SH)) (intC: SH_int_comp2 C (u,v,C_SH)):
-  SH_int_comp2 (A∨₁(B∨₁C)) (a++c++u,b++d++v,(A_SH ∨₁ (B_SH ∨₁ C_SH))) :=
-by
-  have intOr1 := SH_int_comp2.disj intB intC
-  have intOr2 := SH_int_comp2.disj intA intOr1
-  rw [List.append_assoc a c u, List.append_assoc b d v]
-  exact intOr2
-
-example
-  (A B C: Formula)
-  (intA: SH_int_comp2 A (a,b,A_SH)) (intB: SH_int_comp2 B (c,d,B_SH)) (intC: SH_int_comp2 C (u,v,C_SH)):
-  SH_int_comp2 ((A∨₁B)∨₁C) (a++c++u,b++d++v,((A_SH ∨₁ B_SH) ∨₁ C_SH)) :=
-by
-  have intOr1 := SH_int_comp2.disj intA intB
-  have intOr2 := SH_int_comp2.disj intOr1 intC
-  exact intOr2
-
-
--- 6. Cut (inference rule)
-
--- 7. Forall introduction (inference rule)
 
 
 

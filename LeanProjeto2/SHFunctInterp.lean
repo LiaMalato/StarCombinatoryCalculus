@@ -12,6 +12,7 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic
 import Mathlib.Data.List.Sigma
 import Mathlib.Data.List.Basic
+import Batteries
 
 
 open LFormula
@@ -462,22 +463,54 @@ by
 example (A B C : Formula)
         (intA: SH_int_comp A (a,b,A_SH))
         (intB: SH_int_comp B (a,[],B_SH))
-        (intC: SH_int_comp C ([],b,C_SH)):
+        (intC: SH_int_comp C ([],b,C_SH))
+
+
 -/
+
+-- --------------------------------------------------------------------------------
+-- RESULTADOS PARA LIDAR COM EMPTY HASHMAP (TBD: incompleto -> falta primeira prova)
+
+@[simp]
+lemma Formula.subst_empty (A: Formula) : A.subst HashMap.empty = A := by sorry
+
+lemma Subst_empty_empty (A : Formula) : (A.subst ([]⟹[])) = A :=
+by
+  rw [with_t]
+  rw [HashMap.ofList]
+  simp [List.foldl]
+
+--lemma Cenas : ([] ⟹ ([].tt)) = ([] : List String) := by sorry
+-- []⟹[].tt
+
+lemma Subst_with_empty (A:Formula) (x:String) : A.subst ([]⟹[].tt⊙([x].tt)) = A :=
+by
+  simp [Subst_empty_empty]
+
+lemma Subst_with_empty_tuple (A:Formula) (x:  List String) : A.subst ([]⟹[].tt⊙(x.tt)) = A :=
+by
+  simp [Subst_empty_empty]
 
 #check app_empty_list_fst
 
--- TBD: stuck at empty
+-- --------------------------------------------------------------------------------
+
 example (B : Formula)
         (intB: SH_int_comp2 B (a,[],B_SH)):
-        SH_int_comp2 (¬₁ B) ([],a',(b∃₁ a (a'.tt) ((¬₁B_SH)))) :=
+        SH_int_comp2 (¬₁ B) ([],a',((b∃₁ a (a'.tt) ((¬₁B_SH))).subst ([] ⟹ (([].tt)⊙(a.tt))))) :=
 by
-  have intNot := @SH_int_comp2.neg B a [] B_SH [] a' intB
+  exact @SH_int_comp2.neg B a [] B_SH [] a' intB
+  /-
   simp
-  rw [bExistsTuple, with_t] at intNot
+  rw [bExistsTuple] at intNot
   rw [DoubleNeg] at intNot
+  have H := Subst_with_empty_tuple (¬₁(b∀₁ a a'.tt B_SH)) a
+  rw [H] at intNot
+  have H2 := Subst_empty_empty (¬₁(b∀₁ a (List.map var a') B_SH))
+  rw [H2]
+
   --have H := app_empty_list_fst List.nil (a.tt)
-  simp [HashMap.ofList] at intNot
+  -- -- simp [HashMap.ofList] at intNot
   --simp [HashMap.empty] at intNot
 
   --simp [mkHashMap] at intNot
@@ -485,15 +518,31 @@ by
   --have H := app_empty_list_fst List.nil (a.tt)
   --rw [app_empty_list_fst ([].tt) (a.tt)] at hA
   sorry
+  -/
+
+@[simp]
+theorem bForallTuple_nill (A : Formula) :
+  bForallTuple [] [] A = A :=
+by
+  -- Folding over an empty list, gives just the initial accumulator, `A`.
+  unfold bForallTuple
+  simp
+
+def Formmm := ((var "x") =₁ (var "y"))
+#check bForallTuple_nill Formmm
 
 -- TBD: stuck at empty
-example (C : Formula)
+example (C C_SH : Formula)
         (intC: SH_int_comp2 C ([],b,C_SH)):
-        SH_int_comp2 (¬₁ C) (b,[],(¬₁C_SH)) :=
+        SH_int_comp2 (¬₁ C) (b,[],((¬₁C_SH).subst (b ⟹ ([].tt⊙[].tt)))) :=
 by
   have intNot := @SH_int_comp2.neg C [] b C_SH b [] intC
-  rw [bExistsTuple, with_t] at intNot
-  rw [DoubleNeg, HashMap.ofList] at intNot
+  rw [bExistsTuple] at intNot
+  rw [DoubleNeg] at intNot
+  --rw [bForallTuple_nil]
+  --have bForallTuple_nil A
+  --rw [bExistsTuple, with_t] at intNot
+  --rw [DoubleNeg, HashMap.ofList] at intNot
   --simp [HashMap.ofList] at intNot
   sorry
   --rw [app_empty_list_fst (b.tt) []] at hA

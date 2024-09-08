@@ -477,6 +477,13 @@ def bForallTuple (vars : List String) (terms : List Term) (A : Formula) : Formul
     Formula.bForall v t acc
   ) A
 
+@[simp]
+theorem bForallTuple_nil (A : Formula) :
+  bForallTuple [] [] A = A :=
+by
+  -- Folding over an empty list, gives just the initial accumulator, `A`.
+  unfold bForallTuple
+  simp
 
 open Formula
 
