@@ -478,6 +478,12 @@ by
   exact SH_int_comp2.disj intA1 intA2not
 -/
 
+def intExMid_Form (A A_SH: Formula) (a b α β f a' : List String) :=
+  (SH_int_comp2 ((¬₁A)∨₁A) (f++α,a'++β,(((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))∨₁A_SH)))
+
+def intExMid_Form_lemma (A A_SH: Formula) (a b α β f a' : List String) :
+  (SH_int_comp2 ((¬₁A)∨₁A) (f++α,a'++β,(((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))∨₁A_SH))) := by sorry
+
 /-
 theorem SoundnessTheorem_exMid
   (A A_SH: Formula)
@@ -503,7 +509,7 @@ theorem SoundnessTheorem2
   (A B : Formula)
   --(t : List Term)
   (x y g : String)
-  (a a₁ a₂ b b₁ b₂ f a' : List String)
+  (a a₁ a₂ α b b₁ b₂ β f a' : List String)
   --(c d : List String)
   (pa : Γ₁ ⊢ A)
   (hG : Γ₁ = insert (bAC_star_om x y g c d B) Γ)
@@ -519,11 +525,33 @@ by
   cases pa
   . sorry
   . rename_i A
+    have Coisa := intExMid_Form_lemma A A_SH a b α β f a'
+    use f ++ α, a' ++ β, (((b∃₁ a a'.tt A_SH.not).subst (b⟹f.tt⊙a.tt)).or A_SH)
+    constructor
+    . exact Coisa
+    . let p := fun (x y : List String) => ([𝔰₁])⊙(y.tt)   -- This is wrong, mas é para termos uma ideia
+      let q := fun (x y : List String) => (y.tt)⊙(x.tt)   -- This is wrong, mas é para termos uma ideia
+      --let p'⊙((f++a).tt) :=
+      -- (b ⟹ ((f.tt)⊙(a.tt)))
+      --use (p)∪(q)
+      sorry
+    /-
+    use []
+        simp [HashMap.ofList]
+        --unfold AxiomE1_matrix unbForallTuple
+        --simp [List.foldr]
+        apply AxE₁
+
+
+
+    def intExMid_Form (A A_SH: Formula) (a b α β f a' : List String) :=
+    (SH_int_comp2 ((¬₁A)∨₁A) (f++α,a'++β,(((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))∨₁A_SH)))
+    -/
+
     --have a, (a₂++a'), (A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)))
     --  ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))
     -- intExMid A A_SH intA a₁ b₁ f a'
     --use a₁++f, b₁++a', (intExMid A A_SH intA a₁ b₁ f a')
-    sorry
     --have ren (α β : List String) := SH_int_comp_renaming_lemma a₁ b₁ α β A A_SH intA
     --use [z], [], (AxiomE1_matrix z)
     /-

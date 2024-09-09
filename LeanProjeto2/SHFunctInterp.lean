@@ -483,13 +483,37 @@ by
 --lemma Cenas : ([] ⟹ ([].tt)) = ([] : List String) := by sorry
 -- []⟹[].tt
 
-lemma Subst_with_empty (A:Formula) (x:String) : A.subst ([]⟹[].tt⊙([x].tt)) = A :=
+
+lemma Subst_with_empty (A:Formula) (x:String) :
+  A.subst ([]⟹[].tt⊙([x].tt)) = A :=
 by
   simp [Subst_empty_empty]
 
-lemma Subst_with_empty_tuple (A:Formula) (x:  List String) : A.subst ([]⟹[].tt⊙(x.tt)) = A :=
+lemma Subst_with_empty_tuple (A:Formula) (x:  List String) :
+  A.subst ([]⟹[].tt⊙(x.tt)) = A :=
 by
   simp [Subst_empty_empty]
+
+lemma Subst_with_empty_tuple2 (A:Formula) (x:  List String) :
+  A.subst (x⟹(([].tt)⊙(x.tt))) = A :=
+by
+  simp [Subst_empty_empty]
+  unfold with_t
+  simp [HashMap.ofList]
+
+lemma Subst_with_empty_tuple3 (A:Formula) (x:  List String) :
+  A.subst (x⟹((x.tt)⊙([].tt))) = A :=
+by
+  simp [Subst_empty_empty]
+  unfold with_t
+  simp [HashMap.ofList]
+
+lemma Subst_with_empty_tuple4 (A:Formula) (x:  List String) :
+  A.subst (x⟹(([].tt)⊙([].tt))) = A :=
+by
+  simp [Subst_empty_empty]
+  unfold with_t
+  simp [HashMap.ofList]
 
 #check app_empty_list_fst
 
@@ -520,16 +544,25 @@ by
   sorry
   -/
 
-@[simp]
-theorem bForallTuple_nill (A : Formula) :
-  bForallTuple [] [] A = A :=
-by
-  -- Folding over an empty list, gives just the initial accumulator, `A`.
-  unfold bForallTuple
-  simp
 
 def Formmm := ((var "x") =₁ (var "y"))
-#check bForallTuple_nill Formmm
+#check bForallTuple_nil Formmm
+
+lemma app_empty_listss : ((([].tt)⊙([].tt))) = [] :=
+by
+  unfold TermTupleApp_list
+  --rw [List.foldr]
+  --rw [TermTupleApp_list]
+  sorry
+
+lemma app_empty_list_secc (x : List String) : (((x.tt)⊙([].tt)) = []) :=
+by
+  induction x
+  case nil =>
+    --rw [app_empty_lists]
+    sorry
+  case cons _ _ _ =>
+    simp
 
 -- TBD: stuck at empty
 example (C C_SH : Formula)
@@ -539,23 +572,66 @@ by
   have intNot := @SH_int_comp2.neg C [] b C_SH b [] intC
   rw [bExistsTuple] at intNot
   rw [DoubleNeg] at intNot
-  --rw [bForallTuple_nil]
+  rw [bForallTuple_nil] at intNot
+  have H1 := Subst_with_empty_tuple3 C_SH.not b
+  rw [H1] at intNot
+  have H2 := Subst_with_empty_tuple4 C_SH.not b
+  rw [H2]
+  exact intNot
+  --rw [app_empty_list_sec] at intNot
+  --simp
   --have bForallTuple_nil A
   --rw [bExistsTuple, with_t] at intNot
   --rw [DoubleNeg, HashMap.ofList] at intNot
   --simp [HashMap.ofList] at intNot
-  sorry
+  --sorry
   --rw [app_empty_list_fst (b.tt) []] at hA
 
 
 
+-- ---------------------------------------------------------------------
+-- REMARK 2.6 (p.48)
+-- Interpretation of ∃xA(x) with A base
+-- ---------------------------------------------------------------------
+
+example (A : Formula)
+        (hAbase : isBase A) (x x' : List String) :
+        (SH_int_comp2 (∃₁ x A) ([],x',(b∃₁ x x'.tt A))) :=
+by
+  unfold unbExistsTuple
+  have notA := isBase.b_not hAbase
+  have intBase := SH_int_comp2.base notA
+  have intForall := @SH_int_comp2.unbForall (¬₁A) [] [] (¬₁A) x intBase
+  rw [x.append_nil] at intForall
+  have intNot := @SH_int_comp2.neg (∀₁ x (¬₁A)) x [] (¬₁A) [] x' intForall
+  rw [DoubleNeg] at intNot
+  have h := Subst_with_empty_tuple (b∃₁ x x'.tt A) x
+  rw [h] at intNot
+  exact intNot
+
+-- ---------------------------------------------------------------------
+-- REMARK 2.7 (p.48)
+-- Interpretation of ∃xA(x) with interpretations with empty tuples
+-- ---------------------------------------------------------------------
+
+/-
+example (A B C : Formula)
+        (hAbase : isBase A)
+        (intA: SH_int_comp2 A (a,b,A_SH))
+        (intB: SH_int_comp2 B (a,[],B_SH))
+        (intC: SH_int_comp2 C ([],b,C_SH))
+-/
+
+example (B : Formula) (a a' x x' Φ : List String)
+        (intB: SH_int_comp2 B (a,[],B_SH)) :
+        (SH_int_comp2 (∃₁ x B) (Φ,x',(b∃₁ x x'.tt (b∀₁ a a'.tt B)))) := by sorry
+-- FALTA SUBST (ver prop com os defined symbols)
 
 
-
-
-
-
-
+example (C : Formula) (b b' x x' : List String)
+        (intC: SH_int_comp2 C ([],b,B_SH)) :
+        (SH_int_comp2 (∃₁ x C) ([],x'++b',(b∃₁ x x'.tt (b∃₁ b b'.tt C)))) := by sorry
+-- FALTA SUBST (ver prop com os defined symbols)
 
 -- --------------------------------------------------------
 -- --------------------------------------------------------

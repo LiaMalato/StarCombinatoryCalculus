@@ -111,7 +111,7 @@ by
     simp
 
 
-
+@[simp]
 lemma app_empty_lists : (TermTupleApp_list [] []) = [] :=
 by
   rw [TermTupleApp_list]
@@ -479,7 +479,7 @@ def bForallTuple (vars : List String) (terms : List Term) (A : Formula) : Formul
 
 @[simp]
 theorem bForallTuple_nil (A : Formula) :
-  bForallTuple [] [] A = A :=
+  bForallTuple [] ([].tt) A = A :=
 by
   -- Folding over an empty list, gives just the initial accumulator, `A`.
   unfold bForallTuple
