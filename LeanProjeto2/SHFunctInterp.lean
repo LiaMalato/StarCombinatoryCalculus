@@ -6,7 +6,6 @@ import LeanProjeto2.FOLanguage
 import LeanProjeto2.StarLanguage.FiniteTypes
 import LeanProjeto2.StarLanguage.Syntax
 import LeanProjeto2.StarLanguage.Axioms2
-import LeanProjeto2.StarLanguage.ResultsAndOtherDefinitions
 import MathLib.Tactic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic

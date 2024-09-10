@@ -2,6 +2,7 @@ import LeanProjeto2.FOLanguage
 import LeanProjeto2.StarLanguage.Axioms2
 import LeanProjeto2.StarLanguage.Syntax
 import LeanProjeto2.StarLanguage.FiniteTypes
+import LeanProjeto2.StarLanguage.CombinatorialCompleteness
 import LeanProjeto2.SHFunctInterp
 import MathLib.Tactic
 import Mathlib.Data.Finset.Basic
@@ -79,7 +80,7 @@ theorem SoundnessTheorem
 
 
 -- theorem Soundness (A : Formula) : (insert (bAC x y f B) ∅ ⊢ A) → (∃(t:Term), (Provable (∀₁ a A))) := by sorry    -- TBD: falta subst aqui
-example {x y f : String} (A : Formula): (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
+example {x y f a b : List String} (A : Formula): (insert (bAC x y f a b B) ∅ ⊢ A) → (Provable A) := by sorry
 
 /-
 lemma interp_b_ac
@@ -411,7 +412,7 @@ by
 
 -- 5. Associativity (inference rule)
 
-example
+lemma InfRule_Assoc1
   (A B C: Formula)
   (intA: SH_int_comp2 A (a,b,A_SH)) (intB: SH_int_comp2 B (c,d,B_SH)) (intC: SH_int_comp2 C (u,v,C_SH)):
   SH_int_comp2 (A∨₁(B∨₁C)) (a++c++u,b++d++v,(A_SH ∨₁ (B_SH ∨₁ C_SH))) :=
@@ -421,7 +422,7 @@ by
   rw [List.append_assoc a c u, List.append_assoc b d v]
   exact intOr2
 
-example
+lemma InfRule_Assoc2
   (A B C: Formula)
   (intA: SH_int_comp2 A (a,b,A_SH)) (intB: SH_int_comp2 B (c,d,B_SH)) (intC: SH_int_comp2 C (u,v,C_SH)):
   SH_int_comp2 ((A∨₁B)∨₁C) (a++c++u,b++d++v,((A_SH ∨₁ B_SH) ∨₁ C_SH)) :=
@@ -429,6 +430,7 @@ by
   have intOr1 := SH_int_comp2.disj intA intB
   have intOr2 := SH_int_comp2.disj intOr1 intC
   exact intOr2
+
 
 
 -- 6. Cut (inference rule)
@@ -461,49 +463,40 @@ by
 -- ----------------------------------------------------
 
 /-
-lemma SH_int_comp_renaming_lemma
-  (a b c d : List String) (A A_SH: Formula) (intA : SH_int_comp2 A (a,b,A_SH)) :
-  (SH_int_comp2 A (c,d,A_SH)) := by sorry
-
-def FormExMid (A: Formula) := A∨₁(¬₁A)
-def FormExMid_matrix (A A_SH : Formula) (a b f a' : List String) := (A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)))
-
-lemma intExMid
-  (A A_SH: Formula) (intA2: SH_int_comp2 A (a,b,A_SH))
-  (α β f a' : List String):
-  SH_int_comp2 (FormExMid A) (α++f,β++a',(FormExMid_matrix A A_SH a b f a')) :=
-by
-  have intA1 := SH_int_comp_renaming_lemma a b α β A A_SH intA2
-  have intA2not := @SH_int_comp2.neg A a b A_SH f a' intA2
-  exact SH_int_comp2.disj intA1 intA2not
+DEFINITIONS TO GET ACCESS TO THE INTERPRETATIONS OF THE AXIOMS
+AND THE INFERENCE RULES OF SHOENFIELD'S CALCULUS
 -/
 
 def intExMid_Form (A A_SH: Formula) (a b α β f a' : List String) :=
   (SH_int_comp2 ((¬₁A)∨₁A) (f++α,a'++β,(((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))∨₁A_SH)))
 
-def intExMid_Form_lemma (A A_SH: Formula) (a b α β f a' : List String) :
+def intExMid_matrix (A_SH: Formula) (a b f a' : List String) :=
+  (((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))∨₁A_SH)
+
+-- intExMid_matrix A_SH a b f a'
+
+lemma intExMid_Form_lemma (A A_SH: Formula) (a b α β f a' : List String) :
   (SH_int_comp2 ((¬₁A)∨₁A) (f++α,a'++β,(((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))∨₁A_SH))) := by sorry
 
 /-
 theorem SoundnessTheorem_exMid
   (A A_SH: Formula)
-  --(t : List Term)
-  (x y g : String)
-  --(a a₁ a₂ b b₁ b₂ f a' α β : List String)
-  --(c d : List String)
+  (a a₁ a₂ b b₁ b₂ f a' α β x y g: List String)
   (pa : Γ₁ ⊢ (FormExMid A))
-  (hG : Γ₁ = insert (bAC_star_om x y g c d B) Γ)
+  (hG : Γ₁ = insert (bAC x y g c d B) Γ)
   (intA : SH_int_comp2 A (a, b, A_SH))
   (intA' : SH_int_comp2 A (α, β, A_SH))         -- TENTAR JA COM ISTO I GUESS
-  (intA2 : (SH_int_comp2 (FormExMid A) (α++f,β++a',(A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))))
-  --(hA2 : AuSH.components = (a,b,A_SH))
-  --(hA3 : isBase A_SH)
+  (intA2 : (SH_int_comp2 (FormExMid A) (α++f,β++a',(intExMid_matrix A_SH a b f a')))))
   :
   --(Provable (bAC x y f A)) →
   ∃(t:List Term), (Γ ⊢ (∀₁ α++f ((((A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))).subst ))) := by sorry
 -/
 
 def interp_incomp (A : Formula) {a b : List String} {A_SH : Formula}:= (SH_int_comp A (a,b,A_SH))
+
+open lambda
+#eval ((la "x" Π₁).to_term)
+-- (la f (la a (𝔰₁·a))).to_term     --> TBD: la precisa de aceitar tuplos :(
 
 theorem SoundnessTheorem2
   (A B : Formula)
@@ -604,9 +597,9 @@ by
 theorem SoundnessTheorem
   (A B : Formula)
   --(t : List Term)
-  (x y f : String)
+  (x y f : List String)
   (pa : Γ₁ ⊢ A)
-  (hG : Γ₁ = insert (bAC_star_om x y f c d B) Γ)
+  (hG : Γ₁ = insert (bAC x y f c d B) Γ)
   --(hA2 : AuSH.components = (a,b,A_SH))
   --(hA3 : isBase A_SH)
    :
@@ -617,7 +610,7 @@ theorem SoundnessTheorem
     cases pa
     . -- Ax
       rename_i AinΓ
-      have h1 : A = bAC x y f B := by sorry
+      have h1 : A = bAC x y f c d B := by sorry
       --apply ProvableFrom.ax
       sorry
     . -- exMid

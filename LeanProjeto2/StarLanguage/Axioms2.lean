@@ -211,6 +211,8 @@ end Axioms
 
 -- ---------------------------------------------------------------
 
+
+
 /- ---------------------------------------------------------------
 DEFINITION: 'ProvableFrom' - axiomas e regras de inferência
 -/ ---------------------------------------------------------------
@@ -267,10 +269,12 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 
 end
 
-def bAC (x y f : String) (A : Formula) : Formula :=
-  ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((var f)·(var x)) A))))     -- bAC^ω_*
+def bAC2 (x y f : String) (A : Formula) : Formula :=
+  ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((var f)·(var x)) A))))     -- bAC^ω_*  (a tirar)
 def bAC_star_om (x y f a b : String) (A : Formula) : Formula :=
-  ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A))))     -- bAC^ω_*
+  ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A))))     -- bAC^ω_*  (a tirar)
+def bAC (x y f a b : List String) (A : Formula) : Formula :=
+  ((∀₁ x (∃₁ y A)) →₁ (∃₁ f (∀₁ a (b∃₁ b ((f.tt)⊙(a.tt)) A))))     -- bAC^ω_*
 
 
 infix:27 (priority := high) " ⊢ " => ProvableFrom     -- já não é a mesma notação que em ProvableFrom!
@@ -314,10 +318,10 @@ theorem term_reflexivity {t:Term}: ∅ ⊢ (t =₁ t) :=
   | Term.app t1 t2 => by simp [term_reflexivity t1, term_reflexivity t2]
 -/
 
-example (A : Formula) {f : String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
-theorem Soundness (A : Formula) {f : String} : (insert (bAC x y f B) ∅ ⊢ A) → (∃(t: List Term), (Provable (∀₁ a A))) := by sorry    -- TBD: falta subst aqui
-theorem Characterization (A : Formula) {f : String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable (A ∨₁ A)) := by sorry          -- TBD: falta A^SH aqui
-lemma Lem32 (A : Formula) (hA : isBase A) {f : String}: (insert (bAC x y f B) ∅ ⊢ ((b∀₁₁ x t (∃₁₁ y A)) →₁ (∃₁₁ b (b∀₁₁ x t (b∃₁₁ y (var b) A))))) := by sorry
+--example (A : Formula) {f : List String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable A) := by sorry
+--theorem Soundness (A : Formula) {f : String} : (insert (bAC x y f B) ∅ ⊢ A) → (∃(t: List Term), (Provable (∀₁ a A))) := by sorry    -- TBD: falta subst aqui
+--theorem Characterization (A : Formula) {f : String} : (insert (bAC x y f B) ∅ ⊢ A) → (Provable (A ∨₁ A)) := by sorry          -- TBD: falta A^SH aqui
+--lemma Lem32 (A : Formula) (hA : isBase A) {f : String}: (insert (bAC x y f B) ∅ ⊢ ((b∀₁ x t (∃₁ y A)) →₁ (∃₁₁ b (b∀₁ x t (b∃₁ y (b.tt) A))))) := by sorry
 
 
 
