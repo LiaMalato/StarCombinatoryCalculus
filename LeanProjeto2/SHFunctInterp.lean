@@ -163,7 +163,35 @@ inductive SH_int_comp : Formula → (List String × List String × Formula) → 
 | bForall : SH_int_comp A (a,b,A_SH) →
             (SH_int_comp (b∀₁ x t A) (a,b,(b∀₁ x t A_SH)))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
 
+
+/-
+inductive SH_int_comp_L : LFormula → (List String × List String × LFormula) → Prop
+| atomic : (h : isAtomic_L A) → (SH_int_comp_L A ([],[],A))
+| disj : SH_int_comp_L A (a,b,A_SH) →
+         SH_int_comp_L B (c,d,B_SH) →
+         (SH_int_comp_L (A∨₀B) (a++c,b++d,(A_SH ∨₀ B_SH)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+| neg {f a': List String}:
+        SH_int_comp_L A (a,b,A_SH) →
+        (SH_int_comp_L (¬₁A) (f,a',   (  (b∃₁ a (a'.tt) (¬₁(A_SH))).subst ((b ⟹ ((f.tt)⊙(a.tt))))  )     ))
+| unbForall : SH_int_comp2 A (a,b,A_SH) →
+              (SH_int_comp2 (∀₁ x A) (x++a,b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+
+inductive SH_int_comp_L : LFormula → (List String × List String × Formula) → Prop
+| atomic : (h : isAtomic_L A) → (SH_int_comp_L (L_Form A) ([],[],(L_Form A)))
+| disj : SH_int_comp_L A (a,b,A_SH) →
+         SH_int_comp_L B (c,d,B_SH) →
+         (SH_int_comp_L ((L_Form A)∨₁(L_Form B)) (a++c,b++d,((L_Form A)∨₁(L_Form B))))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+| neg {f a': List String}:
+        SH_int_comp_L A (a,b,A_SH) →
+        (SH_int_comp_L (¬₁(L_Form A)) (f,a',   (  (b∃₁ a (a'.tt) (¬₁((L_Form A_SH)))).subst ((b ⟹ ((f.tt)⊙(a.tt))))  )     ))
+| unbForall : SH_int_comp_L A (a,b,A_SH) →
+              (SH_int_comp_L (∀₁ x (L_Form A)) (x++a,b,(L_Form A_SH)))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+-/
+
+
+--mutual
 inductive SH_int_comp2 : Formula → (List String × List String × Formula) → Prop
+--| langL : SH_int_comp_L A (a,b,A_SH) → SH_int_comp2 A (a,b,(L_Form A_SH))
 | base : (h : isBase A) → (SH_int_comp2 A ([],[],A))
 | disj : SH_int_comp2 A (a,b,A_SH) →
          SH_int_comp2 B (c,d,B_SH) →
@@ -176,6 +204,20 @@ inductive SH_int_comp2 : Formula → (List String × List String × Formula) →
               (SH_int_comp2 (∀₁ x A) (x++a,b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
 | bForall : SH_int_comp2 A (a,b,A_SH) →
             (SH_int_comp2 (b∀₁ x t A) (a,b,(b∀₁ x t A_SH)))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
+
+/- I guess we really need mutual and this is wrong :)
+open Formula
+inductive SH_int_comp_L : LFormula → (List String × List String × Formula) → Prop
+| atomic : (h : isAtomic_L A) → (SH_int_comp_2 (L_Form A) ([],[],(L_Form A)))
+| disj : SH_int_comp_L A (a,b,A_SH) →
+         SH_int_comp_L B (c,d,B_SH) →
+         (SH_int_comp_2 ((L_Form A)∨₁(L_Form B)) (a++c,b++d,((L_Form A)∨₁(L_Form B))))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+| neg {f a': List String}:
+        SH_int_comp_L A (a,b,A_SH) →
+        (SH_int_comp_2 (¬₁(L_Form A)) (f,a',   (  (b∃₁ a (a'.tt) (¬₁((L_Form A_SH)))).subst ((b ⟹ ((f.tt)⊙(a.tt))))  )     ))
+| unbForall : SH_int_comp_L A (a,b,A_SH) →
+              (SH_int_comp_2 (∀₁ x (L_Form A)) (x++a,b,(L_Form A_SH)))
+-/
 
 def coisa (x y : String) := (var x =₁ var y)
 #check ¬₁ (coisa "x" "y")

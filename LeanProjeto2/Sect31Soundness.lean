@@ -47,10 +47,16 @@ example
 
 /-
 -- Problema / TODO: o ∈₁ e o =₁ também têm de ser para Finset String :(
-def inclusion_symbol (x b b' : Finset String) : Formula :=
-  (V₁ x ((x ∈₁ b) →₁ (x ∈₁ b')))
+def inclusion_symbol (x b b' : List String) : Formula :=
+  (∀₁ x ((x ∈₁ b) →₁ (x ∈₁ b')))
 
-notation x "⊆₁" y => inclusion_symbol x y
+notation b "⊆₁" b' => inclusion_symbol b b'
+
+lemma MonotonicityLemma
+  (A : Formula) (b b' : Finset String)
+  (intA : SH_int_comp2 A (a,b,A_SH)) (hAbase : isBase A) :
+  isTrue (((b ⊆₁ b') ∧₁ A_SH) →₁ ((A_SH).subst (b ⟹ b'.tt))) := by sorry
+
 
 lemma MonotonicityLemma
   (A : Formula) (b b' : Finset String)
@@ -588,6 +594,71 @@ by
   . sorry
 
 
+lemma all_formulas_have_an_intepretation {f a' : List String}:
+  ∀ A, ∃ a b A_SH, SH_int_comp2 A (a, b, A_SH) :=
+by
+  intro A
+  induction A with
+  | L_Form A_L =>
+      induction A_L with
+      | atomic_L R ts => sorry
+      | not_L A intA => sorry
+      | or_L A B intA intB => sorry
+      | forall_L x A intA =>
+          cases intA; rename_i a intA
+          cases intA; rename_i b intA
+          cases intA; rename_i A_SH intA
+          sorry
+  | rel R ts =>
+      have hAt : isAtomic (rel R ts) := by exact isAtomic.at_rel
+      have hBase : isBase (rel R ts) := by exact isBase.b_atom hAt
+      have intBase := SH_int_comp2.base hBase
+      existsi []; existsi []; existsi (rel R ts)
+      exact intBase
+  | eq t₁ t₂ =>
+      have hAt : isAtomic (t₁=₁t₂) := by exact isAtomic.at_eq t₁ t₂
+      have hBase : isBase (t₁=₁t₂) := by exact isBase.b_atom hAt
+      have intBase := SH_int_comp2.base hBase
+      existsi []; existsi []; existsi (t₁=₁t₂)
+      exact intBase
+  | mem t₁ t₂ =>
+      have hAt : isAtomic (t₁∈₁t₂) := by exact isAtomic.at_mem t₁ t₂
+      have hBase : isBase (t₁∈₁t₂) := by exact isBase.b_atom hAt
+      have intBase := SH_int_comp2.base hBase
+      existsi []; existsi []; existsi (t₁∈₁t₂)
+      exact intBase
+  | not A intA =>
+      cases intA; rename_i a intA
+      cases intA; rename_i b intA
+      cases intA; rename_i A_SH intA
+      existsi f; existsi a'; existsi ((b∃₁ a a'.tt A_SH.not).subst (b⟹f.tt⊙a.tt))
+      apply SH_int_comp2.neg
+      exact intA
+  | or A B intA intB =>
+      cases intA; rename_i a intA
+      cases intA; rename_i b intA
+      cases intA; rename_i A_SH intA
+      cases intB; rename_i c intB
+      cases intB; rename_i d intB
+      cases intB; rename_i B_SH intB
+      existsi a++c; existsi b++d; existsi (A_SH ∨₁ B_SH)
+      apply SH_int_comp2.disj
+      . apply intA
+      . apply intB
+  | unbForall x A intA =>
+      cases intA; rename_i a intA
+      cases intA; rename_i b intA
+      cases intA; rename_i A_SH intA
+      existsi [x]++a; existsi b; existsi A_SH
+      have H := @SH_int_comp2.unbForall A a b A_SH [x] intA
+      exact H
+  | bForall x t A intA =>
+      cases intA; rename_i a intA
+      cases intA; rename_i b intA
+      cases intA; rename_i A_SH intA
+      existsi a; existsi b; existsi (b∀₁₁ x t A_SH)
+      have H := @SH_int_comp2.bForall A a b A_SH [x] [t] intA
+      exact H
 
 
 
@@ -597,7 +668,7 @@ by
 theorem SoundnessTheorem
   (A B : Formula)
   --(t : List Term)
-  (x y f : List String)
+  (x y f a' : List String)
   (pa : Γ₁ ⊢ A)
   (hG : Γ₁ = insert (bAC x y f c d B) Γ)
   --(hA2 : AuSH.components = (a,b,A_SH))
@@ -614,6 +685,14 @@ theorem SoundnessTheorem
       --apply ProvableFrom.ax
       sorry
     . -- exMid
+      rename_i A
+      have hx := @all_formulas_have_an_intepretation f a' A
+      cases hx
+      rename_i a hxx
+      cases hxx
+      rename_i b hxxx
+      cases hxxx
+      rename_i A_SH A_interp
       sorry
       /-
       SH_int_comp2 (A∨₁(¬₁A)) (α++f,β++a',(A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))
@@ -664,8 +743,9 @@ theorem SoundnessTheorem
       constructor
       . exact intAxE2
       . use []
-        simp [HashMap.ofList]
-        apply AxE₂
+        --simp [HashMap.ofList]
+        --apply AxE₂
+        sorry
         --unfold AxiomE2_matrix unbForallTuple
     . sorry   -- é o AxU -> falta interp de AxU
     . rename_i x₁ x₂

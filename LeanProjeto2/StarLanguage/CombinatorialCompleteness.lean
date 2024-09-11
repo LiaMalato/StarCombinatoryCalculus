@@ -22,16 +22,12 @@ open Batteries
 -- ---------------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------------
 
+/- ----------------------------------------
+      Lambda abstraction through terms
+-/ ----------------------------------------
 
 inductive lambda : Type
 | la (s : String) (body : Term): lambda
-
-/-
-def lambda.to_term : lambda → Term
-| .la x (var y) => if x=y then ((Σ₁·Π₁)·Π₁) else (Π₁·(var y))
-| .la x (t·s) => if x∉(t·s).freevars then (Π₁·t) else ((Σ₁·(lambda.la x t).to_term)·(lambda.la x s).to_term)
-| .la x t => if x∉t.freevars then (Π₁·t) else (by sorry) -- Reunião: do pattermatching por extenso com as constantes
--/
 
 def lambda.to_term : lambda → Term
 | .la _ Π₁ => Π₁·Π₁
@@ -42,6 +38,43 @@ def lambda.to_term : lambda → Term
 | .la _ (lcons c) => Π₁·(lcons c)
 | .la x (var y) => if x=y then ((Σ₁·Π₁)·Π₁) else (Π₁·(var y))
 | .la x (t·s) => ((Σ₁·(lambda.la x t).to_term)·(lambda.la x s).to_term)
+
+def testu := lambda.la "y" .pi
+def testu2 := lambda.la "x" (lambda.la "y" .pi).to_term
+def testu3 := lambda.la "x" (lambda.la "y" ((lambda.la "z" .pi).to_term)).to_term
+#eval testu.to_term
+#eval testu2.to_term
+#eval testu3.to_term
+
+def lambdas_no (fs: List String) (bodies: List Term) : List lambda :=
+  (fs.zip bodies).map ( fun (f, b) => lambda.la f b)
+
+def lambdas : List String → Term → Term
+| [], body => body                -- sem variáveis, não acontece nada
+| f :: fs, body => (lambda.la f (lambdas fs body)).to_term -- recursively nesting lambda abstractions
+
+notation "λ₁₁" => lambdas
+
+#eval λ₁₁ ["x", "y"] .pi
+#eval λ₁₁ ["x"] .pi
+
+-- Define lambdas_tuple
+def lambdas_tuple : List String → List Term → List Term
+| vars, ts => ts.map (λ t => lambdas vars t)
+  -- Apply lambdas to each term in the list ts using the list of variables vars
+
+notation "λ₁" => lambdas_tuple
+
+-- EXEMPLO:
+#eval λ₁ ["x1", "x2"] [.pi, .sigma, .sing]
+#eval λ₁ ["x", "y"] [.pi, .sigma]
+
+
+-- ------------------------------------------------------------
+
+/- ----------------------------------------
+      Conversions
+-/ ----------------------------------------
 
 open lambda
 
@@ -86,7 +119,7 @@ by
   rw [remove_non_l_terms]
   sorry
 
--- Igualdades entre termos são igualdades
+-- Igualdades entre termos são igualdades  -- TBD: seria necessário definir substituição de termos por termos
 lemma eq_are_eq {Γ : Set Formula} (t q : Term) (h: Γ ⊢ t=₁q): t=q := by sorry
 
 theorem combinatorial_completeness (x : String) : ∀(t:Term), ∃(q:Term), ∀(s:Term),
@@ -186,15 +219,14 @@ by
         existsi ((la x 𝔰₁).to_term)       --existsi Π₁·𝔰₁
         intro s
         rw [to_term]
-        have H1 := Conv1_l 𝔰₁ s
-        rw [H1]
-        rw [Term.subst]                   -- precisamos de:   Γ ⊢ 𝔰₁=₁𝔰₁
-        sorry
+        rw [Term.subst]
+        exact AxC₁_term Γ 𝔰₁ s
+        --exact ProvableFrom.AxC₁
   | bUnion => sorry
   | iUnion => sorry
   | var y =>
       by_cases h: x = y
-      . existsi ((la x (var y)).to_term)       --existsi Π₁·𝔰₁
+      . existsi ((la x (var y)).to_term)   --existsi Π₁·𝔰₁
         intro s
         rw [to_term]
         simp [h]
@@ -213,6 +245,7 @@ by
         simp [h]
         have H1 := Conv1_l (var y) s
         rw [H1]
+        rw [Term.subst]
         sorry
   | app _ _ _ _ =>
         rename_i t₁ t₂ ht₁ ht₂
@@ -239,21 +272,54 @@ theorem combinatorial_completeness3 (x : String) (s:Term): ∀(t:Term),
 by
   intro t
   induction t with
-  | lcons _ => sorry
-  | pi => sorry
-  | sigma => sorry
-  | sing => sorry
-  | bUnion => sorry
-  | iUnion => sorry
-  | var _ => sorry
-  | app _ _ _ _ =>
-        rename_i t₁ t₂ ht₁ ht₂
-        rw [to_term]
-        have H := Conv2_l ((la x t₁).to_term) ((la x t₂).to_term) s
+  | lcons c =>
+      rw [to_term]
+      rw [Term.subst]
+      have H : lcons (c.subst (remove_non_l_terms ([x]⟹[s]))) = (lcons c) := by sorry
+      rw [H]
+      exact AxC₁_term Γ (lcons c) s
+  | pi =>
+      rw [to_term]
+      rw [Term.subst]
+      exact AxC₁_term Γ Π₁ s
+  | sigma =>
+      rw [to_term]
+      rw [Term.subst]
+      exact AxC₁_term Γ Σ₁ s
+  | sing =>
+      rw [to_term]
+      rw [Term.subst]
+      exact AxC₁_term Γ 𝔰₁ s
+  | bUnion =>
+      rw [to_term]
+      rw [Term.subst]
+      exact AxC₁_term Γ ∪₁ s
+  | iUnion =>
+      rw [to_term]
+      rw [Term.subst]
+      exact AxC₁_term Γ ind_⋃₁ s
+  | var y =>
+      by_cases h: x = y
+      . rw [to_term]
+        simp [h]
+        rw [Term.subst]           --  ⊢   Γ ⊢ (((Σ₁·Π₁)·Π₁)·s)=₁([y]⟹[s]).findD y (var y)
+        have H : (([y]⟹[s]).findD y (var y)) = s := by sorry   -- ⊢ ([y]⟹[s]).findD y (var y) = s
         rw [H]
-        rw [Term.subst]
-        have H1 := eq_are_eq ((la x t₁).to_term·s) (t₁.subst ([x]⟹[s])) ht₁
-        rw [← H1]
-        have H2 := eq_are_eq ((la x t₂).to_term·s) (t₂.subst ([x]⟹[s])) ht₂
-        rw [← H2]       -- precisamos de Γ ⊢ t=₁t
-        sorry
+        sorry   -- é preciso aplicar AxC2 e depois AxC1
+      . rw [to_term]
+        simp [h]
+        rw [Term.subst]           --  ⊢   Γ ⊢ ((Π₁·var y)·s)=₁([x]⟹[s]).findD y (var y)
+        have H : (([x]⟹[s]).findD y (var y)) = (var y) := by sorry    -- ⊢ ([x]⟹[s]).findD y (var y) = var y
+        rw [H]
+        exact AxC₁_term Γ (var y) s
+  | app t₁ t₂ ht₁ ht₂ =>
+      rw [to_term]
+      rw [Term.subst]
+      --have H := Conv2_l ((la x t₁).to_term) ((la x t₂).to_term) s
+      --rw [H]
+      --have H1 := eq_are_eq ((la x t₁).to_term·s) (t₁.subst ([x]⟹[s])) ht₁
+      --rw [← H1]
+      --have H2 := eq_are_eq ((la x t₂).to_term·s) (t₂.subst ([x]⟹[s])) ht₂
+      --rw [← H2]       -- precisamos de Γ ⊢ t=₁t
+      --exact AxE₁_term Γ ((((la x t₁).to_term)·s)·((la x t₂).to_term)·s)
+      sorry   -- é preciso aplicar AxC2 e depois a Induction Hypothesis

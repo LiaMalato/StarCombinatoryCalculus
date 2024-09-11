@@ -626,3 +626,9 @@ axiom L_or_commut (A B : LFormula) : (A∨₀B) = (B∨₀A)
 -- Double neg
 @[simp]
 axiom L_double_neg (A : LFormula) : (¬₀(¬₀A)) = A
+
+
+-- --------------------------------------------------------------
+
+inductive isAtomic_L : LFormula → Prop
+| at_rel : isAtomic_L (atomic_L R lt)

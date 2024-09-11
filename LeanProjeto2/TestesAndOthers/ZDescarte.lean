@@ -314,3 +314,85 @@ by
   rw [DoubleNeg, DoubleNeg, DoubleNeg] at intForm
   exact intForm
 -/
+
+
+
+
+
+
+
+-- AXIOMAS ADAPTADOS A TERMOS:
+
+/-
+@[reducible, simp]
+def AxiomE1_matrix_term (t : Term) : Formula :=
+  t =₁ t
+def AxiomE1_matrix (x : String) : Formula :=
+  AxiomE1_matrix_term (var x)
+
+@[reducible, simp]
+def AxiomE2_matrix (x₁ x₂ : String) (A : Formula) (hA : isBase A) : Formula :=
+  (((var x₁)=₁(var x₂)) ∧₁ A) →₁ (A.subst (HashMap.ofList ([x₁].zip ([x₂].tt))))    -- TBD: a mudar
+/-
+def AxiomE2_matrix_term (t₁ t₂ : Term) (A : Formula) (hA : isBase A) : Formula :=
+  ((t₁=₁t₂) ∧₁ A) →₁ (A.subst (HashMap.ofList ([t₁].zip ([t₂]))))
+def AxiomE2_matrix (x₁ x₂ : String) (A : Formula) (hA : isBase A) : Formula :=
+  AxiomE2_matrix_term (var x₁) (var x₂)
+-/
+
+@[reducible, simp]
+def AxiomUn_matrix_term (x : String) (t : Term) (A : Formula) : Formula :=
+  (b∀₁₁ x t A) ↔₁ (∀₁₁ x (((var x) ∈₁ t) →₁ A))
+def AxiomUn_matrix (x₁ x₂ : String) (A : Formula) : Formula :=
+  (b∀₁₁ x₁ (var x₂) A) ↔₁ (∀₁₁ x₁ (((var x₁) ∈₁ (var x₂)) →₁ A))                   -- TBD: a mudar
+
+@[reducible, simp]
+def AxiomC1_matrix_term (t₁ t₂ : Term) : Formula :=
+  ((Π₁·t₁)·(t₂)) =₁ t₁
+def AxiomC1_matrix (x₁ x₂ : String) : Formula :=
+  AxiomC1_matrix_term (var x₁) (var x₂)
+
+@[reducible, simp]
+def AxiomC2_matrix_term (t₁ t₂ t₃ : Term) : Formula :=
+  (((Σ₁·t₁)·t₂)·t₃) =₁ ((t₁·t₃)·(t₂·t₃))
+def AxiomC2_matrix (x₁ x₂ x₃ : String) : Formula :=
+  AxiomC2_matrix_term (var x₁) (var x₂) (var x₃)
+
+@[reducible, simp]
+def AxiomP1_matrix_term (t₁ t₂ : Term) : Formula :=
+  ((ind_⋃₁·(𝔰₁·t₁))·t₂) =₁ (t₂·t₁)
+def AxiomP1_matrix (x₁ x₂ : String) : Formula :=
+  AxiomP1_matrix_term (var x₁) (var x₂)
+
+@[reducible, simp]
+def AxiomP2_matrix_term (t₁ t₂ t₃ : Term) : Formula :=
+  ((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) =₁ ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃))
+def AxiomP2_matrix (x₁ x₂ x₃ : String) : Formula :=
+  AxiomP2_matrix_term (var x₁) (var x₂) (var x₃)
+
+@[reducible, simp]
+def AxiomS1_matrix_term (t₁ t₂ : Term) : Formula :=
+  (t₁ ∈₁ (𝔰₁·t₂)) ↔₁ (t₁ =₁ t₂)
+def AxiomS1_matrix (x₁ x₂ : String) : Formula :=
+  AxiomS1_matrix_term (var x₁) (var x₂)
+
+@[reducible, simp]
+def AxiomS2_matrix_term (t₁ t₂ t₃ : Term) : Formula :=
+  (t₁ ∈₁ ((∪₁·t₂)·t₃)) ↔₁ ((t₁ ∈₁ t₂) ∨₁ (t₁ ∈₁ t₃))
+def AxiomS2_matrix (x₁ x₂ x₃ : String) : Formula :=
+  AxiomS2_matrix_term (var x₁) (var x₂) (var x₃)
+
+@[reducible, simp]
+def AxiomS3_matrix_term (t₁ t₂ t₃ : Term) (y : String) : Formula :=       -- TBD: check this with y not being Term but String por causa de b∃₁₁
+  (t₃ ∈₁ ((ind_⋃₁·t₁)·t₂)) ↔₁ (b∃₁₁ y t₁ (t₃ ∈₁ (t₂·(var y))))
+def AxiomS3_matrix (x₁ x₂ x₃ y : String) : Formula :=
+  AxiomS3_matrix_term (var x₁) (var x₂) (var x₃) y
+--def AxiomS3_matrix (x₁ x₂ x₃ y : String) : Formula :=
+--  ((var x₃) ∈₁ ((ind_⋃₁·(var x₁))·(var x₂))) ↔₁ (b∃₁₁ y (var x₁) ((var x₃) ∈₁ ((var x₂)·(var y))))
+
+@[reducible, simp]
+def AxiomS4_matrix_term (x : String) (t : Term) : Formula :=          -- TBD: check this though...
+  b∃₁₁ x t ((var x) ∈₁ t)
+def AxiomS4_matrix (x₁ x₂ : String) : Formula :=
+  b∃₁₁ x₂ (var x₁) ((var x₂) ∈₁ (var x₁))
+-/

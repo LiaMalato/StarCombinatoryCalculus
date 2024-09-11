@@ -395,7 +395,6 @@ inductive Formula : Type
 deriving Repr
 --| bForall {x: String} {t:Term} {h: x ∉ t.freevars} : String → Term → Formula → Formula          -- TO DO: passar para well-formed temos de acrescentar isto
 
-
 open LTerm
 
 def term_to_lterm : Term → Option LTerm
@@ -460,7 +459,6 @@ match f with
 | bForall s t f' => match substitutions.find? s with
                     | .none => bForall s (t.subst substitutions) (f'.subst substitutions)
                     | .some _ => bForall s (t.subst substitutions) f'
-
 
 
 -- Convertemos a lista de variáveis numa nested sequence de quantificadores `forall`
