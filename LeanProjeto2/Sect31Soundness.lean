@@ -661,13 +661,14 @@ by
       exact H
 
 
-
-
-
+/- ---------------------------------
+    SOUNDNESS
+-/ ---------------------------------
 
 theorem SoundnessTheorem
   (A B : Formula)
   --(t : List Term)
+  (z : String)
   (x y f a' : List String)
   (pa : Γ₁ ⊢ A)
   (hG : Γ₁ = insert (bAC x y f c d B) Γ)
@@ -678,53 +679,101 @@ theorem SoundnessTheorem
   ∃a b A_SH,
   SH_int_comp2 A (a,b,A_SH) ∧
   ∃(t:List Term), (Γ ⊢ (∀₁ a (A_SH.subst (HashMap.ofList (b.zip (t⊙(a.tt))))))) := by
-    cases pa
+    induction pa
     . -- Ax
       rename_i AinΓ
       have h1 : A = bAC x y f c d B := by sorry
       --apply ProvableFrom.ax
       sorry
-    . -- exMid
+  -- ------------------------------------------------------
+  --        SHOENFIELD'S CALCULUS: Axiom schema
+  -- ------------------------------------------------------
+    . -- Excluded Middle (exMid)
       rename_i A
-      have hx := @all_formulas_have_an_intepretation f a' A
-      cases hx
-      rename_i a hxx
-      cases hxx
-      rename_i b hxxx
-      cases hxxx
-      rename_i A_SH A_interp
-      sorry
-      /-
-      SH_int_comp2 (A∨₁(¬₁A)) (α++f,β++a',(A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))))
-      -/
-      /-
-      rename_i A
-      have intExMid
-      --have H := SH_int_comp_renaming_lemma a b α β A A_SH intA
-      let α := List String
-      let β := List String
-      let g := List String
-      let a' := List String
-      let z := String
-      sorry
-      --use [z], [], (AxiomE1_matrix z)
-      --use [α++f], (β++a'), (A_SH ∨₁ ((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)))
-      -/
-    . -- subs
-      sorry
-    . -- exp
-      sorry
-    . -- contrad
-      sorry
-    . -- assoc
-      sorry
-    . -- cut
-      sorry
-    . -- forallInt
-      rename_i B h
-      rename_i D z A
-      sorry
+      have intA := @all_formulas_have_an_intepretation f a' A
+      cases intA; rename_i a intA; cases intA; rename_i b intA; cases intA; rename_i A_SH intA
+      have intA' := SH_int_comp_renaming_lemma a b x y A A_SH intA
+      have intNotA := @SH_int_comp2.neg A a b A_SH f a' intA
+      have intNotAvA' := SH_int_comp2.disj intNotA intA'
+      use f++x; use a'++y; use (((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)) ∨₁ A_SH)
+      constructor
+      . exact intNotAvA'
+      . have pq := (λ₁ (f++x) ([𝔰₁]⊙(x.tt)))++(λ₁ (f++x) ((f.tt)⊙(x.tt)))
+        use pq
+        --(λ₁ (f++x) ((f.tt)⊙(x.tt)))
+        sorry
+    . -- Substitution (subs)
+      rename_i x t A
+      have intA := @all_formulas_have_an_intepretation f a' A
+      cases intA; rename_i a intA; cases intA; rename_i b intA; cases intA; rename_i A_SH intA
+      have intForallA := @SH_int_comp2.unbForall A a b A_SH x intA
+      sorry       -- TBD: simply continue (not fully done)
+  -- ------------------------------------------------------
+  --        SHOENFIELD'S CALCULUS: Inference rules
+  -- ------------------------------------------------------
+    . -- Expansion (exp)
+      rename_i A B exp1 exp2
+      have intB := @all_formulas_have_an_intepretation f a' B
+      cases intB; rename_i c intB; cases intB; rename_i d intB; cases intB; rename_i B_SH intB
+      cases exp2; rename_i a exp2; cases exp2; rename_i b exp2; cases exp2; rename_i A_SH exp2
+      cases exp2; rename_i intA soundA
+      have intAvB := SH_int_comp2.disj intB intA
+      use c++a; use d++b; use (B_SH ∨₁ A_SH)
+      constructor
+      . exact intAvB
+      . sorry     -- TBD: falta a questão do combi completeness
+    . -- Contraction (contrac)
+      rename_i A contrac1 contrac2
+      have intA := @all_formulas_have_an_intepretation f a' A
+      cases intA; rename_i a intA
+      cases intA; rename_i b intA
+      cases intA; rename_i A_SH intA
+      have intA' := SH_int_comp_renaming_lemma a b x y A A_SH intA
+      cases contrac2; rename_i K1 contrac2; cases contrac2; rename_i K2 contrac2; cases contrac2; rename_i K3 contrac2
+      sorry       -- TBD: extract the tuples, not just names
+    . -- Associativiy (assoc)
+      rename_i A B C assoc1 assoc2
+      have intA := @all_formulas_have_an_intepretation f a' A
+      cases intA; rename_i a intA; cases intA; rename_i b intA; cases intA; rename_i A_SH intA
+      have intB := @all_formulas_have_an_intepretation f a' B
+      cases intB; rename_i c intB; cases intB; rename_i d intB; cases intB; rename_i B_SH intB
+      have intC := @all_formulas_have_an_intepretation f a' C
+      cases intC; rename_i u intC; cases intC; rename_i v intC; cases intC; rename_i C_SH intC
+      have intBvC := SH_int_comp2.disj intB intC
+      have intA_BvC := SH_int_comp2.disj intA intBvC
+      have intAvB := SH_int_comp2.disj intA intB
+      have intAvB_C := SH_int_comp2.disj intAvB intC
+      --obtain ⟨a++(c++u), b++(d++v), (A_SH ∨₁ (B_SH ∨₁ C_SH)), cenas⟩ := assoc2
+      --use a++c at assoc2
+      --cases assoc2;
+      --rename_i a++(c++u) assoc2;
+      sorry       -- TBD: extract the tuples, not just names
+    . -- Cut rule (cut)
+      rename_i A B C cut1 cut2 sound1 sound2
+      have intA := @all_formulas_have_an_intepretation f a' A
+      cases intA; rename_i a intA; cases intA; rename_i b intA; cases intA; rename_i A_SH intA
+      have intB := @all_formulas_have_an_intepretation f a' B
+      cases intB; rename_i c intB; cases intB; rename_i d intB; cases intB; rename_i B_SH intB
+      have intC := @all_formulas_have_an_intepretation f a' C
+      cases intC; rename_i u intC; cases intC; rename_i v intC; cases intC; rename_i C_SH intC
+      have intAvB := SH_int_comp2.disj intA intB
+      have intBvC := SH_int_comp2.disj intB intC
+      have intNotA := @SH_int_comp2.neg A a b A_SH f a' intA
+      have intNotAvC := SH_int_comp2.disj intNotA intC
+      sorry       -- TBD: extract the tuples, not just names
+    . -- ∀-introduction (forallInt)
+      rename_i x A B h sound
+      have intA := @all_formulas_have_an_intepretation f a' A
+      cases intA; rename_i a intA; cases intA; rename_i b intA; cases intA; rename_i A_SH intA
+      have intB := @all_formulas_have_an_intepretation f a' B
+      cases intB; rename_i c intB; cases intB; rename_i d intB; cases intB; rename_i B_SH intB
+      have intAvB := SH_int_comp2.disj intA intB
+      have intFA := @SH_int_comp2.unbForall A a b A_SH x intA
+      have intFAvB := SH_int_comp2.disj intFA intB
+      sorry       -- TBD: extract the tuples, not just names
+  -- ------------------------------------------------------
   -- Os axiomas que são universal closures of base formulas
+  -- ------------------------------------------------------
     . -- repeat {} OU acrescentar lema
       rename_i z
       use [z], [], (AxiomE1_matrix z)

@@ -280,7 +280,7 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 
 -- FIVE RULES:
 | exp :     ∀ {A B},          Γ ⊢ A             →   Γ ⊢ (B∨₁A)
-| contrad : ∀ {A},            Γ ⊢ (A∨₁A)        →   Γ ⊢ A
+| contrac : ∀ {A},            Γ ⊢ (A∨₁A)        →   Γ ⊢ A
 | assoc :   ∀ {A B C},        Γ ⊢ (A∨₁(B∨₁C))   →   Γ ⊢ ((A∨₁B)∨₁C)
 | cut :     ∀ {A B C},        Γ ⊢ (A∨₁B)        →   Γ ⊢ ((¬₁A)∨₁C)      →   Γ ⊢ (B∨₁C)
 | forallInt : ∀ {A B},        Γ ⊢ (A∨₁B)        →   Γ ⊢ ((∀₁ x A)∨₁B)   -- TBD: falta x does not occur free in B
@@ -349,7 +349,7 @@ without relying on any specific assumptions.
 -- DEF: A formula is said to be provable if it can be derived using ProvableFrom and nothing else
 def Provable (A : Formula) := ∅ ⊢ A
 
-export ProvableFrom (ax exMid subs exp contrad assoc cut forallInt AxE₁ AxE₂ AxU AxC₁ AxC₂ AxP₁ AxP₂ AxS₁ AxS₂ AxS₃ AxS₄)
+export ProvableFrom (ax exMid subs exp contrac assoc cut forallInt AxE₁ AxE₂ AxU AxC₁ AxC₂ AxP₁ AxP₂ AxS₁ AxS₂ AxS₃ AxS₄)
 variable {Γ Δ : Set Formula}
 
 /- We define a simple tactic `apply_ax` to prove something using the `ax` rule. -/
@@ -393,8 +393,10 @@ example : insert A (insert B ∅) ⊢ A && B := by
   exact andI (by apply_ax) (by apply_ax)
 -/
 
-
+-- ---------------------------------------
 -- OUTRAS COISAS IMPORTANTES (ex de FOL)
+-- ---------------------------------------
+
 
 @[simp] axiom DoubleNeg (A:Formula) : ((¬₁(¬₁ A)) = A)
 @[simp] axiom DeMorgan_or (A B : Formula) : ((¬₁(A∨₁B)) = (¬₁A)∧₁(¬₁B))
@@ -409,3 +411,32 @@ by
 example (A : Formula) : (¬₁(¬₁A)) = A :=
 by
   exact DoubleNeg A
+
+
+-- ---------------------------------------
+-- EQUALITY: SYMMETRY AND TRANSITIVITY
+-- ---------------------------------------
+
+-- Symmetry of equality
+lemma eq_symm_var (x₁ x₂ : String) (Γ : Set Formula) :
+  Γ ⊢ ∀₁ [x₁,x₂] (((var x₁) =₁ (var x₂))→₁((var x₂) =₁ (var x₁))) := by sorry
+
+lemma eq_symm_term (t₁ t₂ : Term) (Γ : Set Formula) :
+  Γ ⊢ ((t₁ =₁ t₂)→₁(t₂ =₁ t₁)) := by sorry
+
+-- Symmetry of equality
+lemma eq_trans_var (x₁ x₂ x₃: String) (Γ : Set Formula) :
+  Γ ⊢ ∀₁ [x₁,x₂,x₃] ((((var x₁)=₁(var x₂))∧₁((var x₂)=₁(var x₃)))→₁((var x₁)=₁(var x₃))) := by sorry
+
+lemma eq_trans_term (t₁ t₂ t₃ : Term) (Γ : Set Formula) :
+  Γ ⊢ (((t₁=₁t₂)∧₁(t₂=₁t₃))→₁(t₁=₁t₃)) := by sorry
+
+-- ---------------------------------------
+-- MODUS PONENS ?
+-- ---------------------------------------
+
+axiom ModusPonens (Γ : Set Formula) (A B : Formula) :
+  Γ ⊢ A  →
+  Γ ⊢ ((¬₁A)∨₁B) →
+  --------------
+  Γ ⊢ B
