@@ -352,18 +352,23 @@ by
 
 
 -- lemma que podemos mudar os nomes das variáveis dos quantificadores
-def SH_int_comp_renaming
-  (A : Formula) {A_SH : Formula} (a b c d : List String) :=
-  (SH_int_comp2 A (a,b,A_SH)) → (SH_int_comp2 A (c,d,A_SH))
-  -- SH_int_comp A (a,b,A_SH) =
+-- def SH_int_comp_renaming
+--   (A : Formula) {A_SH : Formula} (a b c d : List String) :=
+--   (SH_int_comp2 A (a,b,A_SH)) → (SH_int_comp2 A (c,d,A_SH))
+--   -- SH_int_comp A (a,b,A_SH) =
 
-def SH_int_comp_renaming2
-  (A : Formula) {intA : SH_int_comp2 A (a,b,A_SH)} (c d : List String) :=
-  SH_int_comp2 A (a,b,A_SH) = (SH_int_comp2 A (c,d,A_SH))
+-- def SH_int_comp_renaming2
+--   (A : Formula) {intA : SH_int_comp2 A (a,b,A_SH)} (c d : List String) :=
+--   SH_int_comp2 A (a,b,A_SH) = (SH_int_comp2 A (c,d,A_SH))
 
-lemma SH_int_comp_renaming_lemma
-  (a b c d : List String) (A A_SH: Formula) (intA : SH_int_comp2 A (a,b,A_SH)) :
-  (SH_int_comp2 A (c,d,A_SH)) := by sorry
+-- lemma SH_int_comp_renaming_lemma
+--   (a b c d : List String) (A A_SH: Formula)
+
+--   (intA : SH_int_comp2 A (a,b,A_SH)) :
+--   (SH_int_comp2 A (c,d,A_SH)) := by
+
+-- #check SH_int_comp2 (∀₁₁ "x" (.rel "r" [Term.var "x", Term.var "y"]))
+--                     (["x"], [], (.rel "r" [Term.var "x", Term.var "y"]))
 
 open Axioms
 
@@ -379,26 +384,74 @@ open Axioms
 def FormExMid (A: Formula) := (¬₁A)∨₁A
 def FormExMid_matrix (A A_SH : Formula) (a b f a' : List String) := (((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt))∨₁A_SH)
 
+lemma subst_at_a_time
+  (A: Formula) (x: String) (t:Term):
+  A.subst (HashMap.ofList ((x, t) :: hm)) = (A.subst (HashMap.ofList [(x, t)])).subst (HashMap.ofList hm):= by sorry
+
+lemma subst_useless
+  (A: Formula) :
+  A.subst (HashMap.ofList [(x, .var x)]) = A := by
+    sorry
+
+
+lemma helper2
+  (A: Formula) (a:List String)
+  : A.subst (a⟹(List.map var a)) = A := by
+
+  induction a generalizing A
+  case nil =>
+    simp [Subst_empty_empty]
+  case cons h tl ih =>
+    simp [List.map, with_t]
+    rw [subst_at_a_time]
+    have ih_sp := ih (A.subst (HashMap.ofList [(h, var h)]))
+    rw [with_t] at ih_sp
+    simp [subst_useless] at ih_sp
+    simp [subst_useless]
+    exact ih_sp
+
+
+
+
+lemma helper
+   (A A_SH: Formula) (intA2: SH_int_comp2 A (a,b,A_SH))
+   : ∃α, ∃β,
+    SH_int_comp2 A (α, β, (A_SH.subst (a ⟹ α.tt)).subst (b ⟹ β.tt))
+
+   := by
+    use a
+    use b
+    simp
+    rw [helper2 A_SH a, helper2 A_SH b]
+    assumption
+
+
 lemma intExMid
   (A A_SH: Formula) (intA2: SH_int_comp2 A (a,b,A_SH))
   (α β f a' : List String):
   SH_int_comp2 (FormExMid A) (f++α,a'++β,(FormExMid_matrix A A_SH a b f a')) :=
 by
-  have intA1 := SH_int_comp_renaming_lemma a b α β A A_SH intA2
+  have intA3 := helper A A_SH intA2
+  cases intA3
+  rename_i aa intA4
+  cases intA4
+  rename_i bb intA1
   have intA2not := @SH_int_comp2.neg A a b A_SH f a' intA2
-  exact SH_int_comp2.disj intA2not intA1
+  sorry
+  --exact SH_int_comp2.disj intA2not intA1
 
 lemma intExMid2
   (A A_SH: Formula) (intA2: SH_int_comp2 A (a,b,A_SH))
   (α β f a' : List String):
   SH_int_comp2 (FormExMid A) (f++α,a'++β,(((b∃₁ a a'.tt (¬₁A_SH)).subst (b⟹f.tt⊙a.tt)) ∨₁ A_SH)) :=
 by
-  have intA1 := SH_int_comp_renaming_lemma a b α β A A_SH intA2
-  have intA2not := @SH_int_comp2.neg A a b A_SH f a' intA2
+  sorry -- AQUII
+  -- -- have intA1 := SH_int_comp_renaming_lemma a b α β A A_SH intA2
+  -- -- have intA2not := @SH_int_comp2.neg A a b A_SH f a' intA2
   --rw [FormExMid]
   --have H := SH_int_comp2.disj intA1 intA2not
   --exact H
-  exact SH_int_comp2.disj intA2not intA1
+  -- --exact SH_int_comp2.disj intA2not intA1
 
 -- intExMid A A_SH intA α β f a'
 
@@ -413,8 +466,9 @@ example
   (α β : List String):
   SH_int_comp2 (A∨₁A) (a++α,b++β,(A_SH ∨₁ A_SH)) :=
 by
-  have intA' := SH_int_comp_renaming_lemma a b α β A A_SH intA
-  exact SH_int_comp2.disj intA intA'
+  sorry -- AQUII
+  -- -- have intA' := SH_int_comp_renaming_lemma a b α β A A_SH intA
+  -- -- exact SH_int_comp2.disj intA intA'
 
 -- 5. Associativity (inference rule)
 
@@ -599,16 +653,6 @@ lemma all_formulas_have_an_intepretation {f a' : List String}:
 by
   intro A
   induction A with
-  | L_Form A_L =>
-      induction A_L with
-      | atomic_L R ts => sorry
-      | not_L A intA => sorry
-      | or_L A B intA intB => sorry
-      | forall_L x A intA =>
-          cases intA; rename_i a intA
-          cases intA; rename_i b intA
-          cases intA; rename_i A_SH intA
-          sorry
   | rel R ts =>
       have hAt : isAtomic (rel R ts) := by exact isAtomic.at_rel
       have hBase : isBase (rel R ts) := by exact isBase.b_atom hAt
@@ -706,7 +750,7 @@ theorem SoundnessTheorem
       rename_i x t A
       have intA := @all_formulas_have_an_intepretation f a' A
       cases intA; rename_i a intA; cases intA; rename_i b intA; cases intA; rename_i A_SH intA
-      have intForallA := @SH_int_comp2.unbForall A a b A_SH x intA
+      have intForallA := @SH_int_comp2.unbForall A a b A_SH [x] intA
       sorry       -- TBD: simply continue (not fully done)
   -- ------------------------------------------------------
   --        SHOENFIELD'S CALCULUS: Inference rules
@@ -728,8 +772,10 @@ theorem SoundnessTheorem
       cases intA; rename_i a intA
       cases intA; rename_i b intA
       cases intA; rename_i A_SH intA
-      have intA' := SH_int_comp_renaming_lemma a b x y A A_SH intA
+      --have intA' := SH_int_comp_renaming_lemma a b x y A A_SH intA
       cases contrac2; rename_i K1 contrac2; cases contrac2; rename_i K2 contrac2; cases contrac2; rename_i K3 contrac2
+
+
       sorry       -- TBD: extract the tuples, not just names
     . -- Associativiy (assoc)
       rename_i A B C assoc1 assoc2

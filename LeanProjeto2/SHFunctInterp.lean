@@ -139,6 +139,7 @@ inductive SH_int2 : Formula → Formula → Prop
 
 
 -- Notação para HashMap.ofList (x.zip t)
+@[simp]
 def with_t (x : List String) (t : List Term) := HashMap.ofList (x.zip t)
 
 notation x "⟹" t => with_t x t

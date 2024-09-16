@@ -384,7 +384,6 @@ We define the formulas of L^ω_*:
 -/
 
 inductive Formula : Type
-| L_Form : LFormula → Formula
 | rel : String → List Term → Formula                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
 | eq : Term → Term → Formula                                      -- t =σ q
 | mem : Term → Term → Formula                                     -- t ∈σ q
@@ -394,6 +393,17 @@ inductive Formula : Type
 | bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
 deriving Repr
 --| bForall {x: String} {t:Term} {h: x ∉ t.freevars} : String → Term → Formula → Formula          -- TO DO: passar para well-formed temos de acrescentar isto
+
+
+@[simp]
+def Formula.L_Form : LFormula → Formula
+| .atomic_L x args => .rel x (args.map Term.lcons)
+| .not_L lf => .not (Formula.L_Form lf)
+| .or_L lf1 lf2 => .or (Formula.L_Form lf1) (Formula.L_Form lf2)
+| .forall_L x lf => .unbForall x (Formula.L_Form lf)
+
+
+
 
 open LTerm
 
@@ -447,7 +457,7 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
 
 def Formula.subst (f:Formula) (substitutions:HashMap String Term) : Formula :=
 match f with
-| L_Form lf => .L_Form (LFormula.subst lf (remove_non_l_terms substitutions))
+--| L_Form lf => .L_Form (LFormula.subst lf (remove_non_l_terms substitutions))
 | rel s ts => rel s (ts.map (fun t => Term.subst t substitutions))    -- para lista de termos é so this
 | eq t1 t2 => eq (t1.subst substitutions) (t2.subst substitutions)
 | mem t1 t2 => mem (t1.subst substitutions) (t2.subst substitutions)
@@ -526,7 +536,7 @@ inductive Formula_is_wellformed : List String → Formula → Prop
 
 -- DEFINITION: the free variables of a formula in StarLang
 def Formula.freevars : Formula → Finset String
-| .L_Form (A : LFormula) => Lfreevars_formula A
+-- | .L_Form (A : LFormula) => Lfreevars_formula A
 | .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset
 | .eq t₁ t₂
 | .mem t₁ t₂ => t₁.freevars ∪ t₂.freevars
@@ -538,7 +548,7 @@ def Formula.freevars : Formula → Finset String
 
 -- DEFINITION: all the variables of a formula in StarLang
 def Formula.allvars : Formula → Finset String
-| .L_Form A => Lallvars_formula A                                    -- The variables of a Formula are the ones of the formula when seen as an LFormula
+--| .L_Form A => Lallvars_formula A                                    -- The variables of a Formula are the ones of the formula when seen as an LFormula
 | .rel _ ts => Finset.fold (fun x y => x ∪ y) {} Term.freevars ts.toFinset    -- All the variables from the list of terms used in the predicate
 | .eq t₁ t₂
 | .mem t₁ t₂ => t₁.freevars ∪ t₂.freevars                                     -- For both terms, we collect the variables from both and consider the union of those sets
@@ -802,9 +812,9 @@ inductive Formula_TypeChecking : Formula → Prop
 -- -------------------------------------
 
 def substitution_formula (x : String) (replacement : Term) : Formula → Formula
-| (L_Form A) => match replacement with
-              | .lcons r => L_Form (Lsubstitution_formula x r A)
-              | _ => (L_Form A)
+-- | (L_Form A) => match replacement with
+--               | .lcons r => L_Form (Lsubstitution_formula x r A)
+--               | _ => (L_Form A)
 | (rel P terms) => rel P (terms.map (term_substitution x replacement))
 | (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)
 | (t₁ ∈₁ t₂) => (term_substitution x replacement t₁) ∈₁ (term_substitution x replacement t₂)

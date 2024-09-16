@@ -276,7 +276,13 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 
 -- TWO AXIOM SCHEMA:
 | exMid : ∀ {A},              Γ ⊢ ((¬₁A)∨₁A)
-| subs : ∀ {A},               Γ ⊢ ((∀₁ x A) →₁ (A.subst (HashMap.ofList (x.zip t))))
+| subs : ∀ {A},               Γ ⊢ ((∀₁₁ x A) →₁ (A.subst (HashMap.ofList ([(x, t)]))))
+
+
+-- | modus_ponens : Γ ⊢ (A →₁ B) →
+--                  Γ ⊢ A →
+--                  ------------
+--                  Γ ⊢ B
 
 -- FIVE RULES:
 | exp :     ∀ {A B},          Γ ⊢ A             →   Γ ⊢ (B∨₁A)
@@ -298,6 +304,14 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 | AxS₃:                       Γ ⊢ AxiomS3 x₁ x₂ x₃ y
 | AxS₄:                       Γ ⊢ AxiomS4 x₁ x₂
 
+
+-- lemma provable_survives_subst {x:String} {t:Term}:
+--     Γ ⊢ (∀₁₁ x A) →
+--     Γ ⊢ A.subst (HashMap.ofList [(x, t)]) := by
+--   intro H
+--   have subs_rule := @ProvableFrom.subs Γ x t A
+--   have mp := ProvableFrom.modus_ponens subs_rule
+--   exact mp H
 
 /-
 | AxE₁_term (t:Term) :                               Γ ⊢ (t=₁t)
