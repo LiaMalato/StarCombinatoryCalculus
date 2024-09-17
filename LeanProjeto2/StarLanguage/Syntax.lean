@@ -471,6 +471,20 @@ match f with
                     | .some _ => bForall s (t.subst substitutions) f'
 
 
+
+def Formula.term_subst (f:Formula) (tr1 tr2:Term) : Formula :=
+match f with
+--| L_Form lf => .L_Form (LFormula.subst lf (remove_non_l_terms substitutions))
+| rel s ts => rel s (ts.map (fun t => if t = tr1 then tr2 else t))    -- para lista de termos é so this
+| eq t1 t2 => eq (if t1 = tr1 then tr2 else t1) (if t2 = tr1 then tr2 else t2)
+| mem t1 t2 => mem (if t1 = tr1 then tr2 else t1) (if t2 = tr1 then tr2 else t2)
+| not f' => not (f'.term_subst tr1 tr2)
+| or f1 f2 => or (f1.term_subst tr1 tr2) (f2.term_subst tr1 tr2)
+| unbForall s f' => unbForall s (f'.term_subst tr1 tr2)
+| bForall s t f' => bForall s (if t = tr1 then tr2 else t) (f'.term_subst tr1 tr2)
+
+
+
 -- Convertemos a lista de variáveis numa nested sequence de quantificadores `forall`
 def unbForallTuple (vars : List String) (A : Formula) : Formula :=
   vars.foldr (fun v acc =>

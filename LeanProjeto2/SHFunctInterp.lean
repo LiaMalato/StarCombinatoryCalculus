@@ -530,32 +530,39 @@ lemma Subst_with_empty (A:Formula) (x:String) :
   A.subst ([]⟹[].tt⊙([x].tt)) = A :=
 by
   simp [Subst_empty_empty]
+  rw [HashMap.ofList, List.foldl]
+  exact (Formula.subst_empty A)
+
 
 lemma Subst_with_empty_tuple (A:Formula) (x:  List String) :
   A.subst ([]⟹[].tt⊙(x.tt)) = A :=
 by
   simp [Subst_empty_empty]
+  sorry
 
 lemma Subst_with_empty_tuple2 (A:Formula) (x:  List String) :
   A.subst (x⟹(([].tt)⊙(x.tt))) = A :=
 by
   simp [Subst_empty_empty]
-  unfold with_t
-  simp [HashMap.ofList]
+  sorry
+  --unfold with_t
+  --simp [HashMap.ofList]
 
 lemma Subst_with_empty_tuple3 (A:Formula) (x:  List String) :
   A.subst (x⟹((x.tt)⊙([].tt))) = A :=
 by
   simp [Subst_empty_empty]
-  unfold with_t
-  simp [HashMap.ofList]
+  sorry
+  --unfold with_t
+  --simp [HashMap.ofList]
 
 lemma Subst_with_empty_tuple4 (A:Formula) (x:  List String) :
   A.subst (x⟹(([].tt)⊙([].tt))) = A :=
 by
   simp [Subst_empty_empty]
-  unfold with_t
-  simp [HashMap.ofList]
+  sorry
+  --unfold with_t
+  --simp [HashMap.ofList]
 
 #check app_empty_list_fst
 

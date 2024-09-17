@@ -266,6 +266,11 @@ by
         sorry
         --rw [h₁, h₂]
 
+lemma equality_to_substitution :
+  Γ ⊢ (a=₁b) →
+  Γ ⊢ f →
+  Γ ⊢ (f.term_subst a b)
+  := by sorry
 
 theorem combinatorial_completeness3 (x : String) (s:Term): ∀(t:Term),
   (Γ ⊢ ((((la x t).to_term)·s) =₁ (t.subst ([x] ⟹ [s])))) :=
@@ -303,13 +308,15 @@ by
       . rw [to_term]
         simp [h]
         rw [Term.subst]           --  ⊢   Γ ⊢ (((Σ₁·Π₁)·Π₁)·s)=₁([y]⟹[s]).findD y (var y)
-        have H : (([y]⟹[s]).findD y (var y)) = s := by sorry   -- ⊢ ([y]⟹[s]).findD y (var y) = s
+        have H : ∀d, ((HashMap.ofList [(y, s)]).findD y d) = s := by sorry
+        --have H : (([y]⟹[s]).findD y (var y)) = s := by sorry   -- ⊢ ([y]⟹[s]).findD y (var y) = s
         rw [H]
         sorry   -- é preciso aplicar AxC2 e depois AxC1
       . rw [to_term]
         simp [h]
         rw [Term.subst]           --  ⊢   Γ ⊢ ((Π₁·var y)·s)=₁([x]⟹[s]).findD y (var y)
-        have H : (([x]⟹[s]).findD y (var y)) = (var y) := by sorry    -- ⊢ ([x]⟹[s]).findD y (var y) = var y
+        have H : ((HashMap.ofList [(x, s)]).findD y (var y)) = (var y) := by sorry
+        --have H : (([x]⟹[s]).findD y (var y)) = (var y) := by sorry    -- ⊢ ([x]⟹[s]).findD y (var y) = var y
         rw [H]
         exact AxC₁_term Γ (var y) s
   | app t₁ t₂ ht₁ ht₂ =>

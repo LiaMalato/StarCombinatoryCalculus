@@ -400,7 +400,9 @@ lemma helper2
 
   induction a generalizing A
   case nil =>
-    simp [Subst_empty_empty]
+    simp
+    rw [HashMap.ofList, List.foldl]
+    simp
   case cons h tl ih =>
     simp [List.map, with_t]
     rw [subst_at_a_time]
@@ -422,6 +424,7 @@ lemma helper
     use a
     use b
     simp
+    rw[←with_t, ←with_t]
     rw [helper2 A_SH a, helper2 A_SH b]
     assumption
 
