@@ -21,7 +21,9 @@ open Batteries
 
 -- DEFINITION 1.2 (p.8-9): Terms of L^{omega}_*
 inductive Term --where
-| lcons : LTerm → Term                  -- L-constants
+--l | lcons : LTerm → Term                  -- L-constants
+| lcons : String → Term
+| lfun : String → Term
 | pi --{σ τ: FType} : Term                                    -- combinators:     Π
 | sigma --{σ τ ρ: FType} : Term                               --                  Σ
 | sing                                  -- star constants:  𝔰
@@ -38,9 +40,9 @@ open Term
 def var_x := var "x"
 def var_y := var "y"
 def var_z := var "z"
-def lcons_a (a:LTerm) := lcons a
-def lcons_k (k:LTerm) := lcons k
-def lcons_var_y := lcons (Lvar_y)
+--def lcons_a (a:LTerm) := lcons a
+--def lcons_k (k:LTerm) := lcons k
+--def lcons_var_y := lcons (Lvar_y)
 --end examples
 -- --------------------------------
 -- TERMS OF TUPLES (new)
@@ -211,7 +213,9 @@ inductive LTerm_is_wellformed_inStar : List String → LTerm → Prop
 
 -- Define Term_is_wellformed for Term
 inductive Term_is_wellformed : List String → Term → Prop
-| wf_lcons {xs} {t : LTerm} : LTerm_is_wellformed_inStar xs t → Term_is_wellformed xs (lcons t)           -- TODO not now: não sei porque com LTerm.LTerm_is_wellformed não funciona tbm
+-- --| wf_lcons {xs} {t : LTerm} : LTerm_is_wellformed_inStar xs t → Term_is_wellformed xs (lcons t)           -- TODO not now: não sei porque com LTerm.LTerm_is_wellformed não funciona tbm
+| wf_lcons {xs k} : x ∈ xs → Term_is_wellformed xs (lcons k)
+| wf_lfun {xs f} : x ∈ xs → Term_is_wellformed xs (lfun f)
 | wf_pi {xs} : Term_is_wellformed xs pi
 | wf_sigma {xs} : Term_is_wellformed xs sigma
 | wf_sing {xs} : Term_is_wellformed xs sing
@@ -275,7 +279,9 @@ inductive isSubtermTuple : List Term → List Term → Prop
 
 -- DEFINITION: all the (free) variables of terms in StarLang
 def freevars : Term → Finset String                           -- TODO: mudar este nome para term_vars?
-| lcons t => Lfreevars t                                      --       since para terms: vars and free_vars it's the same
+--| lcons t => Lfreevars t                                      --       since para terms: vars and free_vars it's the same
+| (lcons k)
+| (lfun f)
 | pi
 | sigma
 | sing
@@ -316,7 +322,9 @@ notation t₁ "·" t₂ => Term.app t₁ t₂
 -- We typecheck the components of the formulas of L^ω_*.
 -- This guarantees that the formulas have admissible types.
 inductive Term_TypeChecking : Term → FType → Prop
-| tcLcons (t : LTerm) : Term_TypeChecking (lcons t) G                                                           -- L-constants have type G
+--| tcLcons (t : LTerm) : Term_TypeChecking (lcons t) G                                                           -- L-constants have type G
+| tcLcons {k} : Term_TypeChecking (lcons k) G
+| tcLfun {f} : Term_TypeChecking (lfun f) (G ⟶ G)       -- CHECK
 | tcPi {σ τ} : Term_TypeChecking pi (σ ⟶ (τ ⟶ σ))                                                             -- Π_{σ,τ} : σ ⟶ (τ ⟶ σ)
 | tcSigma {σ τ ρ}: Term_TypeChecking sigma ((σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ)))                           -- Σ_{σ,τ,ρ} : (σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ))
 | tcSing {σ}: Term_TypeChecking sing (σ ⟶ σ⋆)                                                                  -- 𝔰_{σ} : σ⋆
@@ -344,9 +352,11 @@ open Term_TypeChecking
 
 -- Definition: term substitution, we replace x by replacement in some term t (lcons, var, app, rest)
 def term_substitution (x : String) (replacement : Term) : Term → Term
-| lcons t => match replacement with
-              | lcons r => lcons (Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
-              | _ => lcons t
+--| lcons t => match replacement with
+--              | lcons r => lcons (Lsubstitution x r t)                        -- Since replacement has to be an LTerm, we have to add this pattern matching
+--              | _ => lcons t
+| lcons k => lcons k
+| lfun f => lfun f
 | var y => if x = y
           then replacement
           else (var y)
@@ -362,11 +372,11 @@ def term_substitutionTuple (x : String) (replacement : Term) : List Term → Lis
 #eval term_substitution "x" Π₁ (var_x)                                        -- Replacing x by Π₁ in x gives Π₁
 #eval term_substitution "x" Π₁ (var_y)                                        -- Replacing x by Π₁ in y gives y
 #eval term_substitution "x" ∪₁ (((var_x)·(var_y))·(var_z))                    -- Replacing x by ∪₁ in (x·y)·z gives (∪₁·y)·z
-#eval term_substitution "x" (lcons (LTerm.Lvar "b")) (lcons (LTerm.Lvar "a")) -- Replacing x by (Lvariable b) in (Lvariable a) gives (Lvariable a) -> nothing happens
+--#eval term_substitution "x" (lcons (LTerm.Lvar "b")) (lcons (LTerm.Lvar "a")) -- Replacing x by (Lvariable b) in (Lvariable a) gives (Lvariable a) -> nothing happens
 
 -- EXAMPLE: substituting in tuple of terms
 -- We substitute "x" by an lconstant a in the tuple [x, (y·z)]
-#eval term_substitutionTuple "x" (lcons (Lconst_a)) [var_x, (Π₁·var_y)]       -- Output: [a, (Π₁·z)]
+#eval term_substitutionTuple "x" (lcons "c") [var_x, (Π₁·var_y)]       -- Output: [c, (Π₁·z)]
 
 end Term
 
@@ -389,46 +399,53 @@ inductive Formula : Type
 | mem : Term → Term → Formula                                     -- t ∈σ q
 | not : Formula → Formula                                         -- If A is a formula, then so is (¬A)
 | or : Formula → Formula → Formula                                -- If A and B are formulas, then so is (A∨B)
-| unbForall : String → Formula → Formula                          -- If A is a base formula, then so is (∀x A)
+| unbForall : String → Formula → Formula                          -- If A is a formula, then so is (∀x A)
 | bForall : String → Term → Formula → Formula                     -- If A is a formula, then so is (∀x∈t A)
 deriving Repr
 --| bForall {x: String} {t:Term} {h: x ∉ t.freevars} : String → Term → Formula → Formula          -- TO DO: passar para well-formed temos de acrescentar isto
 
 
+/-
 @[simp]
 def Formula.L_Form : LFormula → Formula
 | .atomic_L x args => .rel x (args.map Term.lcons)
 | .not_L lf => .not (Formula.L_Form lf)
 | .or_L lf1 lf2 => .or (Formula.L_Form lf1) (Formula.L_Form lf2)
 | .forall_L x lf => .unbForall x (Formula.L_Form lf)
-
+-/
 
 
 
 open LTerm
 
+/-
 def term_to_lterm : Term → Option LTerm
 | .lcons lt => .some lt
 | _ => .none
+-/
 
 
 mutual
   def List.subst (ts : List Term) (substitutions : HashMap String Term) : List Term :=
   ts.map (fun t => Term.subst t substitutions)
 
+/-
   def remove_non_l_terms (substitutions:HashMap String Term) : HashMap String LTerm :=
   substitutions.filterMap (fun _ v => term_to_lterm v)
+-/
 
   def Term.subst (t:Term) (substitutions:HashMap String Term) : Term :=
   match t with
-  | var n => substitutions.findD n (var n)
-  | app f a => app (f.subst substitutions) (a.subst substitutions)
+  | lcons k => substitutions.findD k (lcons k)
+  | lfun f => substitutions.findD f (lfun f)
   | pi => pi
   | sigma => sigma
   | sing => sing
   | bUnion => bUnion
   | iUnion => iUnion
-  | lcons lterm => .lcons (LTerm.subst lterm (remove_non_l_terms substitutions))
+  | var n => substitutions.findD n (var n)
+  | app t₁ t₂ => app (t₁.subst substitutions) (t₂.subst substitutions)
+  --| lcons lterm => .lcons (LTerm.subst lterm (remove_non_l_terms substitutions))
 end
 /-
 match lterm with
@@ -455,33 +472,33 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
 
 
 
-def Formula.subst (f:Formula) (substitutions:HashMap String Term) : Formula :=
-match f with
+def Formula.subst (A:Formula) (substitutions:HashMap String Term) : Formula :=
+match A with
 --| L_Form lf => .L_Form (LFormula.subst lf (remove_non_l_terms substitutions))
 | rel s ts => rel s (ts.map (fun t => Term.subst t substitutions))    -- para lista de termos é so this
 | eq t1 t2 => eq (t1.subst substitutions) (t2.subst substitutions)
 | mem t1 t2 => mem (t1.subst substitutions) (t2.subst substitutions)
-| not f' => not (f'.subst substitutions)
-| or f1 f2 => or (f1.subst substitutions) (f2.subst substitutions)
-| unbForall s f' => match substitutions.find? s with
-                    | .none => unbForall s (f'.subst substitutions)
-                    | .some _ => unbForall s f'
-| bForall s t f' => match substitutions.find? s with
-                    | .none => bForall s (t.subst substitutions) (f'.subst substitutions)
-                    | .some _ => bForall s (t.subst substitutions) f'
+| not A' => not (A'.subst substitutions)
+| or A1 A2 => or (A1.subst substitutions) (A2.subst substitutions)
+| unbForall s A' => match substitutions.find? s with
+                    | .none => unbForall s (A'.subst substitutions)
+                    | .some _ => unbForall s A'
+| bForall s t A' => match substitutions.find? s with
+                    | .none => bForall s (t.subst substitutions) (A'.subst substitutions)
+                    | .some _ => bForall s (t.subst substitutions) A'
 
 
 
-def Formula.term_subst (f:Formula) (tr1 tr2:Term) : Formula :=
-match f with
+def Formula.term_subst (A:Formula) (tr1 tr2:Term) : Formula :=
+match A with
 --| L_Form lf => .L_Form (LFormula.subst lf (remove_non_l_terms substitutions))
 | rel s ts => rel s (ts.map (fun t => if t = tr1 then tr2 else t))    -- para lista de termos é so this
 | eq t1 t2 => eq (if t1 = tr1 then tr2 else t1) (if t2 = tr1 then tr2 else t2)
 | mem t1 t2 => mem (if t1 = tr1 then tr2 else t1) (if t2 = tr1 then tr2 else t2)
-| not f' => not (f'.term_subst tr1 tr2)
-| or f1 f2 => or (f1.term_subst tr1 tr2) (f2.term_subst tr1 tr2)
-| unbForall s f' => unbForall s (f'.term_subst tr1 tr2)
-| bForall s t f' => bForall s (if t = tr1 then tr2 else t) (f'.term_subst tr1 tr2)
+| not A' => not (A'.term_subst tr1 tr2)
+| or A1 A2 => or (A1.term_subst tr1 tr2) (A2.term_subst tr1 tr2)
+| unbForall s A' => unbForall s (A'.term_subst tr1 tr2)
+| bForall s t A' => bForall s (if t = tr1 then tr2 else t) (A'.term_subst tr1 tr2)
 
 
 
@@ -510,6 +527,7 @@ by
 open Formula
 
 -- Helper function: well-formed FOL formulas in L^ω_*
+/-
 inductive LFormula_is_wellformed_inStar : List String → LFormula → Prop
 | wf_atomic {xs P ts} :
     (∀ t ∈ ts, LTerm_is_wellformed_inStar xs t) →
@@ -524,10 +542,11 @@ inductive LFormula_is_wellformed_inStar : List String → LFormula → Prop
 | wf_forall {xs x A} :
     LFormula_is_wellformed_inStar (x :: xs) A →
     LFormula_is_wellformed_inStar xs (LFormula.forall_L x A)                 -- If A is a well-formed formula (for our list xs and the bound variable x), then so is ∀x A.
+-/
 
 -- Definition: well-formed formulas in L^ω_*
 inductive Formula_is_wellformed : List String → Formula → Prop
-| wf_L_Form {xs} {A : LFormula} : LFormula_is_wellformed_inStar xs A → Formula_is_wellformed xs (L_Form A)
+--| wf_L_Form {xs} {A : LFormula} : LFormula_is_wellformed_inStar xs A → Formula_is_wellformed xs (L_Form A)
 | wf_rel {xs P ts} :
     (∀ t ∈ ts, Term_is_wellformed xs t) → Formula_is_wellformed xs (rel P ts)                                       -- If t₁,...,tₙ are well-formed terms, then so is P(t₁,...,tₙ)
 | wf_eq {xs t₁ t₂} :
@@ -598,6 +617,11 @@ notation "b∀₁₁" => bForall
 notation "∀₁" => unbForallTuple
 notation "b∀₁" => bForallTuple  -- olha
 
+
+
+
+
+
 -- DEFINITION 1.8 (p.14): The bounded existential quantifier ∃x∈t (defined symbol)
 
 -- The unbounded existential quantifier (for one variable): ∃x A := ¬ (∀x (¬ A))
@@ -657,6 +681,14 @@ def F_iff (A B : Formula) : Formula :=
 
 notation A "↔₁" B => F_iff A B
 
+-- mem_tuple: A function to apply `mem` to corresponding elements of two lists of terms.
+def mem_tuple : List Term → List Term → Formula     -- Check
+| [], [] => Formula.rel "True" []  -- Represents an empty membership list
+| (t1::ts), (q1::qs) => (t1 ∈₁ q1) ∧₁ (mem_tuple ts qs)  -- Recursively create pairwise mem statements
+| _, _ => Formula.rel "False" []   -- Case when the lists have different lengths, for instance
+
+notation lt1 "∈_t" lt2 => mem_tuple lt1 lt2
+
 -- EXAMPLE OF FREE VARIABLES AND VARIABLES OF A FORMULA
 -- Formula R(x,y) ∨ (∀z∈t Q(z)) - Free variables and check whether sentence
 def ex_freevars_formula := (rel "R" [var "x", var "y"]) ∨₁ (b∀₁₁ "z" (var "t") (rel "Q" [var "z"]))
@@ -693,7 +725,7 @@ def ex3_freevars_formula := (b∀₁₁ "z" (var "t") (rel "Q" [var "z"]))
 
 -- Checks whether a given formula is atomic:
 inductive isAtomic : Formula → Prop
-| at_rel : isAtomic (rel x l_term)
+| at_rel (R : String) (l_term : List Term): isAtomic (rel R l_term)
 | at_eq (t₁ t₂ : Term) : isAtomic (eq t₁ t₂)
 | at_mem (t₁ t₂ : Term) : isAtomic (mem t₁ t₂)
 
@@ -794,7 +826,7 @@ inductive isFullyBase : Formula → Prop
 -- ------------------------------------------------------
 
 inductive Formula_TypeChecking : Formula → Prop
-| tcRel {R l_terms} :                                               -- R é relational symbol DE L (falta); l_terms é uma lista de termos
+| tcRel {R l_terms} :                                               -- R é relational symbol; l_terms é uma lista de termos
     (∀ t, t ∈ l_terms → Term_TypeChecking t G) →
     Formula_TypeChecking (Formula.rel R l_terms)
 | tcEq {σ t₁ t₂} :
@@ -829,7 +861,7 @@ def substitution_formula (x : String) (replacement : Term) : Formula → Formula
 -- | (L_Form A) => match replacement with
 --               | .lcons r => L_Form (Lsubstitution_formula x r A)
 --               | _ => (L_Form A)
-| (rel P terms) => rel P (terms.map (term_substitution x replacement))
+| (rel R terms) => rel R (terms.map (term_substitution x replacement))
 | (t₁ =₁ t₂) => (term_substitution x replacement t₁) =₁ (term_substitution x replacement t₂)
 | (t₁ ∈₁ t₂) => (term_substitution x replacement t₁) ∈₁ (term_substitution x replacement t₂)
 | (Formula.not A) => ¬₁ (substitution_formula x replacement A)                                                       -- recursivamente em A
@@ -867,7 +899,7 @@ def ex3_subst : Formula :=
 -- TESTE
 
 inductive FormulaWithTuple : Type
-| L_FormT : LFormula → FormulaWithTuple
+--| L_FormT : LFormula → FormulaWithTuple
 | relT : String → List Term → FormulaWithTuple                              -- R(t₁, ..., tₙ) with R relational symbol of L and t₁,...,tₙ ground terms in L^{omega}_*
 | eqT : List Term → List Term → FormulaWithTuple                                      -- t =σ q
 | memT : List Term → List Term → FormulaWithTuple                                     -- t ∈σ q
@@ -898,7 +930,7 @@ def formula_substitution (x : String) (replacement : Term) : FormulaWithTuple �
       bForallT vars (terms.map (term_substitutionT x replacement)) (formula_substitution x replacement A)
     else
       bForallT vars (terms.map (term_substitutionT x replacement)) (formula_substitution x replacement A)
-| t => t
+--| t => t
 
 def makeSubstitutionList (vars : List String) (replacements : List Term) : List (String × Term) :=
   vars.zip replacements
@@ -944,7 +976,7 @@ def formula_substitution_list (vars : List String) (replacements : List Term) : 
   else
     bForallT varsA (termsA.map (term_substitution_list (makeSubstitutionList vars replacements)))
                   (formula_substitution_list vars replacements A)
-| t => t
+--| t => t
 
 /- Próximas tarefas:
       1. Truly check a cena do ∀x∈t, what is tuple, what is not and how to interpretar

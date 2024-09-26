@@ -25,7 +25,7 @@ open Batteries
 -- --------------------------------------
 -- --------------------------------------
 
-namespace Axioms
+namespace axioms
 
 /- ---------------------------------------------------------------
                   AXIOMS FOR VARIABLES (matrices)
@@ -123,7 +123,7 @@ lemma AxiomE1_univ_of_base (x:String) : (isBase (AxiomE1_matrix x)) := by
   unfold AxiomE1_matrix
   exact b_atom (isAtomic.at_eq (var x) (var x))
 
-#check Axioms.AxiomE1_univ_of_base "x"
+#check axioms.AxiomE1_univ_of_base "x"
 
 /-
 #check SH_int2
@@ -250,13 +250,14 @@ def BAxiomS3 (x₁ x₂ x₃ y : String) : Formula :=
 def BAxiomS4 (x₁ x₂ : String) : Formula :=
   ∀₁ [x₁]               (b∃₁₁ x₂ (var x₁) ((var x₂) ∈₁ (var x₁)))
 
-end Axioms
+end axioms
 
 --def Axreflexivity (x : String) : Formula := (Term.var x) =₁ (Term.var x)
 
 -- ---------------------------------------------------------------
 
-
+def bAC (x y f a b : List String) (A : Formula) : Formula :=
+  ((∀₁ x (∃₁ y A)) →₁ (∃₁ f (∀₁ a (b∃₁ b ((f.tt)⊙(a.tt)) A))))     -- bAC^ω_*
 
 /- ---------------------------------------------------------------
 DEFINITION: 'ProvableFrom' - axiomas e regras de inferência
@@ -269,20 +270,13 @@ local infix:27 " ⊢ " => ProvableFrom
 /- `Γ ⊢ A` is the predicate that there is a proof tree with conclusion `A` with assumptions from `Γ`.
 This is a typical list of rules for natural deduction with classical logic. -/
 
-open Axioms
+open axioms
 
 inductive ProvableFrom : Set Formula → Formula → Prop
-| ax    : ∀ {Γ A},            A ∈ Γ             → Γ ⊢ A
 
 -- TWO AXIOM SCHEMA:
 | exMid : ∀ {A},              Γ ⊢ ((¬₁A)∨₁A)
 | subs : ∀ {A},               Γ ⊢ ((∀₁₁ x A) →₁ (A.subst (HashMap.ofList ([(x, t)]))))
-
-
--- | modus_ponens : Γ ⊢ (A →₁ B) →
---                  Γ ⊢ A →
---                  ------------
---                  Γ ⊢ B
 
 -- FIVE RULES:
 | exp :     ∀ {A B},          Γ ⊢ A             →   Γ ⊢ (B∨₁A)
@@ -304,6 +298,8 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 | AxS₃:                       Γ ⊢ AxiomS3 x₁ x₂ x₃ y
 | AxS₄:                       Γ ⊢ AxiomS4 x₁ x₂
 
+| AxbAC    : ∀ {Γ A},         A ∈ Γ             → Γ ⊢ A
+--| AxbAC    : ∀ {Γ x y f a b A},            (bAC x y f a b A) ∈ Γ             → Γ ⊢ (bAC x y f a b A)
 
 -- lemma provable_survives_subst {x:String} {t:Term}:
 --     Γ ⊢ (∀₁₁ x A) →
@@ -327,27 +323,26 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 -- TBD: FALTA AXS4
 -/
 
-axiom AxE₁_term (Γ : Set Formula) (t:Term): Γ ⊢ (t=₁t)
-axiom AxE₂_term (Γ : Set Formula) (x x₁:String) (t :Term) (A:Formula) (hA : isBase A) :       Γ ⊢ (((var x₁)=₁t) ∧₁ (A →₁ (A.subst (HashMap.ofList ([x].zip [t])))))
-axiom AxU_term (Γ : Set Formula) (x : String) (t : Term) (A : Formula) :                      Γ ⊢ ((b∀₁₁ x t A) ↔₁ (∀₁₁ x (((var x) ∈₁ t) →₁ A)))
-axiom AxC₁_term (Γ : Set Formula) (t₁ t₂ : Term) :                                            Γ ⊢ (((Π₁·t₁)·t₂) =₁ t₁)
-axiom AxC₂_term (Γ : Set Formula) (t₁ t₂ t₃ : Term) :                                         Γ ⊢ ((((Σ₁·t₁)·t₂)·t₃) =₁ ((t₁·t₃)·(t₂·t₃)))
-axiom AxP₁_term (Γ : Set Formula) (t₁ t₂ : Term) :                                            Γ ⊢ (((ind_⋃₁·(𝔰₁·t₁))·t₂) =₁ (t₂·t₁))
-axiom AxP₂_term (Γ : Set Formula) (t₁ t₂ t₃ : Term) :                                         Γ ⊢ (((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) =₁ ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃)))
-axiom AxS₁_term (Γ : Set Formula) (t₁ t₂ : Term) :                                            Γ ⊢ ((t₁ ∈₁ (𝔰₁·t₂)) ↔₁ (t₁ =₁ t₂))
-axiom AxS₂_term (Γ : Set Formula) (t₁ t₂ t₃ : Term) :                                         Γ ⊢ ((t₁ ∈₁ ((∪₁·t₂)·t₃) ) ↔₁ ((t₁ ∈₁ t₂) ∨₁ (t₁ ∈₁ t₃)))
-axiom AxS₃_term (Γ : Set Formula) (x:String) (a f b : Term) :                                 Γ ⊢ ((b ∈₁ ((ind_⋃₁·a)·f)) ↔₁ (b∃₁₁ x a (b ∈₁ (f·(var x)))))
--- TBD: FALTA AXS4
-
-
+--axiom AxE₁_term {Γ : Set Formula} (t:Term): Γ ⊢ (t=₁t)
+axiom AxE₂_term {Γ : Set Formula} (x x₁:String) (t :Term) (A:Formula) (hA : isBase A) :       Γ ⊢ (((var x₁)=₁t) ∧₁ (A →₁ (A.subst (HashMap.ofList ([x].zip [t])))))
+axiom AxU_term {Γ : Set Formula} (x : String) (t : Term) (A : Formula) :                      Γ ⊢ ((b∀₁₁ x t A) ↔₁ (∀₁₁ x (((var x) ∈₁ t) →₁ A)))
+axiom AxC₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ (((Π₁·t₁)·t₂) =₁ t₁)
+axiom AxC₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ ((((Σ₁·t₁)·t₂)·t₃) =₁ ((t₁·t₃)·(t₂·t₃)))
+axiom AxP₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ (((ind_⋃₁·(𝔰₁·t₁))·t₂) =₁ (t₂·t₁))
+axiom AxP₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ (((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) =₁ ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃)))
+axiom AxS₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ ((t₁ ∈₁ (𝔰₁·t₂)) ↔₁ (t₁ =₁ t₂))
+axiom AxS₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ ((t₁ ∈₁ ((∪₁·t₂)·t₃) ) ↔₁ ((t₁ ∈₁ t₂) ∨₁ (t₁ ∈₁ t₃)))
+axiom AxS₃_term {Γ : Set Formula} (x:String) (a f b : Term) :                                 Γ ⊢ ((b ∈₁ ((ind_⋃₁·a)·f)) ↔₁ (b∃₁₁ x a (b ∈₁ (f·(var x)))))
+axiom AxS₄_term {Γ : Set Formula} (x:String) (t : Term) :                                     Γ ⊢ (b∃₁₁ x t ((var x) ∈₁ t))
 end
 
 def bAC2 (x y f : String) (A : Formula) : Formula :=
   ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ x (b∃₁₁ y ((var f)·(var x)) A))))     -- bAC^ω_*  (a tirar)
 def bAC_star_om (x y f a b : String) (A : Formula) : Formula :=
   ((∀₁₁ x (∃₁₁ y A)) →₁ (∃₁₁ f (∀₁₁ a (b∃₁₁ b ((var f)·(var a)) A))))     -- bAC^ω_*  (a tirar)
-def bAC (x y f a b : List String) (A : Formula) : Formula :=
-  ((∀₁ x (∃₁ y A)) →₁ (∃₁ f (∀₁ a (b∃₁ b ((f.tt)⊙(a.tt)) A))))     -- bAC^ω_*
+
+
+
 
 
 infix:27 (priority := high) " ⊢ " => ProvableFrom     -- já não é a mesma notação que em ProvableFrom!
@@ -363,17 +358,10 @@ without relying on any specific assumptions.
 -- DEF: A formula is said to be provable if it can be derived using ProvableFrom and nothing else
 def Provable (A : Formula) := ∅ ⊢ A
 
-export ProvableFrom (ax exMid subs exp contrac assoc cut forallInt AxE₁ AxE₂ AxU AxC₁ AxC₂ AxP₁ AxP₂ AxS₁ AxS₂ AxS₃ AxS₄)
-variable {Γ Δ : Set Formula}
+export ProvableFrom (exMid subs exp contrac assoc cut forallInt AxE₁ AxE₂ AxU AxC₁ AxC₂ AxP₁ AxP₂ AxS₁ AxS₂ AxS₃ AxS₄)
+variable {Γ : Set Formula}
 
-/- We define a simple tactic `apply_ax` to prove something using the `ax` rule. -/
-syntax "solve_mem" : tactic
-syntax "apply_ax" : tactic
-macro_rules
-  | `(tactic| solve_mem) =>
-    `(tactic| first | apply mem_insert | apply mem_insert_of_mem; solve_mem
-                    | fail "tactic \'apply_ax\' failed")
-  | `(tactic| apply_ax)  => `(tactic| { apply ax; solve_mem })
+
 
 /-
 se não teriamos de usar os seguintes lemas about insert:
@@ -446,11 +434,102 @@ lemma eq_trans_term (t₁ t₂ t₃ : Term) (Γ : Set Formula) :
   Γ ⊢ (((t₁=₁t₂)∧₁(t₂=₁t₃))→₁(t₁=₁t₃)) := by sorry
 
 -- ---------------------------------------
--- MODUS PONENS ?
+-- MODUS PONENS
 -- ---------------------------------------
 
-axiom ModusPonens (Γ : Set Formula) (A B : Formula) :
-  Γ ⊢ A  →
-  Γ ⊢ ((¬₁A)∨₁B) →
+lemma ModusPonens {Γ : Set Formula} (A B : Formula) (hA : Γ ⊢ A) (hnAvB : Γ ⊢ (A→₁B)) :
+  --Γ ⊢ A  →
+  --Γ ⊢ (A→₁B) →
   --------------
-  Γ ⊢ B
+  Γ ⊢ B :=
+by
+  --intro hA; intro hnAvB
+  unfold F_implies at hnAvB
+  have hBvA := @exp Γ A B hA
+  have hBvnB := @exMid Γ B
+  have hAvB := @cut Γ B A B hBvA hBvnB
+  have hBvB := @cut Γ A B B hAvB hnAvB
+  exact contrac hBvB
+
+-- ---------------------------------------
+-- OTHER AXIOMS THAT WILL BE NEEDED LATER ON
+-- ---------------------------------------
+
+axiom Add1 (Γ : Set Formula) (A B : Formula) :
+  Γ ⊢ A  →
+  Γ ⊢ B  →
+  --------------
+  Γ ⊢ A∧₁B
+
+axiom Add2 (Γ : Set Formula) (A : Formula) :
+  A ∈ Γ
+  --------------
+  → Γ ⊢ A
+
+
+-- ---------------------------------------
+-- AXIOMS FOR TERMS
+-- ---------------------------------------
+
+open axioms
+
+lemma Aux1 (x : String) (t : Term) :
+ ((var x=₁var x).subst (mkHashMap.insert x t)) = (t=₁t) := by sorry
+
+lemma AxE₁_term_l {Γ : Set Formula} (x:String) (t:Term): Γ ⊢ (t=₁t) :=
+by
+  have H := @AxE₁ Γ x
+  unfold AxiomE1 at H; unfold AxiomE1_matrix at H
+  have hSubs := @subs Γ x t ((var x) =₁ (var x))
+  have hMP := @ModusPonens Γ (∀₁₁ x ((var x)=₁(var x))) (((var x)=₁(var x)).subst (HashMap.ofList [(x, t)])) H hSubs
+  simp [HashMap.ofList, HashMap.empty, Aux1] at hMP
+  exact hMP
+
+
+lemma AxC₁_term_l {Γ : Set Formula} {x₁ x₂ : String} (t₁ t₂ : Term) :   Γ ⊢ (((Π₁·t₁)·t₂) =₁ t₁) :=
+by
+  have H := @AxC₁ Γ x₁ x₂
+  --have H2 := @AxiomC1 x₁ x₂
+  unfold AxiomC1 at H; unfold AxiomC1_matrix at H
+  have hSubs := @subs Γ x₁ t₁ (∀₁₁ x₂ (((Π₁·var x₁)·var x₂)=₁var x₁))
+  sorry
+
+lemma AxC₂_term_l {Γ : Set Formula} {x₁ x₂ x₃ : String} (t₁ t₂ t₃ : Term) :  Γ ⊢ ((((Σ₁·t₁)·t₂)·t₃) =₁ ((t₁·t₃)·(t₂·t₃))) := by sorry
+
+
+
+
+/-
+lemma AxE₂_term_l {Γ : Set Formula} (x x₁:String) (t :Term) (A:Formula) (hA : isBase A) :     x∈A.freevars → Γ ⊢ (((var x₁)=₁t) ∧₁ (A →₁ (A.subst (HashMap.ofList ([x].zip [t])))))
+
+
+∀₁₁ x (AxiomE1_matrix x)
+| subs : ∀ {A},               Γ ⊢ ((∀₁₁ x A) →₁ (A.subst (HashMap.ofList ([(x, t)]))))
+
+lemma AxE₁_term {Γ : Set Formula} (t:Term): Γ ⊢ (t=₁t) := by sorry
+
+
+axiom AxE₂_term {Γ : Set Formula} (x x₁:String) (t :Term) (A:Formula) (hA : isBase A) :       Γ ⊢ (((var x₁)=₁t) ∧₁ (A →₁ (A.subst (HashMap.ofList ([x].zip [t])))))
+axiom AxU_term {Γ : Set Formula} (x : String) (t : Term) (A : Formula) :                      Γ ⊢ ((b∀₁₁ x t A) ↔₁ (∀₁₁ x (((var x) ∈₁ t) →₁ A)))
+axiom AxC₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ (((Π₁·t₁)·t₂) =₁ t₁)
+axiom AxC₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ ((((Σ₁·t₁)·t₂)·t₃) =₁ ((t₁·t₃)·(t₂·t₃)))
+axiom AxP₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ (((ind_⋃₁·(𝔰₁·t₁))·t₂) =₁ (t₂·t₁))
+axiom AxP₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ (((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) =₁ ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃)))
+axiom AxS₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ ((t₁ ∈₁ (𝔰₁·t₂)) ↔₁ (t₁ =₁ t₂))
+axiom AxS₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ ((t₁ ∈₁ ((∪₁·t₂)·t₃) ) ↔₁ ((t₁ ∈₁ t₂) ∨₁ (t₁ ∈₁ t₃)))
+axiom AxS₃_term {Γ : Set Formula} (x:String) (a f b : Term) :                                 Γ ⊢ ((b ∈₁ ((ind_⋃₁·a)·f)) ↔₁ (b∃₁₁ x a (b ∈₁ (f·(var x)))))
+axiom AxS₄_term {Γ : Set Formula} (x:String) (t : Term) :                                     Γ ⊢ (b∃₁₁ x t ((var x) ∈₁ t))
+
+| AxE₁:                       Γ ⊢ AxiomE1 x
+| AxE₂:                       Γ ⊢ AxiomE2 x₁ x₂ A hA
+| AxU:                        Γ ⊢ AxiomUn x t A
+| AxC₁:                       Γ ⊢ AxiomC1 x₁ x₂
+| AxC₂:                       Γ ⊢ AxiomC2 x₁ x₂ x₃
+| AxP₁:                       Γ ⊢ AxiomP1 x₁ x₂
+| AxP₂:                       Γ ⊢ AxiomP2 x₁ x₂ x₃
+| AxS₁:                       Γ ⊢ AxiomS1 x₁ x₂
+| AxS₂:                       Γ ⊢ AxiomS2 x₁ x₂ x₃
+| AxS₃:                       Γ ⊢ AxiomS3 x₁ x₂ x₃ y
+| AxS₄:                       Γ ⊢ AxiomS4 x₁ x₂
+
+-/

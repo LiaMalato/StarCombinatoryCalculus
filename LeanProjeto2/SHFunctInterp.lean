@@ -5,7 +5,7 @@
 import LeanProjeto2.FOLanguage
 import LeanProjeto2.StarLanguage.FiniteTypes
 import LeanProjeto2.StarLanguage.Syntax
-import LeanProjeto2.StarLanguage.Axioms2
+import LeanProjeto2.StarLanguage.Axioms
 import MathLib.Tactic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic
@@ -86,19 +86,21 @@ def ex_formula_comp2 : Formula :=
 #eval ex_formula_comp2.components                                                 -- Output: (["x"], [], ∀y∈t R[y])
 
 -- --------
--- Recreate
+-- Recreate: só se pode usar na sequência da functional interpretation
 -- --------
 
-@[simp]
+@[simp] -- only to be applied on formulas that have been interpreted
 def RecreateSimp : (List String × List String × Formula) → Formula
 | (a, b, rest) => ∀₁ a (∃₁ b rest)
 
-@[simp]
+@[simp] -- only to be applied on formulas that have been interpreted
 def Recreate : (List String × List String × Formula) → Formula
 | ([], [], rest) => rest
 | (a, [], rest) => ∀₁ a rest
 | ([], b, rest) => ∃₁ b rest
 | (a, b, rest) => ∀₁ a (∃₁ b rest)
+
+
 
 -- --------------------------------------
 -- DEFINITION 2.1 (p.38):
@@ -190,42 +192,45 @@ inductive SH_int_comp_L : LFormula → (List String × List String × Formula) �
 -/
 
 
---mutual
+
 inductive SH_int_comp2 : Formula → (List String × List String × Formula) → Prop
 --| langL : SH_int_comp_L A (a,b,A_SH) → SH_int_comp2 A (a,b,(L_Form A_SH))
 | base : (h : isBase A) → (SH_int_comp2 A ([],[],A))
 | disj : SH_int_comp2 A (a,b,A_SH) →
          SH_int_comp2 B (c,d,B_SH) →
-         (SH_int_comp2 (A∨₁B) (a++c,b++d,(A_SH ∨₁ B_SH)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+         SH_int_comp2 (A∨₁B) (a++c,b++d,(A_SH ∨₁ B_SH))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
 | neg {f a': List String}:
         SH_int_comp2 A (a,b,A_SH) →
-        (SH_int_comp2 (¬₁A) (f,a',   (  (b∃₁ a (a'.tt) (¬₁(A_SH))).subst ((b ⟹ ((f.tt)⊙(a.tt))))  )     ))
+        SH_int_comp2 (¬₁A) (f,a',     (b∃₁ a (a'.tt) (¬₁A_SH)).subst (b ⟹ ((f.tt)⊙(a.tt)))      )
 -- (SH_int_Comp (¬₁A) (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH))     ).subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))          ))
 | unbForall : SH_int_comp2 A (a,b,A_SH) →
-              (SH_int_comp2 (∀₁ x A) (x++a,b,A_SH))                 -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+              SH_int_comp2 (∀₁ x A) (x++a,b,A_SH)               -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
 | bForall : SH_int_comp2 A (a,b,A_SH) →
-            (SH_int_comp2 (b∀₁ x t A) (a,b,(b∀₁ x t A_SH)))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
+            SH_int_comp2 (b∀₁ x t A) (a,b,(b∀₁ x t A_SH))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
 
-/- I guess we really need mutual and this is wrong :)
-open Formula
-inductive SH_int_comp_L : LFormula → (List String × List String × Formula) → Prop
-| atomic : (h : isAtomic_L A) → (SH_int_comp_2 (L_Form A) ([],[],(L_Form A)))
-| disj : SH_int_comp_L A (a,b,A_SH) →
-         SH_int_comp_L B (c,d,B_SH) →
-         (SH_int_comp_2 ((L_Form A)∨₁(L_Form B)) (a++c,b++d,((L_Form A)∨₁(L_Form B))))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
+/-
+inductive SH_int_comp22 : Formula → (List String × List String × (Formula × List String × List String)) → Prop
+--| langL : SH_int_comp_L A (a,b,A_SH) → SH_int_comp2 A (a,b,(L_Form A_SH))
+| base : (h : isBase A) → (SH_int_comp22 A ([],[], (A, [], [])))
+| disj : SH_int_comp22 A (a,b,(A_SH,a,b)) →
+         SH_int_comp22 B (c,d,(B_SH,c,d)) →
+         SH_int_comp22 (A∨₁B) (a++c,b++d,((A_SH,a,b) ∨₁ (B_SH,c,d)))               -- (A∨B)^SH = ∀a,c ∃b,d [ A_SH(a,b) ∨ B_SH(c,d) ]
 | neg {f a': List String}:
-        SH_int_comp_L A (a,b,A_SH) →
-        (SH_int_comp_2 (¬₁(L_Form A)) (f,a',   (  (b∃₁ a (a'.tt) (¬₁((L_Form A_SH)))).subst ((b ⟹ ((f.tt)⊙(a.tt))))  )     ))
-| unbForall : SH_int_comp_L A (a,b,A_SH) →
-              (SH_int_comp_2 (∀₁ x (L_Form A)) (x++a,b,(L_Form A_SH)))
+        SH_int_comp22 A (a,b,A_SH) →
+        SH_int_comp22 (¬₁A) (f,a',     (b∃₁ a (a'.tt) (¬₁A_SH)).subst (b ⟹ ((f.tt)⊙(a.tt)))      )
+-- (SH_int_Comp (¬₁A) (f,a',(b∃₁ a (a'.tt) (¬₁(A_SH))     ).subst (HashMap.ofList (b.zip ((f.tt)⊙(a.tt)))          ))
+| unbForall : SH_int_comp22 A (a,b,A_SH) →
+              SH_int_comp22 (∀₁ x A) (x++a,b,A_SH)               -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
+| bForall : SH_int_comp22 A (a,b,A_SH) →
+            SH_int_comp22 (b∀₁ x t A) (a,b,(b∀₁ x t A_SH))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
 -/
+
 
 def coisa (x y : String) := (var x =₁ var y)
 #check ¬₁ (coisa "x" "y")
 
 
-
-
+-- Check: add o que temos here below
 
 --({a,b} ⊆ A.allvars) →
 --({c,d} ⊆ B.allvars) →
@@ -322,22 +327,6 @@ by
   unfold unbExistsTuple
   rw [DoubleNeg, DoubleNeg]
 
--- VERSAO ERRADA
--- EXAMPLE 2.2: (∀y∈t ¬(∃x ¬A(x) ∧ B(y)))^SH = ∀a ∃b (A_SH ∨₁ (b∀₁ [x] t B))
-example (A B : Formula)
-        (intA: SH_int_comp A (a,b,A_SH))
-        (intB: SH_int_comp B (c,d,B_SH)) :
-        SH_int_comp (b∀₁ y t (¬₁((∃₁ x (¬₁ A))∧₁B))) (x++a++g,b++c',(b∀₁ y t (A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH.subst (HashMap.ofList (d.zip ((g.tt)⊙(c.tt)))))))))) :=
-by
-  sorry
-  --rw [ex_2_2_PrimSymbb A B x y t]                                       -- ∀y∈t ¬ (∀x A(x) ∨ ¬B(y))
-  --have intForallA := @SH_int_comp.unbForall A a b A_SH x intA             -- ∀x,a ∃b A_SH(x,a,b)
-  --have intNotB := @SH_int_comp.neg B c d B_SH g c' intB                   -- ∀g ∃c' [∃ c c' ¬B_SH(c,gc)]
-  --have intOr := SH_int_comp.disj intForallA intNotB                     -- ∀x,a,g ∃b,c' [A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc))]
-  --let Form_SH := (A_SH ∨₁ (b∃₁ c (c'.tt) (¬₁(B_SH.subst (d ⟹ (g.tt⊙c.tt))))))
-  --exact @SH_int_comp.bForall ((∀₁₁ x A).or B.not) ([x]++ a++g) (b ++ c') Form_SH [y] [t] intOr        -- ∀x,a,g ∃b,c' [∀y∈t (A_SH(x,a,b) ∨ (∃ c c' ¬B_SH(c,gc)))]
-
--- VERSAO CERTA
 -- EXAMPLE 2.2: (∀y∈t ¬(∃x ¬A(x) ∧ B(y)))^SH = ∀a ∃b (A_SH ∨₁ (b∀₁ [x] t B))
 example (A B : Formula)
         (intA: SH_int_comp2 A (a,b,A_SH))
@@ -354,11 +343,6 @@ by
   exact @SH_int_comp2.bForall ((∀₁ x A).or B.not) (x++a++g) (b ++ c') (A_SH ∨₁ ((b∃₁ c (c'.tt) (¬₁(B_SH)))).subst (d ⟹ (g.tt⊙c.tt))) y t intOr
 
 
-
-
-
-
-
 -- ---------------------------------------------------------------------
 -- PROPOSITION 2.1 (p.46)
 -- Interpretation of formulas with defined symbols.
@@ -368,22 +352,9 @@ by
 
 #check F_iff
 
--- VERSAO ERRADA
-lemma SH_imp
-  (A B : Formula)
-  (intA : SH_int_comp A (a,b,A_SH)) (f a' : List String)
-  (intB : SH_int_comp B (c,d,B_SH))
-  (f a' : List String): SH_int_comp (A→₁B) (f++c, a'++d, ((b∀₁ a a'.tt (A_SH.subst (b ⟹ (f.tt⊙a.tt)))))→₁B_SH) :=
-by
-  unfold F_implies
-  have intNotA := @SH_int_comp.neg A a b A_SH f a' intA
-  have intForm := SH_int_comp.disj intNotA intB
-  rw [bExistsTuple] at intForm
-  rw [DoubleNeg] at intForm
-  exact intForm
 
 -- VERSAO CERTA
-lemma SH_imp_corr     -- (A→B) = (¬A ∨ B)
+lemma SH_imp     -- (A→B) = (¬A ∨ B)
   (A B : Formula)
   (intA : SH_int_comp2 A (a,b,A_SH)) (f a' : List String)
   (intB : SH_int_comp2 B (c,d,B_SH))
@@ -818,7 +789,7 @@ def FormulaF : Formula := aaa =₁ bbb
 
 
 -- mover
-open Axioms
+open axioms
 
 example : Formula.components (AxiomE1_matrix "x") = ([], [], (AxiomE1_matrix "x")) := by
   exact rfl
