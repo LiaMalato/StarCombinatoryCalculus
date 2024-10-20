@@ -307,12 +307,21 @@ def isClosedTupleTerm (t : List Term) : Prop := freevarsTuple t = {}
 -- ------------------------------------------------------------
 
 -- NOTATION: Notation for combinators and star constants
-notation "Π₁" => Term.pi
-notation "Σ₁" => Term.sigma
-notation "𝔰₁" => Term.sing
-notation "∪₁" => Term.bUnion
-notation "ind_⋃₁" => Term.iUnion
-notation t₁ "·" t₂ => Term.app t₁ t₂
+notation "Π₁" => pi
+notation "Σ₁" => sigma
+notation "𝔰₁" => sing
+notation "∪₁" => bUnion
+notation "ind_⋃₁" => iUnion
+notation t₁ "·" t₂ => app t₁ t₂
+
+
+def arities : String → Option Nat
+| "+" => .some 2
+| _ => .none
+
+def type_from_arity : Nat → FType
+| 0 => G
+| (n + 1) => G ⟶ (type_from_arity n)
 
 -- ------------------------------------------------------
 -- TYPECHECKING THE TERMS OF L^{omega}_*
@@ -324,7 +333,7 @@ notation t₁ "·" t₂ => Term.app t₁ t₂
 inductive Term_TypeChecking : Term → FType → Prop
 --| tcLcons (t : LTerm) : Term_TypeChecking (lcons t) G                                                           -- L-constants have type G
 | tcLcons {k} : Term_TypeChecking (lcons k) G
-| tcLfun {f} : Term_TypeChecking (lfun f) (G ⟶ G)       -- CHECK
+| tcLfun {f} {n} : arities f = (.some n)  → Term_TypeChecking (lfun f) (type_from_arity n)       -- CHECK
 | tcPi {σ τ} : Term_TypeChecking pi (σ ⟶ (τ ⟶ σ))                                                             -- Π_{σ,τ} : σ ⟶ (τ ⟶ σ)
 | tcSigma {σ τ ρ}: Term_TypeChecking sigma ((σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ)))                           -- Σ_{σ,τ,ρ} : (σ ⟶ (τ ⟶ ρ)) ⟶ ((σ ⟶ τ) ⟶ (σ ⟶ ρ))
 | tcSing {σ}: Term_TypeChecking sing (σ ⟶ σ⋆)                                                                  -- 𝔰_{σ} : σ⋆
@@ -428,12 +437,10 @@ def term_to_lterm : Term → Option LTerm
 mutual
   def List.subst (ts : List Term) (substitutions : HashMap String Term) : List Term :=
   ts.map (fun t => Term.subst t substitutions)
-
 /-
   def remove_non_l_terms (substitutions:HashMap String Term) : HashMap String LTerm :=
   substitutions.filterMap (fun _ v => term_to_lterm v)
 -/
-
   def Term.subst (t:Term) (substitutions:HashMap String Term) : Term :=
   match t with
   | lcons k => substitutions.findD k (lcons k)
@@ -446,6 +453,7 @@ mutual
   | var n => substitutions.findD n (var n)
   | app t₁ t₂ => app (t₁.subst substitutions) (t₂.subst substitutions)
   --| lcons lterm => .lcons (LTerm.subst lterm (remove_non_l_terms substitutions))
+
 end
 /-
 match lterm with
@@ -466,8 +474,6 @@ def term_substitution (x : String) (replacement : Term) : Term → Term
 | app t₁ t₂ => app (term_substitution x replacement t₁) (term_substitution x replacement t₂)  -- In an application, we do the substitution in each term
 | t => t
 -/
-
-
 
 
 
@@ -504,17 +510,13 @@ match A with
 
 -- Convertemos a lista de variáveis numa nested sequence de quantificadores `forall`
 def unbForallTuple (vars : List String) (A : Formula) : Formula :=
-  vars.foldr (fun v acc =>
-    Formula.unbForall v acc
-  ) A
+  vars.foldr (fun v acc => Formula.unbForall v acc) A
 
 def bForallTuple (vars : List String) (terms : List Term) (A : Formula) : Formula :=
   -- Function to apply bForall using the variable and corresponding term
   let applyBForall := List.zip vars terms
   -- Fold over the list of (variable, term) pairs, applying bForall in the given order
-  applyBForall.foldr (fun (v, t) acc =>
-    Formula.bForall v t acc
-  ) A
+  applyBForall.foldr (fun (v, t) acc => Formula.bForall v t acc) A
 
 @[simp]
 theorem bForallTuple_nil (A : Formula) :
@@ -688,6 +690,15 @@ def mem_tuple : List Term → List Term → Formula     -- Check
 | _, _ => Formula.rel "False" []   -- Case when the lists have different lengths, for instance
 
 notation lt1 "∈_t" lt2 => mem_tuple lt1 lt2
+
+-- eq_tuple: A function to apply `eq` to corresponding elements of two lists of terms.
+def eq_tuple : List Term → List Term → Formula     -- Check
+| [], [] => Formula.rel "True" []  -- Represents an empty membership list
+| (t1::ts), (q1::qs) => (t1 =₁ q1) ∧₁ (eq_tuple ts qs)  -- Recursively create pairwise mem statements
+| _, _ => Formula.rel "False" []   -- Case when the lists have different lengths, for instance
+
+notation lt1 "=_t" lt2 => eq_tuple lt1 lt2
+
 
 -- EXAMPLE OF FREE VARIABLES AND VARIABLES OF A FORMULA
 -- Formula R(x,y) ∨ (∀z∈t Q(z)) - Free variables and check whether sentence

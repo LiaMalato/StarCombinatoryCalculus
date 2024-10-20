@@ -405,6 +405,42 @@ lemma subst_useless
   (A: Formula) :
   A.subst (HashMap.ofList [(x, .var x)]) = A := by sorry
 
+lemma subst_useless_tuple
+  (t : List Term) (x : List String) :
+  t.subst (x ⟹ x.tt) = t := by sorry
+-- ([𝔰₁]⊙a₂.tt).subst ((f ++ a₂)⟹(f ++ a₂).tt)
+
+lemma term_app_dst
+  (t₁ t₂ t₃ : List Term) :
+  ((t₁++t₂)⊙t₃) = ((t₁⊙t₃)++(t₂⊙t₃)) := by sorry
+
+lemma subst_step
+  (A: Formula) (x₁ x₂ : List String) (t₁ t₂ : List Term) :
+  (A.subst ((x₁++x₂)⟹(t₁++t₂))) = ((A.subst (x₁ ⟹ t₁)).subst (x₂ ⟹ t₂)) := by sorry
+
+lemma AxS1_sing_tuples
+  (A: Formula) (x : List String) (t : List Term) :
+  (b∃₁ x ([𝔰₁]⊙t) A) = (A.subst (x ⟹ t)) := by sorry
+
+lemma subst_lemma_comm (A : Formula) (x₁ x₂ : List String) (t₁ t₂ : List Term):
+  ((A.subst (x₁ ⟹ t₁)).subst (x₂ ⟹ t₂)) = ((A.subst (x₂ ⟹ t₂)).subst (x₁ ⟹ t₁)) := by sorry
+
+lemma subst_lemma_or (A B : Formula) (x : List String) (t : List Term):
+  ((A ∨₁ B).subst (x ⟹ t)) = ((A.subst (x ⟹ t)) ∨₁ (B.subst (x ⟹ t))) := by sorry
+
+lemma subst_lemma_not (A : Formula) (x : List String) (t : List Term):
+  ((¬₁A).subst (x ⟹ t)) = (¬₁(A.subst (x ⟹ t))) := by sorry
+
+lemma subst_lemma_unbEx (A : Formula) (a₁ a' a₂ : List String) :
+  ((b∃₁ a₁ a'.tt A).subst (a'⟹[𝔰₁]⊙a₂.tt)) = (b∃₁ a₁ ([𝔰₁]⊙a₂.tt) (A.subst ((a'⟹[𝔰₁]⊙a₂.tt)))) := by sorry
+
+/-
+((((b∃₁ a₁ a'.tt ((A_SH.subst (a⟹a₁.tt)).subst (b⟹b₁.tt)).not).subst (b₁⟹f.tt⊙a₁.tt)).or
+              ((A_SH.subst (a⟹a₂.tt)).subst (b⟹b₂.tt))).subst
+          (a'⟹[𝔰₁]⊙a₂.tt)).subst
+-/
+
+
 
 lemma helper2 (A: Formula) (a:List String) :
   A.subst (a⟹(List.map var a)) = A :=
@@ -465,6 +501,8 @@ lemma inf_rule_as_imp (A B C : Formula) (a : List String) (t : List Term):
   (Γ ⊢ ∀₁ x ((A∨₁(B∨₁C)).subst (HashMap.ofList (a.zip t)))) → (Γ ⊢ ∀₁ x (((A∨₁B)∨₁C).subst (HashMap.ofList (a.zip t)))) := by sorry
 
 -- Γ ⊢ ∀₁ (a ++ (c ++ u)) ((A_SH.or (B_SH.or C_SH)).subst (HashMap.ofList ((b ++ (d ++ v)).zip (t₁⊙(a ++ (c ++ u)).tt))))
+
+
 
 -- -------------------------------------------------------
 -- INTERPRETAÇÕES DOS AXIOMAS DO CALCULO DE SHOENFIELD
@@ -894,8 +932,70 @@ theorem SoundnessTheorem
       . let p : List Term := λ₁ (f++a₂) ([𝔰₁]⊙(a₂.tt))
         let q : List Term := λ₁ (f++a₂) ((f.tt)⊙(a₂.tt))
         let t' : List Term := p++q
+        have hCC_p := @CombinatorialCompleteness_tuples Γ (f++a₂) ((f++a₂).tt) ([𝔰₁]⊙(a₂.tt))
+        have hCC_q := @CombinatorialCompleteness_tuples Γ (f++a₂) ((f++a₂).tt) ((f.tt)⊙(a₂.tt))
+        have hCC_p_eq := eq_are_eq_tuple hCC_p
+        have hCC_q_eq := eq_are_eq_tuple hCC_q
+        use (λ₁ (f++a₂) ([𝔰₁]⊙(a₂.tt)))++(λ₁ (f++a₂) ((f.tt)⊙(a₂.tt)))
+        have hSubs_p := subst_useless_tuple ([𝔰₁]⊙a₂.tt) ((f ++ a₂))
+        have hSubs_q := subst_useless_tuple (f.tt⊙a₂.tt) ((f ++ a₂))
+        have hGoal := term_app_dst (λ₁ (f ++ a₂) ([𝔰₁]⊙a₂.tt)) (λ₁ (f ++ a₂) (f.tt⊙a₂.tt)) ((f ++ a₂).tt)
+        have eq_p := Eq.trans hCC_p_eq hSubs_p
+        have eq_q := Eq.trans hCC_q_eq hSubs_q
+        --rw [hGoal, hCC_p_eq, hSubs_p, hCC_q_eq, hSubs_q]
+        rw [hGoal, eq_p, eq_q]
+        rw [← with_t]
+        -- ---------------------------------------------------------
+        have hSimp := subst_step (((b∃₁ a₁ a'.tt (¬₁((A_SH.subst (a⟹a₁.tt)).subst (b⟹b₁.tt)))).subst (b₁⟹f.tt⊙a₁.tt)) ∨₁ ((A_SH.subst (a⟹a₂.tt)).subst (b⟹b₂.tt))) a' b₂ ([𝔰₁]⊙a₂.tt) (f.tt⊙a₂.tt)
+        rw [hSimp]
+        have hh := subst_lemma_or (((b∃₁ a₁ a'.tt ((A_SH.subst (a⟹a₁.tt)).subst (b⟹b₁.tt)).not).subst (b₁⟹f.tt⊙a₁.tt))) ((A_SH.subst (a⟹a₂.tt)).subst (b⟹b₂.tt)) a' ([𝔰₁]⊙a₂.tt)
+        rw [hh]
+        have hhh := subst_lemma_comm ((b∃₁ a₁ a'.tt ((A_SH.subst (a⟹a₁.tt)).subst (b⟹b₁.tt)).not)) b₁ a' (f.tt⊙a₁.tt) ([𝔰₁]⊙a₂.tt)
+        rw [hhh]
+        have hhhh := subst_lemma_unbEx (((A_SH.subst (a⟹a₁.tt)).subst (b⟹b₁.tt)).not) a₁ a' a₂
+        rw [hhhh]
+        have hAx := AxS1_sing_tuples ((((A_SH.subst (a⟹a₁.tt)).subst (b⟹b₁.tt)).not.subst (a'⟹[𝔰₁]⊙a₂.tt))) a₁ a₂.tt
+        rw [hAx]
+
         sorry
       /-
+      lemma subst_lemma_comm (A : Formula) (x₁ x₂ : List String) (t₁ t₂ : List Term):
+        ((A.subst (x₁ ⟹ t₁)).subst (x₂ ⟹ t₂)) = ((A.subst (x₂ ⟹ t₂)).subst (x₁ ⟹ t₁)) := by sorry
+
+      lemma subst_lemma_or (A B : Formula) (x : List String) (t : List Term):
+        ((A ∨₁ B).subst (x ⟹ t)) = ((A.subst (x ⟹ t)) ∨₁ (B.subst (x ⟹ t))) := by sorry
+
+      lemma subst_lemma_not (A : Formula) (x : List String) (t : List Term):
+        ((¬₁A).subst (x ⟹ t)) = (¬₁(A.subst (x ⟹ t))) := by sorry
+
+      lemma subst_lemma_unbEx (A : Formula) (a₁ a' a₂ : List String) :
+        (b∃₁ a₁ a'.tt A).subst (a'⟹[𝔰₁]⊙a₂.tt)) = (b∃₁ a₁ ([𝔰₁]⊙a₂.tt) (A.subst ((a'⟹[𝔰₁]⊙a₂.tt)))) := by sorry
+
+
+      lemma AxS1_sing_tuples
+        (A: Formula) (x : List String) (t : List Term) :
+        (b∃₁ x ([𝔰₁]⊙t) A) = (A.subst (x ⟹ t)) := by sorry
+
+      def AxiomS1_term_tuple (t₁ t₂ : List Term) : Formula :=
+        (t₁ ∈_t ([𝔰₁] ⊙ t₂)) ↔₁ (t₁ =_t t₂)
+
+      lemma subst_step
+      (A: Formula) (x₁ x₂ : List String) (t₁ t₂ : List Term) :
+      (A.subst ((x₁++x₂)⟹(t₁++t₂))) = ((A.subst (x₁ ⟹ t₁)).subst (x₂ ⟹ t₂)) := by sorry
+
+      lemma term_app_dst
+      (t₁ t₂ t₃ : List Term) :
+      ((t₁++t₂)⊙t₃) = ((t₁⊙t₃)++(t₂⊙t₃)) := by sorry
+
+      lemma subst_useless_tuple
+      (t : List Term) (x : List String) :
+      t.subst (x ⟹ x.tt) = t := by sorry
+
+      theorem CombinatorialCompleteness_tuples (x: List String) (s: List Term):
+      ∀(t:List Term),
+      (Γ ⊢ (((λ₁ x t) ⊙ s) =_t (t.subst (x ⟹ s)))) := by sorry
+
+
 
       SH_int_comp2 ((¬₁A)∨₁A) (f++a₂,a'++b₂, ( (((b∃₁ a₁ a'.tt (¬₁((A_SH.subst (a⟹a₁.tt)).subst (b⟹b₁.tt)))).subst (b₁⟹f.tt⊙a₁.tt))∨₁((A_SH.subst (a⟹a₂.tt)).subst (b⟹b₂.tt))) ) )
       -/
@@ -927,11 +1027,13 @@ theorem SoundnessTheorem
       use c++a; use d++b; use (B_SH ∨₁ A_SH)
       constructor
       . exact intAvB
-      . cases' soundA with t₁
+      . cases' soundA with t₁ hSound
         let k : Term := lcons "k"
         let p : List Term := λ₁ (c++a) ([k])
-        --let q : List Term := λ₁ (c++a) (t₂⊙(a.tt))
-        --let t' : List Term := p++q
+        let q : List Term := λ₁ (c++a) (t₁⊙(a.tt))
+        let t' : List Term := p++q
+        use t'
+        --subst t'
         sorry     -- TBD: falta a questão do combi completeness
     . -- Contraction (contrac)
       rename_i A contrac1 contrac2

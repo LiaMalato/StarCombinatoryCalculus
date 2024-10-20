@@ -116,6 +116,7 @@ Here we will represent an interpretation A^SH such as ∀a∃b A_SH(a,b) as
 -- TO DO (eu): a tirar este Teste e fazer um melhor
 def Teste (a b : String) (f : Term) (A_SH : Formula): Formula := substitution_formula b (f·(Term.var a)) A_SH
 
+
 inductive SH_int2 : Formula → Formula → Prop
 | base : (h : isBase A) → (SH_int2 A A)
 | disj : SH_int2 A AuSH →
@@ -193,6 +194,16 @@ inductive SH_int_comp_L : LFormula → (List String × List String × Formula) �
 
 
 
+-- Two disjoint lists
+def disj_lists_two (ls1 ls2 : List String) : Prop :=
+  ∀ x, x ∈ ls1 → x ∉ ls2
+
+-- Four disjoint lists
+def disj_lists_four (l1 l2 l3 l4 : List String) : Prop :=
+  disj_lists_two l1 l2 ∧ disj_lists_two l1 l3 ∧ disj_lists_two l1 l4 ∧
+  disj_lists_two l2 l3 ∧ disj_lists_two l2 l4 ∧ disj_lists_two l3 l4
+
+-- (a,b,A_SH(a,b))
 inductive SH_int_comp2 : Formula → (List String × List String × Formula) → Prop
 --| langL : SH_int_comp_L A (a,b,A_SH) → SH_int_comp2 A (a,b,(L_Form A_SH))
 | base : (h : isBase A) → (SH_int_comp2 A ([],[],A))
@@ -207,6 +218,14 @@ inductive SH_int_comp2 : Formula → (List String × List String × Formula) →
               SH_int_comp2 (∀₁ x A) (x++a,b,A_SH)               -- (∀x A)^SH = ∀x,a ∃b [ A_SH(x,a,b) ]
 | bForall : SH_int_comp2 A (a,b,A_SH) →
             SH_int_comp2 (b∀₁ x t A) (a,b,(b∀₁ x t A_SH))            -- (∀x∈t A(x))^SH = ∀a ∃b [ ∀x∈t A_SH(x,a,b) ]
+
+inductive SH_int_comp25 : Formula → (List String × List String × Formula) → Prop
+--| langL : SH_int_comp_L A (a,b,A_SH) → SH_int_comp2 A (a,b,(L_Form A_SH))
+| base : (h : isBase A) → (SH_int_comp25 A ([],[],A))
+| disj : (h : disj_lists_four a b c d) →
+         SH_int_comp25 A (a,b,A_SH) →
+         SH_int_comp25 B (c,d,B_SH) →
+         SH_int_comp25 (A∨₁B) (a++c,b++d,(A_SH ∨₁ B_SH))
 
 /-
 inductive SH_int_comp22 : Formula → (List String × List String × (Formula × List String × List String)) → Prop

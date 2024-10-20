@@ -2,18 +2,14 @@
 --            STAR LANGUAGE - FINITE TYPES
 -- -------------------------------------------------------------
 
--- We import the definitions from the first-order language L:
-import LeanProjeto2.FOLanguage
-import MathLib.Tactic                   -- Pergunta: é preciso repetir isto?
-
-open LFormula
+import MathLib.Tactic
 
 -- ----------------------
 -- FINITE TYPES
 -- ----------------------
 
 -- Finite types [def 1.1]
-inductive FType : Type
+inductive FType
 | ground : FType                        -- G
 | arrow : FType → FType → FType         -- σ → τ
 | star : FType → FType                  -- σ*
@@ -23,8 +19,8 @@ open FType
 
 -- Notation for finite types
 def G := ground                         -- notation G => ground
-notation t "⟶" t1 => arrow t t1
-notation t "⋆" => star t
+notation σ "⟶" τ => arrow σ τ
+notation σ "⋆" => star σ
 
 def exCreateType (σ τ : FType) : FType := (σ⋆) ⟶ τ
 
@@ -40,10 +36,35 @@ def s1ex2_5 (σ τ : FType) : FType := σ ⟶ ((σ⋆ ⟶ τ) ⟶ τ)
 def s1ex2_5' (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
 example (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
 
--- DEFINITION (Tuple of Types): We define tuples of types as lists
-def FTypeTuple := List FType
-deriving Repr, DecidableEq
 
--- EXAMPLE: two examples of tuples
-def exTuple1 : FTypeTuple := [G]
-def exTuple2 : FTypeTuple := [G⋆,G ⟶ G]
+-- ----------------------
+-- TYPE TUPLES
+-- ----------------------
+
+/-
+Type tuples can easily be implemented as lists of finite types (List FType)
+-/
+
+-- EXAMPLE: two type tuples
+def exTuple1 : List FType := [G]
+def exTuple2 : List FType := [G⋆,G ⟶ G]
+
+
+-- ESTA MAL
+-- DEFINITION (arrow constructor between two type tuples):
+def arrowTuples : List FType → List FType → FType
+| [], τ => match τ with
+  | []      => G  -- base case: if both lists are empty, return the ground type
+  | t::ts   => t  -- if σ is empty, the result is just the list τ's first element
+| σ, [] => G  -- if τ is empty, we return the ground type
+| σ, t::ts => (σ.foldr arrow t) ⟶ arrowTuples σ ts
+
+
+notation σₜ "⟿" τₜ => arrowTuples σₜ τₜ
+
+
+
+
+
+--def FTypeTuple := List FType
+--deriving Repr, DecidableEq

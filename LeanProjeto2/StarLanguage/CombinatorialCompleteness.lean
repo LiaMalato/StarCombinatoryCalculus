@@ -26,19 +26,21 @@ open Batteries
       Lambda abstraction through terms
 -/ ----------------------------------------
 
-inductive lambda : Type
-| la (s : String) (body : Term): lambda
+inductive lambda
+| la (s : String) (t : Term): lambda
+
+open lambda
 
 def lambda.to_term : lambda → Term
-| .la _ Π₁ => Π₁·Π₁
-| .la _ Σ₁ => Π₁·Σ₁
-| .la _ ind_⋃₁ => Π₁·ind_⋃₁
-| .la _ ∪₁ => Π₁·∪₁
-| .la _ 𝔰₁ => Π₁·𝔰₁
-| .la _ (lcons k) => Π₁·(lcons k)
-| .la _ (lfun f) => Π₁·(lfun f)
-| .la x (var y) => if x=y then ((Σ₁·Π₁)·Π₁) else (Π₁·(var y))
-| .la x (t·s) => ((Σ₁·(lambda.la x t).to_term)·(lambda.la x s).to_term)
+| la _ Π₁ => Π₁·Π₁
+| la _ Σ₁ => Π₁·Σ₁
+| la _ ind_⋃₁ => Π₁·ind_⋃₁
+| la _ ∪₁ => Π₁·∪₁
+| la _ 𝔰₁ => Π₁·𝔰₁
+| la _ (lcons k) => Π₁·(lcons k)
+| la _ (lfun f) => Π₁·(lfun f)
+| la x (var y) => if x=y then ((Σ₁·Π₁)·Π₁) else (Π₁·(var y))
+| la x (t·s) => ((Σ₁·(la x t).to_term)·(la x s).to_term)
 
 def testu := lambda.la "y" .pi
 def testu2 := lambda.la "x" (lambda.la "y" .pi).to_term
@@ -124,6 +126,7 @@ by
 
 -- Igualdades entre termos são igualdades  -- TBD: seria necessário definir substituição de termos por termos
 lemma eq_are_eq {Γ : Set Formula} (t q : Term) (h: Γ ⊢ t=₁q): t=q := by sorry
+lemma eq_are_eq_tuple {Γ : Set Formula} {t q : List Term} (h: Γ ⊢ t =_t q): t=q := by sorry
 
 -- OLD (a tirar)
 theorem combinatorial_completeness (x : String) : ∀(t:Term), ∃(q:Term), ∀(s:Term),
@@ -281,17 +284,18 @@ lemma eq_to_subst :
 
 lemma helper_cc1 : (([x]⟹[s]).findD c (lcons c)) = (lcons c) := by sorry
 lemma helper_cc2 : (([x]⟹[s]).findD f (lfun f)) = (lfun f) := by sorry
-lemma helper_cc3 : ((HashMap.ofList [(x, s)]).findD y (var y)) = (var y) := by sorry
-lemma helper_cc4 (y:String) (s d :Term): ((HashMap.ofList [(y, s)]).findD y d) = s := by sorry
-lemma helper_t {t₁ t₂ t₃ : Term} : (Γ ⊢ t₁ =₁ t₂) → (Γ ⊢ t₂ =₁ t₃) → (Γ ⊢ t₁ =₁ t₃) := by sorry
+lemma helper_cc3 (x y : String) (s : Term): ((HashMap.ofList [(x, s)]).findD y (var y)) = (var y) := by sorry
+lemma helper_cc4 (y:String) (s t :Term): ((HashMap.ofList [(y, s)]).findD y t) = s := by sorry
+lemma eq_trans {t₁ t₂ t₃ : Term} : (Γ ⊢ t₁ =₁ t₂) → (Γ ⊢ t₂ =₁ t₃) → (Γ ⊢ t₁ =₁ t₃) := by sorry
 lemma helper_subst_l {t₁ t₂ t₃ t₂' : Term} : (Γ ⊢ t₁ =₁ (t₂·t₃)) → (Γ ⊢ t₂ =₁ t₂') → (Γ ⊢ t₁ =₁ (t₂'·t₃)) := by sorry
 lemma helper_subst_r {t₁ t₂ t₃ t₃' : Term} : (Γ ⊢ t₁ =₁ (t₂·t₃)) → (Γ ⊢ t₃ =₁ t₃') → (Γ ⊢ t₁ =₁ (t₂·t₃')) := by sorry
+
 
 
 -- good version
 theorem CombinatorialCompleteness {x₁ x₂ x₃ : String} (x:String) (s:Term):
   ∀(t:Term),
-  (Γ ⊢ ((((la x t).to_term)·s) =₁ (t.subst ([x] ⟹ [s])))) :=
+  Γ ⊢ ((((la x t).to_term)·s) =₁ (t.subst ([x] ⟹ [s]))) :=
 by
   intro t
   induction t with
@@ -324,9 +328,10 @@ by
         simp [h]
         rw [Term.subst]           --  ⊢   Γ ⊢ (((Σ₁·Π₁)·Π₁)·s)=₁([y]⟹[s]).findD y (var y)
         rw [helper_cc4]
-        have H1 := @AxC₂_term_l Γ x₁ x₂ x₃ Π₁ Π₁ s
-        have H2 := @AxC₁_term_l Γ x₁ x₂ s (Π₁·s)
-        exact helper_t H1 H2    -- permitiu aplicar AxC2 e depois AxC1
+        --have H1 := @AxC₂_term_l Γ x₁ x₂ x₃ Π₁ Π₁ s
+        have H1 := @AxC₂_term Γ Π₁ Π₁ s
+        have H2 := @AxC₁_term Γ s (Π₁·s)
+        exact eq_trans H1 H2    -- permitiu aplicar AxC2 e depois AxC1
       . rw [to_term]
         simp [h]
         rw [Term.subst]           --  ⊢   Γ ⊢ ((Π₁·var y)·s)=₁([x]⟹[s]).findD y (var y)
@@ -338,3 +343,8 @@ by
       have H1 := @AxC₂_term_l Γ x₁ x₂ x₃ ((la x t₁).to_term) ((la x t₂).to_term) s
       have Hr := @helper_subst_l Γ (((Σ₁·(la x t₁).to_term)·(la x t₂).to_term)·s) (((la x t₁).to_term·s)) ((la x t₂).to_term·s) (t₁.subst ([x]⟹[s])) H1 ht₁
       exact @helper_subst_r Γ (((Σ₁·(la x t₁).to_term)·(la x t₂).to_term)·s) (t₁.subst ([x]⟹[s])) ((la x t₂).to_term·s) (t₂.subst ([x]⟹[s])) Hr ht₂
+
+-- Extensão do combinatorial completeness para tuples
+theorem CombinatorialCompleteness_tuples (x: List String) (s: List Term):
+  ∀(t:List Term),
+  (Γ ⊢ (((λ₁ x t) ⊙ s) =_t (t.subst (x ⟹ s)))) := by sorry

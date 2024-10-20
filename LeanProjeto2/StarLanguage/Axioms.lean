@@ -1,6 +1,5 @@
 -- -------------------------------------------------------------
---            STAR LANGUAGE - AXIOMS (new)
---          Versão adaptada de Patrick Massot
+--            STAR LANGUAGE - AXIOMS
 -- -------------------------------------------------------------
 
 import LeanProjeto2.FOLanguage
@@ -92,6 +91,10 @@ def AxiomS3_matrix_term (t₁ t₂ t₃ : Term) (y : String) : Formula :=
 @[reducible, simp]
 def AxiomS4_matrix_term (x : String) (t : Term) : Formula :=
   b∃₁₁ x t ((var x) ∈₁ t)
+
+-- "Axioms" for term tuples
+def AxiomS1_term_tuple (t₁ t₂ : List Term) : Formula :=
+  (t₁ ∈_t ([𝔰₁] ⊙ t₂)) ↔₁ (t₁ =_t t₂)
 
 
 -- ------------------------------------------------------------------------
@@ -279,9 +282,9 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 | subs : ∀ {A},               Γ ⊢ ((∀₁₁ x A) →₁ (A.subst (HashMap.ofList ([(x, t)]))))
 
 -- FIVE RULES:
-| exp :     ∀ {A B},          Γ ⊢ A             →   Γ ⊢ (B∨₁A)
+| exp :     ∀ {A B},          Γ ⊢ A             →   Γ ⊢ B∨₁A
 | contrac : ∀ {A},            Γ ⊢ (A∨₁A)        →   Γ ⊢ A
-| assoc :   ∀ {A B C},        Γ ⊢ (A∨₁(B∨₁C))   →   Γ ⊢ ((A∨₁B)∨₁C)
+| assoc :   ∀ {A B C},        Γ ⊢ (A∨₁(B∨₁C))   →   Γ ⊢ (A∨₁B)∨₁C
 | cut :     ∀ {A B C},        Γ ⊢ (A∨₁B)        →   Γ ⊢ ((¬₁A)∨₁C)      →   Γ ⊢ (B∨₁C)
 | forallInt : ∀ {A B},        Γ ⊢ (A∨₁B)        →   Γ ⊢ ((∀₁ x A)∨₁B)   -- TBD: falta x does not occur free in B
 
@@ -326,8 +329,8 @@ inductive ProvableFrom : Set Formula → Formula → Prop
 --axiom AxE₁_term {Γ : Set Formula} (t:Term): Γ ⊢ (t=₁t)
 axiom AxE₂_term {Γ : Set Formula} (x x₁:String) (t :Term) (A:Formula) (hA : isBase A) :       Γ ⊢ (((var x₁)=₁t) ∧₁ (A →₁ (A.subst (HashMap.ofList ([x].zip [t])))))
 axiom AxU_term {Γ : Set Formula} (x : String) (t : Term) (A : Formula) :                      Γ ⊢ ((b∀₁₁ x t A) ↔₁ (∀₁₁ x (((var x) ∈₁ t) →₁ A)))
-axiom AxC₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ (((Π₁·t₁)·t₂) =₁ t₁)
-axiom AxC₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ ((((Σ₁·t₁)·t₂)·t₃) =₁ ((t₁·t₃)·(t₂·t₃)))
+axiom AxC₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ ((Π₁·t₁)·t₂) =₁ t₁
+axiom AxC₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ (((Σ₁·t₁)·t₂)·t₃) =₁ (t₁·t₃)·(t₂·t₃)
 axiom AxP₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ (((ind_⋃₁·(𝔰₁·t₁))·t₂) =₁ (t₂·t₁))
 axiom AxP₂_term {Γ : Set Formula} (t₁ t₂ t₃ : Term) :                                         Γ ⊢ (((ind_⋃₁·((∪₁·t₁)·t₂))·t₃) =₁ ((∪₁·((ind_⋃₁·t₁)·t₃))·((ind_⋃₁·t₂)·t₃)))
 axiom AxS₁_term {Γ : Set Formula} (t₁ t₂ : Term) :                                            Γ ⊢ ((t₁ ∈₁ (𝔰₁·t₂)) ↔₁ (t₁ =₁ t₂))
