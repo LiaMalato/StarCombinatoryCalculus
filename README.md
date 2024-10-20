@@ -16,4 +16,8 @@ The files in this repository accompany the structure of the dissertation:
   2. SHFunctInterp: folder corresponding to the second section with the formalization of the herbrandized version of Shoenfield's functional interpretation and associated results
   3. Soundness: folder corresponding to the third section with the formalization of the Soundness Theorem and other results (future work)
 
+<<<<<<< HEAD
 The link to the dissertation will be made available as soon as it is published by the University of Lisbon.
+=======
+The link to the dissertation will be made available as soon as it is published by the University of Lisbon.
+>>>>>>> b5208973c45e6f0a0084bfc93f3346cab9385bcd
