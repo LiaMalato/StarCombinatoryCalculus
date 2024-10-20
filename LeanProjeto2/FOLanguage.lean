@@ -1,4 +1,3 @@
-import LeanProjeto2
 import MathLib.Tactic
 import Init.Data.String.Basic
 import Mathlib.Data.Finset.Basic
