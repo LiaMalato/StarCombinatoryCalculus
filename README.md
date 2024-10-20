@@ -4,10 +4,15 @@ This repository accompanies the Master's Degree in Mathematics dissertation enti
 
 The files in this repository accompany the structure of the dissertation:
   1. StarLanguage: folder corresponding to the first section
-       a) FiniteTypes: definitions and examples of finite types (corresponding to Section 1.1) 
+     
+       a) FiniteTypes: definitions and examples of finite types (corresponding to Section 1.1)
+     
        b) Syntax: syntax of the Star Combinatory Language (Section 1.2.1)
+     
        c) Axioms: axiomatic of the corresponding theory (Section 1.2.2)
+     
        d) CombinatorialCompleteness: the formalization of the Combinatorial Completeness Theorem (Section 2.1)
+     
   2. SHFunctInterp: folder corresponding to the second section with the formalization of the herbrandized version of Shoenfield's functional interpretation and associated results
   3. Soundness: folder corresponding to the third section with the formalization of the Soundness Theorem and other results (future work)
 
