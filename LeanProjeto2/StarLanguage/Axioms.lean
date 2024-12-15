@@ -7,7 +7,6 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic
 import Batteries
 
-open LFormula
 open Term
 open Formula
 open Set
