@@ -95,8 +95,8 @@ example (σ τ : FType) (w : Term) (x: String)
     (hw : Term_TypeChecking w (σ ⟶ τ⋆))
     (hx : Term_TypeChecking (var x) σ)
     (h_sing : Term_TypeChecking 𝔰₁ (σ ⟶ σ⋆))
-    (h_i_un : Term_TypeChecking ind_⋃₁ (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆)))
-    (h_b_un : Term_TypeChecking ∪₁ (τ⋆ ⟶ (τ⋆ ⟶ τ⋆))) : Term_TypeChecking (app ∪₁ (app (app ind_⋃₁ (app 𝔰₁ (var x))) w)) (τ⋆ ⟶ τ⋆) :=
+    (h_i_un : Term_TypeChecking i∪₁ (σ⋆ ⟶ ((σ ⟶ τ⋆) ⟶ τ⋆)))
+    (h_b_un : Term_TypeChecking ∪₁ (τ⋆ ⟶ (τ⋆ ⟶ τ⋆))) : Term_TypeChecking (app ∪₁ (app (app i∪₁ (app 𝔰₁ (var x))) w)) (τ⋆ ⟶ τ⋆) :=
   by
     have H1 := Term_TypeChecking.tcApp h_sing hx
     have H2 := Term_TypeChecking.tcApp h_i_un H1
@@ -107,47 +107,3 @@ example (σ τ : FType) (w : Term) (x: String)
 -- ----------------------------------------------
 -- EXAMPLE 1.5: cenas com tuples (termos e tipos)
 -- ----------------------------------------------
-
-
-
-
-
-
-
--- --------------------
--- FORMULAS
--- --------------------
-
---open AtomicFormula
---open BaseFormula
-open Formula
-
-
--- --------------------
--- AXIOMS
--- --------------------
-
--- Shoenfield's calculus
-
-
-
-
--- Combinator axioms
-
-
-
-
-
--- Primary axioms for the star constants
-
-
-
-
-
--- Secondary axioms for the star constants
-
-
-
-
-
--- Bounded axiom of choice

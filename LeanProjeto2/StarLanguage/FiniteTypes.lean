@@ -1,70 +1,47 @@
--- -------------------------------------------------------------
---            STAR LANGUAGE - FINITE TYPES
--- -------------------------------------------------------------
-
 import MathLib.Tactic
 
--- ----------------------
--- FINITE TYPES
--- ----------------------
+-- -------------------------------------------------------------
+-- -------------------------------------------------------------
+--             STAR LANGUAGE - FINITE TYPES
+--             (SECTION 1.1: Finite types)
+-- -------------------------------------------------------------
+-- -------------------------------------------------------------
 
--- Finite types [def 1.1]
+/- FILE DESCRIPTION:
+In this file we present the definition for finite types together
+with some examples. The file corresponds to pages 5 to 8.
+-/
+
+-- -------------------------------------------------------------
+-- DEFINITION 1.1 (p.5):
+-- Finite types
+-- -------------------------------------------------------------
+
+-- Definition of finite types
 inductive FType
-| ground : FType                        -- G
-| arrow : FType → FType → FType         -- σ → τ
-| star : FType → FType                  -- σ*
+| ground :  FType                        -- the ground type G
+| arrow :   FType → FType → FType        -- the function type σ → τ
+| star :    FType → FType                -- the star type σ*
 deriving Repr, DecidableEq
 
 open FType
 
 -- Notation for finite types
-def G := ground                         -- notation G => ground
+def G := ground
 notation σ "⟶" τ => arrow σ τ
 notation σ "⋆" => star σ
 
-def exCreateType (σ τ : FType) : FType := (σ⋆) ⟶ τ
+-- -------------------------------------------------------------
+-- EXAMPLE 1.2 (p.6):
+-- Examples of finite types
+-- -------------------------------------------------------------
 
--- (G⋆) ⟶ (G ⟶ G)
-
--- EXAMPLE:
-def s1ex2_1 : FType := G⋆
-def s1ex2_2 : FType := G ⟶ G
-def s1ex2_3 : FType := G ⟶ (G ⟶ G)
-def s1ex2_3' : FType := (G ⟶ G) ⟶ G
-def s1ex2_4 : FType := (G ⟶ G) ⟶ (G ⟶ (G ⟶ G))
-def s1ex2_5 (σ τ : FType) : FType := σ ⟶ ((σ⋆ ⟶ τ) ⟶ τ)
+-- Example:
+def s1ex2_1 : FType                := G⋆
+def s1ex2_2 : FType                := G ⟶ G
+def s1ex2_3 : FType                := G ⟶ (G ⟶ G)
+def s1ex2_3' : FType               := (G ⟶ G) ⟶ G
+def s1ex2_4 : FType                := (G ⟶ G) ⟶ (G ⟶ (G ⟶ G))
+def s1ex2_5 (σ τ : FType) : FType  := σ ⟶ ((σ⋆ ⟶ τ) ⟶ τ)
 def s1ex2_5' (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
-example (σ τ : FType) : FType := (σ⋆ ⟶ τ)⋆
-
-
--- ----------------------
--- TYPE TUPLES
--- ----------------------
-
-/-
-Type tuples can easily be implemented as lists of finite types (List FType)
--/
-
--- EXAMPLE: two type tuples
-def exTuple1 : List FType := [G]
-def exTuple2 : List FType := [G⋆,G ⟶ G]
-
-
--- ESTA MAL
--- DEFINITION (arrow constructor between two type tuples):
-def arrowTuples : List FType → List FType → FType
-| [], τ => match τ with
-  | []      => G  -- base case: if both lists are empty, return the ground type
-  | t::ts   => t  -- if σ is empty, the result is just the list τ's first element
-| σ, [] => G  -- if τ is empty, we return the ground type
-| σ, t::ts => (σ.foldr arrow t) ⟶ arrowTuples σ ts
-
-
-notation σₜ "⟿" τₜ => arrowTuples σₜ τₜ
-
-
-
-
-
---def FTypeTuple := List FType
---deriving Repr, DecidableEq
+example (σ τ : FType) : FType      := (σ⋆ ⟶ τ)⋆
